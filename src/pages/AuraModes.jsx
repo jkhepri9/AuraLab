@@ -218,7 +218,7 @@ export default function AuraModes() {
   });
 
   const deletePreset = useMutation({
-    mutationFn: (id) => db.presets.remove(id),
+    mutationFn: (id) => db.presets.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['presets']);
       toast.success("Mode deleted.");

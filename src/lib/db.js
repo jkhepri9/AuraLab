@@ -96,6 +96,15 @@ export const db = {
             presets.sort((a, b) => a.order - b.order);
 
             return true;
+        },
+        rename: async (id, newName) => {
+            await sleep(100);
+            const index = presets.findIndex(p => p.id === id);
+            if (index !== -1) {
+                presets[index].name = newName;
+                return presets[index];
+            }
+            return null;
         }
     }
 };
