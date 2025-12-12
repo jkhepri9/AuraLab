@@ -1,9 +1,11 @@
+// src/lib/db.js
 // Mock database with default data and async simulation
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const initialPresets = [
   // -------------------------------------------------------
   // HOME FEATURED MODES (MATCHES HOME PAGE CARDS)
+  // Purpose-focused descriptions for Aura Modes cards
   // -------------------------------------------------------
 
   {
@@ -14,7 +16,7 @@ const initialPresets = [
     imageUrl:
       "https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?q=80&w=2400&auto=format&fit=crop",
     description:
-      "Binaural Delta (2 Hz): L=200 Hz, R=202 Hz + Brown noise grounding bed. Headphones recommended.",
+      "Drop into deep, uninterrupted rest. Ideal for bedtime, night wakings, and winding down fast.",
     layers: [
       {
         id: "ds_l",
@@ -68,7 +70,7 @@ const initialPresets = [
     imageUrl:
       "https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=2400&auto=format&fit=crop",
     description:
-      "Binaural Theta (6 Hz): L=180 Hz, R=186 Hz + Pink noise softness. Headphones recommended.",
+      "Deep meditation and inner stillness. Best for breathwork, journaling, and quiet introspection.",
     layers: [
       {
         id: "tg_l",
@@ -122,7 +124,7 @@ const initialPresets = [
     imageUrl:
       "https://images.unsplash.com/photo-1526378722484-bd91ca387e72?q=80&w=2400&auto=format&fit=crop",
     description:
-      "Binaural Beta (14 Hz): L=210 Hz, R=224 Hz + Gray noise clarity bed. Headphones recommended.",
+      "Sharpen attention and reduce mental drift. Great for work sprints, studying, and creative flow.",
     layers: [
       {
         id: "ff_l",
@@ -176,7 +178,7 @@ const initialPresets = [
     imageUrl:
       "https://images.unsplash.com/photo-1516627145497-ae6968895b74?q=80&w=2400&auto=format&fit=crop",
     description:
-      "Binaural Alpha (10 Hz): L=200 Hz, R=210 Hz + Pink noise warmth. Headphones recommended.",
+      "Calm your nervous system and settle into steady coherence. Ideal for stress relief and emotional reset.",
     layers: [
       {
         id: "hc_l",
@@ -230,7 +232,7 @@ const initialPresets = [
     imageUrl:
       "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=2400&auto=format&fit=crop",
     description:
-      "Binaural Alpha (10 Hz): L=220 Hz, R=230 Hz + Brown noise grounding. Headphones recommended.",
+      "Ground and stabilize your space. Use when you feel overstimulated, exposed, or energetically “open.”",
     layers: [
       {
         id: "sc_l",
@@ -284,7 +286,7 @@ const initialPresets = [
     imageUrl:
       "https://images.unsplash.com/photo-1519682577862-22b62b24e493?q=80&w=2400&auto=format&fit=crop",
     description:
-      "Binaural (12 Hz): L=180 Hz, R=192 Hz + Silver noise sparkle. Headphones recommended.",
+      "Wake up your system cleanly. Great for mornings, workouts, and uplift without anxiety.",
     layers: [
       {
         id: "ei_l",
@@ -340,6 +342,8 @@ const initialPresets = [
     color: "linear-gradient(135deg, #1e3a8a, #0c4a6e)",
     imageUrl:
       "https://images.unsplash.com/photo-1546410531-d8527a051d95?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    description:
+      "Sustain focus and reduce distractions. Great for studying, writing, and deep work blocks.",
     layers: [
       {
         id: "l1",
@@ -371,6 +375,8 @@ const initialPresets = [
     color: "linear-gradient(135deg, #059669, #065f46)",
     imageUrl:
       "https://images.unsplash.com/photo-1547926179-883a93c78096?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    description:
+      "Quiet the mind and soften stress. Best for relaxation, breathwork, and gentle meditation.",
     layers: [
       {
         id: "l3",
@@ -402,6 +408,8 @@ const initialPresets = [
     color: "linear-gradient(135deg, #0ea5e9, #0f766e)",
     imageUrl:
       "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    description:
+      "Ease the body into calm, steady relaxation. Ideal for unwinding, reading, and sleep preparation.",
     layers: [
       {
         id: "l5",
