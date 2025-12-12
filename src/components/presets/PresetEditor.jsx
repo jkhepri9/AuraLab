@@ -310,9 +310,28 @@ export default function PresetEditor({
   };
 
   const selectedLayer = layers.find(l => l.id === selectedLayerId);
-
+  const backgroundUrl = initialPreset?.imageUrl || null;
   return (
-    <div className="space-y-6 pb-32">
+    <div className="relative w-full overflow-hidden rounded-3xl border border-white/10">
+      {backgroundUrl && (
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${backgroundUrl})` }}
+        />
+      )}
+
+      <div
+        className={cn(
+          "absolute inset-0",
+          backgroundUrl
+            ? isPlaying
+              ? "bg-gradient-to-b from-black/45 via-black/60 to-black/85"
+              : "bg-gradient-to-b from-black/65 via-black/75 to-black/90"
+            : "bg-transparent"
+        )}
+      />
+
+      <div className="relative z-10 space-y-6 pb-32">
       <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
         <Button
           variant="ghost"
@@ -523,15 +542,9 @@ export default function PresetEditor({
                             step={0.1}
                             className="flex-1"
                           />
-                          <Input
-                            type="number"
-                            value={layer.pulseRate}
-                            onChange={(e) =>
-                              updateLayer(layer.id, 'pulseRate', parseFloat(e.target.value))
-                            }
-                            className="w-12 h-6 text-[10px] bg-white/5 border-white/10 text-center p-0"
-                          />
-                          <span className="text-[10px] text-gray-500 w-4">Hz</span>
+                          <span className="text-[10px] text-gray-400 w-10 text-right font-mono">
+                            {layer.pulseRate.toFixed(1)}
+                          </span>
                         </div>
                       </div>
 
@@ -549,76 +562,60 @@ export default function PresetEditor({
                             step={0.01}
                             className="flex-1"
                           />
-                          <Input
-                            type="number"
-                            value={Math.round(layer.pulseDepth * 100)}
-                            onChange={(e) =>
-                              updateLayer(layer.id, 'pulseDepth', parseFloat(e.target.value) / 100)
-                            }
-                            className="w-12 h-6 text-[10px] bg-white/5 border-white/10 text-center p-0"
-                          />
-                          <span className="text-[10px] text-gray-500 w-4">%</span>
+                          <span className="text-[10px] text-gray-400 w-10 text-right font-mono">
+                            {layer.pulseDepth.toFixed(2)}
+                          </span>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Fader/Panner Block (Vertical Sliders) */}
-                  <div className="bg-black/20 p-4 rounded-xl border border-white/5 grid grid-cols-[1fr_1fr] gap-6">
-                    {/* Volume Fader */}
-                    <div className="flex flex-col items-center justify-end">
-                      <div className="text-xs font-bold text-gray-400 uppercase mb-3">
+                  {/* Volume */}
+                  <div className="bg-black/20 p-4 rounded-xl border border-white/5 flex flex-col justify-center">
+                    <div className="flex items-center gap-2 mb-3 border-b border-white/5 pb-2">
+                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                         Volume
-                      </div>
+                      </span>
+                    </div>
+                    <div className="flex gap-2 items-center">
                       <Slider
-                        orientation="vertical"
                         value={[layer.volume]}
-                        onValueChange={(v) =>
-                          updateLayer(layer.id, 'volume', v[0])
-                        }
+                        onValueChange={(v) => updateLayer(layer.id, 'volume', v[0])}
                         max={1}
-                        min={0}
                         step={0.01}
                         className="flex-1"
                       />
-                      <div className="text-sm font-mono text-white mt-3">
-                        {Math.round(layer.volume * 100)}%
-                      </div>
+                      <span className="text-[10px] text-gray-400 w-10 text-right font-mono">
+                        {layer.volume.toFixed(2)}
+                      </span>
                     </div>
+                  </div>
 
-                    {/* Pan Fader */}
-                    <div className="flex flex-col items-center justify-end">
-                      <div className="text-xs font-bold text-gray-400 uppercase mb-3">
+                  {/* Pan */}
+                  <div className="bg-black/20 p-4 rounded-xl border border-white/5 flex flex-col justify-center">
+                    <div className="flex items-center gap-2 mb-3 border-b border-white/5 pb-2">
+                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                         Pan
-                      </div>
+                      </span>
+                    </div>
+                    <div className="flex gap-2 items-center">
                       <Slider
-                        orientation="vertical"
                         value={[layer.pan]}
-                        onValueChange={(v) =>
-                          updateLayer(layer.id, 'pan', v[0])
-                        }
-                        max={1}
+                        onValueChange={(v) => updateLayer(layer.id, 'pan', v[0])}
                         min={-1}
+                        max={1}
                         step={0.01}
                         className="flex-1"
                       />
-                      <div
-                        className={cn(
-                          "text-sm font-mono mt-3",
-                          layer.pan < 0
-                            ? 'text-blue-300'
-                            : layer.pan > 0
-                              ? 'text-red-300'
-                              : 'text-gray-400'
-                        )}
-                      >
-                        {layer.pan > 0
-                          ? `R ${Math.round(layer.pan * 100)}`
-                          : layer.pan < 0
-                            ? `L ${Math.round(Math.abs(layer.pan * 100))}`
-                            : 'Center'}
-                      </div>
+                      <span className="text-[10px] text-gray-400 w-10 text-right font-mono">
+                        {layer.pan.toFixed(2)}
+                      </span>
                     </div>
+                  </div>
+
+                  {/* Placeholder for any future effect panels */}
+                  <div className="bg-black/10 p-4 rounded-xl border border-white/5 flex items-center justify-center text-[10px] text-gray-500">
+                    Effects coming soon
                   </div>
                 </div>
               </div>
@@ -672,6 +669,7 @@ export default function PresetEditor({
             <Save className="w-5 h-5 mr-2" /> Save Mode
           </Button>
         </div>
+      </div>
       </div>
     </div>
   );

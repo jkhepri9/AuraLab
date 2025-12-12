@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { db } from "@/lib/db";
 import {
   useQuery,
@@ -12,7 +12,6 @@ import {
   Trash2,
   MoreHorizontal,
   Edit,
-  ArrowLeft,
   Edit3,
   Loader2
 } from "lucide-react";
@@ -27,6 +26,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { useLocation, useNavigate } from 'react-router-dom';
 
 function ModeCard({
   preset,
@@ -119,6 +119,7 @@ function ModeCard({
               >
                 <Edit className="w-4 h-4 mr-2" /> Edit Details
               </DropdownMenuItem>
+
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
@@ -129,6 +130,7 @@ function ModeCard({
               >
                 Move Up
               </DropdownMenuItem>
+
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
@@ -139,6 +141,7 @@ function ModeCard({
               >
                 Move Down
               </DropdownMenuItem>
+
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
@@ -148,6 +151,7 @@ function ModeCard({
               >
                 <Edit3 className="w-4 h-4 mr-2" /> Rename
               </DropdownMenuItem>
+
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
@@ -192,6 +196,9 @@ export default function AuraModes() {
   const [autoPlay, setAutoPlay] = useState(false);
 
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const hasAutoActivatedRef = useRef(false);
 
   const { data: presets = [], isLoading } = useQuery({
     queryKey: ['presets'],
@@ -253,7 +260,7 @@ export default function AuraModes() {
 
   const handleEditRequest = (preset) => {
     setEditingPreset(preset);
-    setAutoPlay(false);        // editing, not activating
+    setAutoPlay(false);
     setView('edit');
   };
 
@@ -274,11 +281,11 @@ export default function AuraModes() {
   const startRename = (id) => setIsRenaming(id);
   const finishRename = () => setIsRenaming(null);
 
-  // This is the handler for the green "Activate Aura Mode" button
+  // Green activate button handler
   const handleActivate = (e, preset) => {
     e.stopPropagation();
     setEditingPreset(preset);
-    setAutoPlay(true);        // 👈 THIS is what triggers PresetEditor auto-play
+    setAutoPlay(true);
     setView('edit');
   };
 
@@ -287,6 +294,28 @@ export default function AuraModes() {
     setEditingPreset(null);
     setAutoPlay(false);
   };
+
+  // AUTO-ACTIVATE from Home: /AuraModes?activate=<presetId>
+  useEffect(() => {
+    if (isLoading) return;
+    if (!presets || presets.length === 0) return;
+    if (hasAutoActivatedRef.current) return;
+
+    const params = new URLSearchParams(location.search);
+    const activateId = params.get('activate');
+    if (!activateId) return;
+
+    const preset = presets.find((p) => p.id === activateId);
+    if (!preset) return;
+
+    hasAutoActivatedRef.current = true;
+    setEditingPreset(preset);
+    setAutoPlay(true);
+    setView('edit');
+
+    // Remove the query so it doesn't re-trigger later
+    navigate(location.pathname, { replace: true });
+  }, [isLoading, presets, location.search, location.pathname, navigate]);
 
   return (
     <div className="h-full w-full p-8 overflow-y-auto bg-black/80">
@@ -349,7 +378,7 @@ export default function AuraModes() {
           initialPreset={editingPreset}
           onSave={handleSave}
           onCancel={handleEditorCancel}
-          autoPlay={autoPlay} // 👈 This is the key connection
+          autoPlay={autoPlay}
         />
       )}
     </div>

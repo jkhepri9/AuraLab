@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './Layout';
 
-// Import Pages from the new 'pages' folder
 import Home from './pages/Home';
 import Install from './pages/Install';
 import AuraGenerator from './pages/AuraGenerator';

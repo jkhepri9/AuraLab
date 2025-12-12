@@ -1,105 +1,168 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import {
-    Home,
-    Layers,
-    Activity,
-    SlidersHorizontal,
-    Music,
-    Menu,
-    X,
-} from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Menu, X } from 'lucide-react';
 
 const navItems = [
-    { name: 'Home', path: '/', icon: Home },
-    { name: 'AuraGenerator', path: '/AuraGenerator', icon: Activity },
-    { name: 'AuraConverter', path: '/AuraConverter', icon: Music },
-    { name: 'AuraModes', path: '/AuraModes', icon: Layers },
-    { name: 'AuraStudio', path: '/AuraEditor', icon: SlidersHorizontal },
+  { name: 'Home', path: '/' },
+  { name: 'AuraGenerator', path: '/AuraGenerator' },
+  { name: 'AuraConverter', path: '/AuraConverter' },
+  { name: 'AuraModes', path: '/AuraModes' },
+  { name: 'AuraStudio', path: '/AuraEditor' },
 ];
 
 export default function Navbar() {
-    const location = useLocation();
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    const closeMobileMenu = () => setMobileMenuOpen(false);
+  const closeMobileMenu = () => setMobileMenuOpen(false);
+  const toggleMobileMenu = () => setMobileMenuOpen((v) => !v);
 
-    return (
-        <header className="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-md border-b border-white/10 shadow-lg">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+  const isActive = (path) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(path);
+  };
 
-                {/* Logo/Title */}
-                <Link to="/" className="text-xl font-extrabold tracking-widest text-white hover:text-gray-300 transition-colors z-50">
-                    AURA<span className="text-emerald-400">LAB</span>
-                </Link>
+  // Close drawer on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
-                {/* Desktop Navigation Links */}
-                <nav className="hidden md:flex items-center space-x-6">
-                    {navItems.map((item) => (
-                        <Link
-                            key={item.name}
-                            to={item.path}
-                            className={`flex items-center text-sm font-medium transition-all ${
-                                location.pathname.startsWith(item.path) && item.path !== '/'
-                                    ? 'text-white border-b-2 border-emerald-400 pb-1'
-                                    : location.pathname === item.path
-                                    ? 'text-white border-b-2 border-emerald-400 pb-1'
-                                    : 'text-gray-400 hover:text-white'
-                            }`}
-                        >
-                            <item.icon className="w-4 h-4 mr-1" />
-                            {item.name}
-                        </Link>
-                    ))}
-                </nav>
+  // Scroll-lock behind drawer
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [mobileMenuOpen]);
 
-                {/* Mobile Menu Button */}
-                <button
-                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                    className="md:hidden text-white hover:text-emerald-400 transition-colors z-50"
-                    aria-label="Toggle menu"
-                >
-                    {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-                </button>
+  // ESC closes drawer
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') closeMobileMenu();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mobileMenuOpen]);
+
+  const mobileDrawer = mobileMenuOpen
+    ? createPortal(
+        <div className="fixed inset-0 z-[9999] md:hidden" role="dialog" aria-modal="true">
+          {/* Backdrop */}
+          <button
+            type="button"
+            aria-label="Close menu"
+            onClick={closeMobileMenu}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+
+          {/* Drawer panel */}
+          <div
+            className="
+              fixed right-0 top-0 h-full
+              w-[82vw] max-w-xs
+              bg-zinc-950 text-white
+              border-l border-white/10
+              shadow-2xl
+              overflow-y-auto
+            "
+          >
+            {/* Top row (brand + close) */}
+            <div className="h-16 flex items-center justify-between px-4 border-b border-white/10">
+              <span className="text-sm font-extrabold tracking-widest">
+                AURA<span className="text-emerald-400">LAB</span>
+              </span>
+
+              <button
+                type="button"
+                onClick={closeMobileMenu}
+                aria-label="Close menu"
+                className="text-gray-300 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
 
-            {/* Mobile Menu Overlay */}
-            {mobileMenuOpen && (
-                <div
-                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+            {/* Links (ONLY page names) */}
+            <div className="px-3 py-3 space-y-2">
+              {navItems.map((item) => {
+                const active = isActive(item.path);
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.path}
                     onClick={closeMobileMenu}
-                />
-            )}
+                    className={
+                      `
+                        block rounded-2xl px-4 py-4
+                        text-base font-semibold
+                        transition-all
+                      ` +
+                      (active
+                        ? 'bg-emerald-500/20 border border-emerald-500/50 text-white'
+                        : 'bg-white/0 border border-transparent text-gray-200 hover:bg-white/5 hover:text-white')
+                    }
+                  >
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )
+    : null;
 
-            {/* Mobile Navigation Menu */}
-            <nav
-                className={`
-                    fixed top-16 right-0 h-[calc(100vh-4rem)] w-64 bg-zinc-950/95 backdrop-blur-xl
-                    border-l border-white/10 shadow-2xl transform transition-transform duration-300 ease-in-out z-40
-                    md:hidden
-                    ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}
-                `}
-            >
-                <div className="flex flex-col p-6 space-y-2">
-                    {navItems.map((item) => (
-                        <Link
-                            key={item.name}
-                            to={item.path}
-                            onClick={closeMobileMenu}
-                            className={`flex items-center px-4 py-3 rounded-lg text-base font-medium transition-all ${
-                                location.pathname.startsWith(item.path) && item.path !== '/'
-                                    ? 'bg-emerald-500/20 text-white border border-emerald-500/50'
-                                    : location.pathname === item.path
-                                    ? 'bg-emerald-500/20 text-white border border-emerald-500/50'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                            }`}
-                        >
-                            <item.icon className="w-5 h-5 mr-3" />
-                            {item.name}
-                        </Link>
-                    ))}
-                </div>
-            </nav>
-        </header>
-    );
+  return (
+    <>
+      <header className="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-md border-b border-white/10 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <Link
+            to="/"
+            className="text-xl font-extrabold tracking-widest text-white hover:text-gray-300 transition-colors"
+          >
+            AURA<span className="text-emerald-400">LAB</span>
+          </Link>
+
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center gap-6" aria-label="Primary">
+            {navItems.map((item) => {
+              const active = isActive(item.path);
+              return (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  className={
+                    `text-sm font-medium transition-all ` +
+                    (active
+                      ? 'text-white border-b-2 border-emerald-400 pb-1'
+                      : 'text-gray-400 hover:text-white')
+                  }
+                >
+                  {item.name}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Mobile hamburger */}
+          <button
+            type="button"
+            onClick={toggleMobileMenu}
+            className="md:hidden text-white hover:text-emerald-400 transition-colors"
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileMenuOpen}
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
+      </header>
+
+      {mobileDrawer}
+    </>
+  );
 }

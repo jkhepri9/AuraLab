@@ -1,110 +1,189 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../components/utils';
-import { Activity, Music, ArrowRight, Zap, Heart, Download, Layers } from 'lucide-react';
+import {
+  ArrowRight,
+  Layers,
+  SlidersHorizontal,
+  Activity,
+  Music,
+  Moon,
+  Brain,
+  Shield,
+  HeartPulse,
+  Sparkles,
+  Flame,
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 
+const quickModes = [
+  {
+    id: 'm_deep_sleep',
+    title: 'Deep Sleep',
+    subtitle: 'Downshift and shut off mental noise.',
+    icon: Moon,
+  },
+  {
+    id: 'm_theta_gate',
+    title: 'Theta Gate',
+    subtitle: 'Meditation depth and inner stillness.',
+    icon: Sparkles,
+  },
+  {
+    id: 'm_focus_forge',
+    title: 'Focus Forge',
+    subtitle: 'Clean focus for work and creation.',
+    icon: Brain,
+  },
+  {
+    id: 'm_heart_coherence',
+    title: 'Heart Coherence',
+    subtitle: 'Steady the rhythm of your field.',
+    icon: HeartPulse,
+  },
+  {
+    id: 'm_shielded_calm',
+    title: 'Shielded Calm',
+    subtitle: 'Smooth the edges and stabilize.',
+    icon: Shield,
+  },
+  {
+    id: 'm_energy_ignition',
+    title: 'Energy Ignition',
+    subtitle: 'Wake up the system without chaos.',
+    icon: Flame,
+  },
+];
+
 export default function Home() {
+  const modesUrl = createPageUrl('AuraModes');
+  const studioUrl = createPageUrl('AuraEditor');
+
   return (
-    <div className="space-y-20 py-10">
-      {/* Hero Section */}
-      <section className="text-center space-y-8 relative">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-5xl md:text-7xl font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40 relative z-10">
-
-          Where Your Aura Evolves.
-        </motion.h1>
-        
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
-
-          An immersive frequency lab for building, healing, and evolving your inner field.
-        </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          className="flex flex-wrap justify-center gap-4">
-
-          <Link to={createPageUrl('AuraGenerator')}>
-            <button className="px-8 py-4 rounded-full bg-white text-black font-bold text-lg hover:scale-105 transition-transform flex items-center gap-2">
-              <Activity className="w-5 h-5" /> AuraGenerator
-            </button>
-          </Link>
-          <Link to={createPageUrl('AuraConverter')}>
-            <button className="px-8 py-4 rounded-full bg-white/10 text-white font-bold text-lg hover:bg-white/20 border border-white/10 backdrop-blur-sm transition-all flex items-center gap-2">
-              <Music className="w-5 h-5" /> AuraConverter
-            </button>
-          </Link>
-        </motion.div>
+    <div className="w-full overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-10">
+        {/* Immediate start (MyNoise-style clarity) */}
+        <section className="relative">
+          <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-[520px] h-[520px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
           <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="flex justify-center">
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="relative z-10"
+          >
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+              Choose a Mode. Start Now.
+            </h1>
+            <p className="mt-2 text-sm sm:text-base text-gray-400 max-w-2xl">
+              Sleep, focus, calm, energy — one tap to enter a state. Studio is here when you want full control.
+            </p>
 
-          <Link to={createPageUrl('Install')}>
-            <button className="px-6 py-3 rounded-full bg-emerald-500/20 text-emerald-400 font-medium hover:bg-emerald-500/30 border border-emerald-500/30 transition-all flex items-center gap-2 text-sm">
-              <Download className="w-4 h-4" /> Install App
-            </button>
-          </Link>
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-3">
+              <Link to={modesUrl} className="min-w-0">
+                <button className="w-full px-4 py-3 rounded-2xl bg-white text-black font-bold text-sm sm:text-base hover:scale-[1.02] transition-transform flex items-center justify-center gap-2">
+                  <Layers className="w-5 h-5" /> Start a Mode
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </Link>
+
+              <Link to={studioUrl} className="min-w-0">
+                <button className="w-full px-4 py-3 rounded-2xl bg-white/10 text-white font-bold text-sm sm:text-base hover:bg-white/15 border border-white/10 backdrop-blur-sm transition-all flex items-center justify-center gap-2">
+                  <SlidersHorizontal className="w-5 h-5" /> Open Studio
+                </button>
+              </Link>
+
+              <Link to={createPageUrl('AuraGenerator')} className="min-w-0">
+                <button className="w-full px-4 py-3 rounded-2xl bg-zinc-900/60 text-white font-semibold text-sm hover:bg-zinc-900 border border-white/10 transition-all flex items-center justify-center gap-2">
+                  <Activity className="w-5 h-5" /> Generator
+                </button>
+              </Link>
+
+              <Link to={createPageUrl('AuraConverter')} className="min-w-0">
+                <button className="w-full px-4 py-3 rounded-2xl bg-zinc-900/60 text-white font-semibold text-sm hover:bg-zinc-900 border border-white/10 transition-all flex items-center justify-center gap-2">
+                  <Music className="w-5 h-5" /> Converter
+                </button>
+              </Link>
+            </div>
           </motion.div>
-      </section>
+        </section>
 
-      {/* Features Grid */}
-      <section className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-        <Link to={createPageUrl('AuraGenerator')} className="group">
-          <div className="h-full p-8 rounded-3xl bg-gradient-to-br from-gray-900 to-black border border-white/10 hover:border-emerald-500/50 transition-colors relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-100 transition-opacity">
-              <ArrowRight className="w-6 h-6 -rotate-45 group-hover:rotate-0 transition-transform duration-300 text-emerald-500" />
+        {/* Featured modes (TAP = instant autoplay via AuraModes?activate=...) */}
+        <section className="space-y-3">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-white">Featured Modes</h2>
+              <p className="text-xs text-gray-400">
+                Tap a card to start immediately. Headphones recommended for binaural modes.
+              </p>
             </div>
-            <div className="w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6">
-              <Zap className="w-6 h-6 text-emerald-500" />
-            </div>
-            <h3 className="text-2xl font-bold mb-2 text-white group-hover:text-emerald-400 transition-colors">AuraGenerator</h3>
-            <p className="text-gray-400 mb-4">Frequency Generator capable of generating sine, square, saw, and triangle waves from 0.1Hz to 20kHz.</p>
-            <div className="h-1 w-12 bg-gray-800 group-hover:w-full bg-emerald-500/50 transition-all duration-500 rounded-full"></div>
-          </div>
-        </Link>
-
-        <Link to={createPageUrl('AuraConverter')} className="group">
-          <div className="h-full p-8 rounded-3xl bg-gradient-to-br from-gray-900 to-black border border-white/10 hover:border-purple-500/50 transition-colors relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-100 transition-opacity">
-              <ArrowRight className="w-6 h-6 -rotate-45 group-hover:rotate-0 transition-transform duration-300 text-purple-500" />
-            </div>
-            <div className="w-12 h-12 bg-purple-500/10 rounded-full flex items-center justify-center mb-6">
-              <Heart className="w-6 h-6 text-purple-500" />
-            </div>
-            <h3 className="text-2xl font-bold mb-2 text-white group-hover:text-purple-400 transition-colors">AuraConverter</h3>
-            <p className="text-gray-400 mb-4">Transform your existing audio library. Shift pitch from standard 440Hz to the natural resonance of 432Hz.</p>
-            <div className="h-1 w-12 bg-gray-800 group-hover:w-full bg-purple-500/50 transition-all duration-500 rounded-full"></div>
-          </div>
-        </Link>
-
-        <Link to={createPageUrl('AuraModes')} className="group md:col-span-2">
-            <div className="h-full p-8 rounded-3xl bg-gradient-to-br from-gray-900 to-black border border-white/10 hover:border-amber-500/50 transition-colors relative overflow-hidden flex flex-col items-center text-center">
-            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-100 transition-opacity">
-              <ArrowRight className="w-6 h-6 -rotate-45 group-hover:rotate-0 transition-transform duration-300 text-amber-500" />
-            </div>
-            <div className="w-12 h-12 bg-amber-500/10 rounded-full flex items-center justify-center mb-6">
-              <Layers className="w-6 h-6 text-amber-500" />
-            </div>
-            <h3 className="text-2xl font-bold mb-2 text-white group-hover:text-amber-400 transition-colors">Aura Modes</h3>
-            <p className="text-gray-400 mb-4 max-w-md">Explore our collection of custom frequency presets or create your own room of sound designed for your aura.</p>
-            <div className="h-1 w-12 bg-gray-800 group-hover:w-full bg-amber-500/50 transition-all duration-500 rounded-full"></div>
-            </div>
+            <Link
+              to={modesUrl}
+              className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors whitespace-nowrap"
+            >
+              View all
             </Link>
-            </section>
-    </div>);
+          </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {quickModes.map((m) => {
+              const Icon = m.icon;
+              return (
+                <Link
+                  key={m.id}
+                  to={`${modesUrl}?activate=${encodeURIComponent(m.id)}`}
+                  className="group"
+                >
+                  <div className="p-4 rounded-3xl bg-gradient-to-br from-gray-900 to-black border border-white/10 hover:border-emerald-500/40 transition-colors overflow-hidden">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                          <Icon className="w-5 h-5 text-emerald-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-white font-bold truncate">{m.title}</div>
+                          <div className="text-xs text-gray-400 truncate">{m.subtitle}</div>
+                        </div>
+                      </div>
+
+                      <div className="w-9 h-9 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 transition-colors shrink-0">
+                        <ArrowRight className="w-4 h-4 text-white/70 group-hover:text-white" />
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Minimal secondary explanation (kept below content) */}
+        <section className="grid md:grid-cols-3 gap-3">
+          <Link to={modesUrl} className="group md:col-span-1">
+            <div className="h-full p-5 rounded-3xl bg-gradient-to-br from-gray-900 to-black border border-white/10 hover:border-amber-500/40 transition-colors">
+              <div className="text-white font-bold">Aura Modes</div>
+              <div className="mt-1 text-xs text-gray-400">
+                Curated presets built for states: sleep, focus, calm, energy.
+              </div>
+              <div className="mt-3 text-xs font-semibold text-amber-400 group-hover:text-amber-300 transition-colors">
+                Open Modes →
+              </div>
+            </div>
+          </Link>
+
+          <Link to={studioUrl} className="group md:col-span-2">
+            <div className="h-full p-5 rounded-3xl bg-gradient-to-br from-gray-900 to-black border border-white/10 hover:border-emerald-500/40 transition-colors">
+              <div className="text-white font-bold">Aura Studio</div>
+              <div className="mt-1 text-xs text-gray-400">
+                Layer synth, noise, ambience, effects — build and save your own field architecture.
+              </div>
+              <div className="mt-3 text-xs font-semibold text-emerald-400 group-hover:text-emerald-300 transition-colors">
+                Open Studio →
+              </div>
+            </div>
+          </Link>
+        </section>
+      </div>
+    </div>
+  );
 }
