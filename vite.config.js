@@ -20,8 +20,8 @@ export default defineConfig({
         'icons/apple-touch-icon-180.png',
         'icons/favicon-32.png',
         'icons/favicon-16.png',
-        'icons/auralab-192.png',
-        'icons/auralab-512.png',
+        'icons/auralab-192-maskable.png',
+        'icons/auralab-512-maskable.png',
       ],
 
       manifest: {
@@ -35,8 +35,8 @@ export default defineConfig({
         background_color: '#09090b',
         theme_color: '#09090b',
         icons: [
-          { src: '/icons/auralab-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/auralab-512.png', sizes: '512x512', type: 'image/png' }
+          { src: '/icons/auralab-192-maskable.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icons/auralab-512-maskable.png', sizes: '512x512', type: 'image/png' }
         ]
       },
 
