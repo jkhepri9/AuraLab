@@ -3,8 +3,6 @@
 // AURA LAB — COMPLETE, STABLE AUDIO ENGINE
 // Supports UI types: frequency, color, synth, ambient
 // -----------------------------------------------------------------------------
-// Clean FX handling, stable delay, no infinite echo, correct filter toggling
-// -----------------------------------------------------------------------------
 
 import { createNoiseBuffer } from "./NoiseEngines";
 import { createSynthGraph } from "./SynthEngines";
@@ -46,16 +44,13 @@ class AudioEngineClass {
     this.tickRAF = null;
   }
 
-  // ---------------------------------------------------------------------------
-  // INIT
-  // ---------------------------------------------------------------------------
   init() {
     if (this.initialized) return;
 
     const AC = window.AudioContext || window.webkitAudioContext;
     this.ctx = new AC();
 
-    // MASTER BUS ---------------------------------------------------------------
+    // MASTER BUS
     const masterIn = this.ctx.createGain();
     masterIn.gain.value = 1.0;
 
@@ -71,7 +66,7 @@ class AudioEngineClass {
 
     this.master = { input: masterIn, shaper, output: masterOut };
 
-    // REVERB -------------------------------------------------------------------
+    // REVERB
     const conv = this.ctx.createConvolver();
     conv.buffer = this._impulse(2, 2);
 
@@ -83,7 +78,7 @@ class AudioEngineClass {
 
     this.reverb = { convolver: conv, dry: rvDry, wet: rvWet };
 
-    // DELAY --------------------------------------------------------------------
+    // DELAY
     const delayNode = this.ctx.createDelay(5.0);
     delayNode.delayTime.value = 0.5;
 
@@ -107,9 +102,6 @@ class AudioEngineClass {
     this.initialized = true;
   }
 
-  // ---------------------------------------------------------------------------
-  // PLAY
-  // ---------------------------------------------------------------------------
   async play(layers) {
     this.init();
     if (this.ctx.state === "suspended") await this.ctx.resume();
@@ -121,9 +113,6 @@ class AudioEngineClass {
     this._startTick();
   }
 
-  // ---------------------------------------------------------------------------
-  // PAUSE
-  // ---------------------------------------------------------------------------
   pause() {
     if (!this.isPlaying) return;
 
@@ -134,9 +123,6 @@ class AudioEngineClass {
     this._stopTick();
   }
 
-  // ---------------------------------------------------------------------------
-  // STOP — also kills echo loop
-  // ---------------------------------------------------------------------------
   stop() {
     this.isPlaying = false;
     this.seekOffset = 0;
@@ -151,9 +137,6 @@ class AudioEngineClass {
     } catch {}
   }
 
-  // ---------------------------------------------------------------------------
-  // SEEK
-  // ---------------------------------------------------------------------------
   seek(time) {
     this.seekOffset = time;
     if (this.isPlaying) {
@@ -161,9 +144,6 @@ class AudioEngineClass {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // BUILD GRAPH
-  // ---------------------------------------------------------------------------
   async _buildGraph(layers) {
     for (const layer of layers) {
       const engineType = resolveType(layer.type);
@@ -184,7 +164,6 @@ class AudioEngineClass {
       }
     }
 
-    // Cleanup
     for (const [id, group] of this.layers.entries()) {
       if (!layers.find((l) => l.id === id)) {
         this._stopNodeGroup(group);
@@ -193,9 +172,6 @@ class AudioEngineClass {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // CREATE LAYER
-  // ---------------------------------------------------------------------------
   async _createLayerNodes(layer, engineType) {
     const ctx = this.ctx;
 
@@ -230,23 +206,17 @@ class AudioEngineClass {
       source.frequency.value = layer.frequency ?? 432;
       source.connect(filter);
       source.start();
-    }
-
-    else if (engineType === "noise") {
+    } else if (engineType === "noise") {
       const buf = createNoiseBuffer(ctx, layer.waveform);
       source = ctx.createBufferSource();
       source.buffer = buf;
       source.loop = true;
       source.connect(filter);
       source.start();
-    }
-
-    else if (engineType === "synth") {
+    } else if (engineType === "synth") {
       oscs = createSynthGraph(ctx, layer.waveform, layer.frequency, filter);
-    }
-
-    else if (engineType === "ambient") {
-      const buffer = await loadAmbientBuffer(layer.waveform, this.ambientCache);
+    } else if (engineType === "ambient") {
+      const buffer = await loadAmbientBuffer(ctx, layer.waveform, this.ambientCache);
       if (buffer) {
         const src = ctx.createBufferSource();
         src.buffer = buffer;
@@ -260,29 +230,20 @@ class AudioEngineClass {
     return { id: layer.id, gain, pan, filter, source, oscs, ambient };
   }
 
-  // ---------------------------------------------------------------------------
-  // UPDATE LAYER
-  // ---------------------------------------------------------------------------
   async _updateLayerNodes(layer, engineType, group) {
     const now = this.ctx.currentTime;
 
     group.gain.gain.setTargetAtTime(layer.volume ?? 0.5, now, 0.05);
     group.pan.pan.setTargetAtTime(layer.pan ?? 0, now, 0.05);
 
-    // FILTER FIX — Only on when enabled
-    const filterOn = engineType !== "oscillator" || layer.filterEnabled===false
-    ;
+    // Correct: filter is on unless explicitly disabled
+    const filterOn = layer.filterEnabled !== false;
 
     if (filterOn) {
       group.filter.type = layer.filter?.type || "lowpass";
-      group.filter.frequency.setTargetAtTime(
-        layer.filter?.frequency ?? 20000,
-        now,
-        0.05
-      );
+      group.filter.frequency.setTargetAtTime(layer.filter?.frequency ?? 20000, now, 0.05);
       group.filter.Q.setTargetAtTime(layer.filter?.Q ?? 1, now, 0.05);
     } else {
-      // Bypass = wide open
       group.filter.type = "lowpass";
       group.filter.frequency.setTargetAtTime(20000, now, 0.05);
       group.filter.Q.setTargetAtTime(0.0001, now, 0.05);
@@ -295,9 +256,9 @@ class AudioEngineClass {
 
     if (engineType === "ambient") {
       if (group.ambient?.currentName !== layer.waveform) {
-        const buf = await loadAmbientBuffer(layer.waveform, this.ambientCache);
+        const buf = await loadAmbientBuffer(this.ctx, layer.waveform, this.ambientCache);
         if (buf) {
-          group.ambient.sources.forEach(s => { try { s.stop(); } catch {} });
+          group.ambient.sources.forEach((s) => { try { s.stop(); } catch {} });
 
           const src = this.ctx.createBufferSource();
           src.buffer = buf;
@@ -311,25 +272,17 @@ class AudioEngineClass {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // STOP + CLEANUP
-  // ---------------------------------------------------------------------------
   _stopAllLayers() {
-    for (const group of this.layers.values()) {
-      this._stopNodeGroup(group);
-    }
+    for (const group of this.layers.values()) this._stopNodeGroup(group);
     this.layers.clear();
   }
 
   _stopNodeGroup(group) {
     try { group.source?.stop(); } catch {}
-    try { group.oscs?.forEach(o => o.stop()); } catch {}
-    try { group.ambient?.sources?.forEach(s => s.stop()); } catch {}
+    try { group.oscs?.forEach((o) => o.stop()); } catch {}
+    try { group.ambient?.sources?.forEach((s) => s.stop()); } catch {}
   }
 
-  // ---------------------------------------------------------------------------
-  // TICK
-  // ---------------------------------------------------------------------------
   _startTick() {
     if (!this.onTick) return;
 
@@ -349,12 +302,9 @@ class AudioEngineClass {
     this.tickRAF = null;
   }
 
-  // ---------------------------------------------------------------------------
-  // FX CONTROLS
-  // ---------------------------------------------------------------------------
   setReverb(value) {
     const t = this.ctx.currentTime;
-    const wet = Math.min(3, value * 2.5); // stronger reverb scaling
+    const wet = Math.min(3, value * 2.5);
 
     this.reverb.dry.gain.setTargetAtTime(1 - value, t, 0.05);
     this.reverb.wet.gain.setTargetAtTime(wet, t, 0.05);
@@ -371,9 +321,6 @@ class AudioEngineClass {
     this.delay.delay.delayTime.linearRampToValueAtTime(value, t + 0.05);
   }
 
-  // ---------------------------------------------------------------------------
-  // UTILITIES
-  // ---------------------------------------------------------------------------
   _softClip(amount, samples = 2048) {
     const c = new Float32Array(samples);
     for (let i = 0; i < samples; i++) {
@@ -398,18 +345,11 @@ class AudioEngineClass {
   }
 }
 
-// -----------------------------------------------------------------------------
-// SINGLETON + FACTORY
-// -----------------------------------------------------------------------------
 const AudioEngine = new AudioEngineClass();
 
 export function createAudioEngine(config = {}) {
   AudioEngine.init();
-
-  if (config.onTick) {
-    AudioEngine.onTick = config.onTick;
-  }
-
+  if (config.onTick) AudioEngine.onTick = config.onTick;
   return AudioEngine;
 }
 
