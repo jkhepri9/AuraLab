@@ -10,8 +10,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       filename: 'sw.js',
 
-      // If you want PWA active during npm run dev, set true.
-      // For Codespaces, false avoids extra tunnel issues.
+      // Keep OFF in Codespaces; test install on auralab.space
       devOptions: {
         enabled: false,
       },
@@ -20,6 +19,12 @@ export default defineConfig({
         'icons/apple-touch-icon-180.png',
         'icons/favicon-32.png',
         'icons/favicon-16.png',
+
+        // any
+        'icons/auralab-192.png',
+        'icons/auralab-512.png',
+
+        // maskable
         'icons/auralab-192-maskable.png',
         'icons/auralab-512-maskable.png',
       ],
@@ -35,23 +40,45 @@ export default defineConfig({
         background_color: '#09090b',
         theme_color: '#09090b',
         icons: [
-          { src: '/icons/auralab-192-maskable.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/auralab-512-maskable.png', sizes: '512x512', type: 'image/png' }
-        ]
+          // any (standard)
+          {
+            src: '/icons/auralab-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/icons/auralab-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any',
+          },
+
+          // maskable (best for ChromeOS/Android adaptive shapes)
+          {
+            src: '/icons/auralab-192-maskable.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+          {
+            src: '/icons/auralab-512-maskable.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
       },
 
       workbox: {
         cleanupOutdatedCaches: true,
         navigateFallback: '/index.html',
-
-        // Prevent Workbox from answering these paths as "navigation"
         navigateFallbackDenylist: [
           /^\/icons\//,
           /^\/manifest\.webmanifest$/,
           /^\/sw\.js$/,
           /^\/favicon\.ico$/,
         ],
-
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.destination === 'image',
@@ -60,9 +87,9 @@ export default defineConfig({
               cacheName: 'images',
               expiration: {
                 maxEntries: 60,
-                maxAgeSeconds: 60 * 60 * 24 * 30
-              }
-            }
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+              },
+            },
           },
           {
             urlPattern: ({ request }) => request.destination === 'audio',
@@ -71,15 +98,15 @@ export default defineConfig({
               cacheName: 'audio',
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 30
-              }
-            }
-          }
-        ]
-      }
-    })
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+              },
+            },
+          },
+        ],
+      },
+    }),
   ],
   resolve: {
-    alias: { '@': path.resolve(__dirname, './src') }
-  }
+    alias: { '@': path.resolve(__dirname, './src') },
+  },
 })
