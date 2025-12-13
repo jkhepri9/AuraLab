@@ -21,13 +21,15 @@ function initializeAudioContext() {
 
   const tempContext = new AudioContext();
   if (tempContext.state === 'suspended') {
-    tempContext.resume().then(() => {
-      console.log('AudioContext resumed successfully by initial click.');
-      tempContext.close();
-      audioInitialized = true;
-    }).catch(e => {
-      console.error('Failed to resume AudioContext:', e);
-    });
+    tempContext
+      .resume()
+      .then(() => {
+        tempContext.close();
+        audioInitialized = true;
+      })
+      .catch(() => {
+        // leave audioInitialized false so a later gesture can retry
+      });
   } else {
     tempContext.close();
     audioInitialized = true;

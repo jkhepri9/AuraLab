@@ -8,21 +8,20 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-
-      // IMPORTANT: lets you validate PWA behavior during `npm run dev`
-      devOptions: {
-        enabled: true,
-      },
-
-      // Ensures predictable SW path for cache headers + debugging
       filename: 'sw.js',
 
+      // If you want PWA active during npm run dev, set true.
+      // For Codespaces, false avoids extra tunnel issues.
+      devOptions: {
+        enabled: false,
+      },
+
       includeAssets: [
-        'icons/apple-touch-icon.png',
+        'icons/apple-touch-icon-180.png',
         'icons/favicon-32.png',
         'icons/favicon-16.png',
-        'icons/pwa-192.png',
-        'icons/pwa-512.png',
+        'icons/auralab-192.png',
+        'icons/auralab-512.png',
       ],
 
       manifest: {
@@ -36,17 +35,22 @@ export default defineConfig({
         background_color: '#09090b',
         theme_color: '#09090b',
         icons: [
-          { src: '/icons/pwa-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/pwa-512.png', sizes: '512x512', type: 'image/png' },
-        ],
+          { src: '/icons/auralab-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icons/auralab-512.png', sizes: '512x512', type: 'image/png' }
+        ]
       },
 
       workbox: {
-        // Keeps React Router deep links working offline
+        cleanupOutdatedCaches: true,
         navigateFallback: '/index.html',
 
-        // Good baseline to avoid bloated precache with large audio libraries
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+        // Prevent Workbox from answering these paths as "navigation"
+        navigateFallbackDenylist: [
+          /^\/icons\//,
+          /^\/manifest\.webmanifest$/,
+          /^\/sw\.js$/,
+          /^\/favicon\.ico$/,
+        ],
 
         runtimeCaching: [
           {
@@ -56,27 +60,26 @@ export default defineConfig({
               cacheName: 'images',
               expiration: {
                 maxEntries: 60,
-                maxAgeSeconds: 60 * 60 * 24 * 30,
-              },
-            },
+                maxAgeSeconds: 60 * 60 * 24 * 30
+              }
+            }
           },
           {
-            // Offline choice B: cache audio after it’s played once (runtime cache)
             urlPattern: ({ request }) => request.destination === 'audio',
             handler: 'CacheFirst',
             options: {
               cacheName: 'audio',
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 30,
-              },
-            },
-          },
-        ],
-      },
-    }),
+                maxAgeSeconds: 60 * 60 * 24 * 30
+              }
+            }
+          }
+        ]
+      }
+    })
   ],
   resolve: {
-    alias: { '@': path.resolve(__dirname, './src') },
-  },
+    alias: { '@': path.resolve(__dirname, './src') }
+  }
 })
