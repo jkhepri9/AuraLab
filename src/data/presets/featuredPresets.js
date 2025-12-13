@@ -17,6 +17,17 @@ export const FEATURED_PRESETS = [
       "Drop into deep, uninterrupted rest. Ideal for bedtime, night wakings, and winding down fast.",
     layers: [
       {
+        id: "ds_amb",
+        name: "Ambient: Light Rain",
+        type: "ambient",
+        waveform: "rain_light",
+        volume: 0.22,
+        pan: 0,
+        enabled: true,
+        filterEnabled: true,
+        filter: { type: "lowpass", frequency: 12000, Q: 0.7 },
+      },
+      {
         id: "ds_l",
         name: "Binaural Carrier L (200 Hz)",
         type: "oscillator",
@@ -41,7 +52,7 @@ export const FEATURED_PRESETS = [
         name: "Brown Noise (Grounding)",
         type: "noise",
         frequency: 0,
-        volume: 0.22,
+        volume: 0.18,
         pan: 0,
         waveform: "brown",
         enabled: true,
@@ -71,6 +82,17 @@ export const FEATURED_PRESETS = [
       "Deep meditation and inner stillness. Best for breathwork, journaling, and quiet introspection.",
     layers: [
       {
+        id: "tg_amb",
+        name: "Ambient: Gentle River",
+        type: "ambient",
+        waveform: "river_soft",
+        volume: 0.18,
+        pan: 0,
+        enabled: true,
+        filterEnabled: true,
+        filter: { type: "lowpass", frequency: 15000, Q: 0.7 },
+      },
+      {
         id: "tg_l",
         name: "Binaural Carrier L (180 Hz)",
         type: "oscillator",
@@ -95,7 +117,7 @@ export const FEATURED_PRESETS = [
         name: "Pink Noise (Soft Field)",
         type: "noise",
         frequency: 0,
-        volume: 0.2,
+        volume: 0.16,
         pan: 0,
         waveform: "pink",
         enabled: true,
@@ -125,6 +147,17 @@ export const FEATURED_PRESETS = [
       "Sharpen attention and reduce mental drift. Great for work sprints, studying, and creative flow.",
     layers: [
       {
+        id: "ff_amb",
+        name: "Ambient: Campfire",
+        type: "ambient",
+        waveform: "fire_camp",
+        volume: 0.12,
+        pan: 0,
+        enabled: true,
+        filterEnabled: true,
+        filter: { type: "lowpass", frequency: 16000, Q: 0.7 },
+      },
+      {
         id: "ff_l",
         name: "Binaural Carrier L (210 Hz)",
         type: "oscillator",
@@ -149,7 +182,7 @@ export const FEATURED_PRESETS = [
         name: "Gray Noise (Attention Bed)",
         type: "noise",
         frequency: 0,
-        volume: 0.14,
+        volume: 0.12,
         pan: 0,
         waveform: "gray",
         enabled: true,
@@ -179,6 +212,17 @@ export const FEATURED_PRESETS = [
       "Calm your nervous system and settle into steady coherence. Ideal for stress relief and emotional reset.",
     layers: [
       {
+        id: "hc_amb",
+        name: "Ambient: Park Birds",
+        type: "ambient",
+        waveform: "birds_park",
+        volume: 0.14,
+        pan: 0,
+        enabled: true,
+        filterEnabled: true,
+        filter: { type: "lowpass", frequency: 17000, Q: 0.7 },
+      },
+      {
         id: "hc_l",
         name: "Binaural Carrier L (200 Hz)",
         type: "oscillator",
@@ -203,7 +247,7 @@ export const FEATURED_PRESETS = [
         name: "Pink Noise (Warmth)",
         type: "noise",
         frequency: 0,
-        volume: 0.18,
+        volume: 0.14,
         pan: 0,
         waveform: "pink",
         enabled: true,
@@ -233,6 +277,17 @@ export const FEATURED_PRESETS = [
       "Ground and stabilize your space. Use when you feel overstimulated, exposed, or energetically “open.”",
     layers: [
       {
+        id: "sc_amb",
+        name: "Ambient: Forest Wind",
+        type: "ambient",
+        waveform: "wind_forest",
+        volume: 0.18,
+        pan: 0,
+        enabled: true,
+        filterEnabled: true,
+        filter: { type: "lowpass", frequency: 14000, Q: 0.7 },
+      },
+      {
         id: "sc_l",
         name: "Binaural Carrier L (220 Hz)",
         type: "oscillator",
@@ -257,7 +312,7 @@ export const FEATURED_PRESETS = [
         name: "Brown Noise (Shield Bed)",
         type: "noise",
         frequency: 0,
-        volume: 0.16,
+        volume: 0.14,
         pan: 0,
         waveform: "brown",
         enabled: true,
@@ -287,6 +342,17 @@ export const FEATURED_PRESETS = [
       "Wake up your system cleanly. Great for mornings, workouts, and uplift without anxiety.",
     layers: [
       {
+        id: "ei_amb",
+        name: "Ambient: Jungle Birds",
+        type: "ambient",
+        waveform: "birds_jungle",
+        volume: 0.16,
+        pan: 0,
+        enabled: true,
+        filterEnabled: true,
+        filter: { type: "lowpass", frequency: 17500, Q: 0.7 },
+      },
+      {
         id: "ei_l",
         name: "Binaural Carrier L (180 Hz)",
         type: "oscillator",
@@ -311,7 +377,7 @@ export const FEATURED_PRESETS = [
         name: "Silver Noise (Spark)",
         type: "noise",
         frequency: 0,
-        volume: 0.1,
+        volume: 0.08,
         pan: 0,
         waveform: "silver",
         enabled: true,
@@ -331,7 +397,7 @@ export const FEATURED_PRESETS = [
   },
 
   // -------------------------------------------------------
-  // ORIGINAL DEFAULTS
+  // ORIGINAL DEFAULTS (NOW WITH AMBIENT SUPPORT)
   // -------------------------------------------------------
 
   {
@@ -343,6 +409,17 @@ export const FEATURED_PRESETS = [
     description:
       "Sustain focus and reduce distractions. Great for studying, writing, and deep work blocks.",
     layers: [
+      {
+        id: "p1_amb",
+        name: "Ambient: Medium Rain",
+        type: "ambient",
+        waveform: "rain_medium",
+        volume: 0.12,
+        pan: 0,
+        enabled: true,
+        filterEnabled: true,
+        filter: { type: "lowpass", frequency: 16000, Q: 0.7 },
+      },
       {
         id: "l1",
         name: "Alpha Tone (8 Hz)",
@@ -358,7 +435,7 @@ export const FEATURED_PRESETS = [
         name: "White Noise Bed",
         type: "noise",
         frequency: 0,
-        volume: 0.18,
+        volume: 0.16,
         pan: 0,
         waveform: "white",
         enabled: true,
@@ -377,11 +454,22 @@ export const FEATURED_PRESETS = [
       "Quiet the mind and soften stress. Best for relaxation, breathwork, and gentle meditation.",
     layers: [
       {
+        id: "p2_amb",
+        name: "Ambient: Gentle River",
+        type: "ambient",
+        waveform: "river_soft",
+        volume: 0.16,
+        pan: 0,
+        enabled: true,
+        filterEnabled: true,
+        filter: { type: "lowpass", frequency: 15000, Q: 0.7 },
+      },
+      {
         id: "l3",
         name: "Theta Tone (6 Hz)",
         type: "oscillator",
         frequency: 6.0,
-        volume: 0.3,
+        volume: 0.30,
         pan: 0,
         waveform: "sine",
         enabled: true,
@@ -391,7 +479,7 @@ export const FEATURED_PRESETS = [
         name: "Pink Noise Bed",
         type: "noise",
         frequency: 0,
-        volume: 0.18,
+        volume: 0.16,
         pan: 0,
         waveform: "pink",
         enabled: true,
@@ -410,11 +498,22 @@ export const FEATURED_PRESETS = [
       "Ease the body into calm, steady relaxation. Ideal for unwinding, reading, and sleep preparation.",
     layers: [
       {
+        id: "p3_amb",
+        name: "Ambient: Soft Ocean",
+        type: "ambient",
+        waveform: "ocean_soft",
+        volume: 0.18,
+        pan: 0,
+        enabled: true,
+        filterEnabled: true,
+        filter: { type: "lowpass", frequency: 13500, Q: 0.7 },
+      },
+      {
         id: "l5",
         name: "Delta Tone (2 Hz)",
         type: "oscillator",
         frequency: 2.0,
-        volume: 0.3,
+        volume: 0.30,
         pan: 0,
         waveform: "sine",
         enabled: true,
@@ -424,7 +523,7 @@ export const FEATURED_PRESETS = [
         name: "Ocean Bed (Filtered Noise)",
         type: "noise",
         frequency: 0,
-        volume: 0.16,
+        volume: 0.12,
         pan: 0,
         waveform: "ocean",
         enabled: true,
@@ -434,5 +533,5 @@ export const FEATURED_PRESETS = [
   },
 ];
 
-// Compatibility exports: use ONE import name everywhere else
+// Single import name used by the rest of the app:
 export const initialPresets = FEATURED_PRESETS;

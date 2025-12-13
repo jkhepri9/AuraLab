@@ -1,15 +1,21 @@
 // src/pages/AuraEditor.jsx
 // -----------------------------------------------------------------------------
-// FINAL ORCHESTRATOR FOR THE AURA EDITOR (FULLY PATCHED VERSION)
+// AURA LAB — AURA STUDIO (AuraEditor)
+// - Stable AudioEngine wiring
+// - Layer types aligned with LayerList + SourceControls (oscillator/noise/synth/ambient)
+// - Unsaved Changes guard WITHOUT react-router useBlocker (BrowserRouter-safe)
+//   • refresh/close prompt (beforeunload)
+//   • browser back prompt (popstate)
 // -----------------------------------------------------------------------------
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import { createAudioEngine } from "../editor/audio/AudioEngine";
 import Timeline from "../editor/timeline/Timeline";
 import TransportBar from "../editor/transport/TransportBar";
 import LayerList from "../editor/layers/LayerList";
 import EffectsPanel from "../editor/effects/EffectsPanel";
+import RotatePrompt from "@/components/RotatePrompt";
 
 import { db } from "../lib/db";
 
@@ -18,12 +24,13 @@ import { Button } from "../components/ui/button";
 import { Download, Save } from "lucide-react";
 import { toast } from "sonner";
 
+import useUnsavedChangesGuard from "../hooks/useUnsavedChangesGuard";
+
 export default function AuraEditor() {
   // ----------------------------
   // PROJECT
   // ----------------------------
   const [projectName, setProjectName] = useState("New Aura Session");
-
   const [layers, setLayers] = useState([]);
   const [selectedLayerId, setSelectedLayerId] = useState(null);
 
@@ -32,7 +39,7 @@ export default function AuraEditor() {
   // ----------------------------
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(1200);
+  const [duration] = useState(1200);
 
   // ----------------------------
   // FX STATE (UI STATE)
@@ -53,11 +60,76 @@ export default function AuraEditor() {
   }, []);
 
   // ----------------------------
+  // UNSAVED CHANGES (baseline snapshot)
+  // ----------------------------
+  const baselineRef = useRef("");
+
+  const snapshot = useMemo(() => {
+    // Keep it deterministic and lightweight
+    return JSON.stringify({
+      projectName,
+      layers,
+      fx: { reverbWet, delayWet, delayTime },
+    });
+  }, [projectName, layers, reverbWet, delayWet, delayTime]);
+
+  // Initialize baseline once
+  if (!baselineRef.current) baselineRef.current = snapshot;
+
+  const isDirty = baselineRef.current !== snapshot;
+
+  // BrowserRouter-safe unsaved guard:
+  // - handles refresh/close automatically
+  // - (return value can be used before manual navigation; not needed here)
+  useUnsavedChangesGuard(isDirty);
+
+  // Also protect browser BACK when dirty (BrowserRouter-safe)
+  useEffect(() => {
+    // Push a dummy state so the first "Back" triggers popstate inside the app
+    window.history.pushState({ __aura_guard: true }, "", window.location.href);
+
+    const onPopState = () => {
+      if (!isDirty) return;
+
+      const ok = window.confirm("You have unsaved changes. Leave without saving?");
+      if (!ok) {
+        // Re-push state to prevent leaving
+        window.history.pushState({ __aura_guard: true }, "", window.location.href);
+      }
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [isDirty]);
+
+  // ----------------------------
+  // SAVE PROJECT
+  // ----------------------------
+  const handleSaveProject = async () => {
+    try {
+      await db.presets.create({
+        name: projectName,
+        description: "Created in AuraEditor",
+        color: "linear-gradient(135deg, #0f172a, #10b981)",
+        layers,
+      });
+
+      // Reset baseline = not dirty anymore
+      baselineRef.current = snapshot;
+
+      toast.success("Project saved!");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to save project.");
+    }
+  };
+
+  // ----------------------------
   // TRANSPORT HANDLERS
   // ----------------------------
-  const handlePlay = () => {
+  const handlePlay = async () => {
     if (!audioRef.current) return;
-    audioRef.current.play(layers);
+    await audioRef.current.play(layers);
     setIsPlaying(true);
   };
 
@@ -87,38 +159,47 @@ export default function AuraEditor() {
   };
 
   // ----------------------------
-  // LAYER OPS
+  // LAYER OPS (types aligned with LayerList + SourceControls)
   // ----------------------------
   const addLayer = (type) => {
+    const safeType = ["oscillator", "noise", "synth", "ambient"].includes(type)
+      ? type
+      : "oscillator";
+
     const newLayer = {
       id: crypto.randomUUID(),
-      type, // raw UI type (frequency / color / synth / ambient)
+      type: safeType,
+
       name:
-        type === "frequency"
+        safeType === "oscillator"
           ? "Frequency"
-          : type === "color"
-          ? "Color Noise"
-          : type === "synth"
+          : safeType === "noise"
+          ? "Noise"
+          : safeType === "synth"
           ? "Synth"
           : "Ambient",
 
-      frequency: type === "color" ? 0 : 432,
+      frequency: safeType === "oscillator" ? 432 : safeType === "synth" ? 432 : 0,
+
       waveform:
-        type === "synth"
-          ? "analog"
-          : type === "ambient"
-          ? "ocean_soft"
-          : type === "color"
+        safeType === "oscillator"
+          ? "sine"
+          : safeType === "noise"
           ? "white"
-          : "sine",
+          : safeType === "synth"
+          ? "analog"
+          : "ocean_soft",
 
       volume: 0.5,
       pan: 0,
       enabled: true,
+
       pulseRate: 0,
       pulseDepth: 0,
       phaseShift: 0,
-      filterEnabled: type !== "frequency",
+
+      // Filter default ON for everything except oscillator
+      filterEnabled: safeType !== "oscillator",
       filter: { type: "lowpass", frequency: 20000, Q: 1 },
     };
 
@@ -128,9 +209,7 @@ export default function AuraEditor() {
 
   const updateLayer = (id, updates) => {
     setLayers((prev) =>
-      prev.map((layer) =>
-        layer.id === id ? { ...layer, ...updates } : layer
-      )
+      prev.map((layer) => (layer.id === id ? { ...layer, ...updates } : layer))
     );
   };
 
@@ -139,25 +218,7 @@ export default function AuraEditor() {
     if (selectedLayerId === id) setSelectedLayerId(null);
   };
 
-  const selectedLayer = layers.find((l) => l.id === selectedLayerId);
-
-  // ----------------------------
-  // SAVE PROJECT
-  // ----------------------------
-  const handleSaveProject = async () => {
-    try {
-      await db.presets.create({
-        name: projectName,
-        description: "Created in AuraEditor",
-        color: "linear-gradient(135deg, #0f172a, #10b981)",
-        layers,
-      });
-      toast.success("Project saved!");
-    } catch (e) {
-      console.error(e);
-      toast.error("Failed to save project.");
-    }
-  };
+  const selectedLayer = layers.find((l) => l.id === selectedLayerId) || null;
 
   // ----------------------------
   // EXPORT WAV
@@ -185,10 +246,11 @@ export default function AuraEditor() {
   // ----------------------------
   return (
     <div className="h-[calc(100vh-4rem)] w-full flex flex-col bg-[#080808]">
+      {/* MOBILE PORTRAIT ROTATION PROMPT */}
+      <RotatePrompt />
 
       {/* TOP BAR */}
       <div className="h-14 flex items-center justify-between border-b border-white/10 px-5 bg-[#0a0a0a]">
-
         <div className="flex items-center gap-3">
           <Input
             className="w-52 h-9 bg-white/5 border-white/10 text-sm"
@@ -221,7 +283,6 @@ export default function AuraEditor() {
 
       {/* BODY */}
       <div className="flex flex-1 overflow-hidden">
-
         {/* LEFT SIDEBAR */}
         <LayerList
           layers={layers}
@@ -234,7 +295,6 @@ export default function AuraEditor() {
 
         {/* CENTER TIMELINE */}
         <div className="flex-1 flex flex-col overflow-hidden">
-
           <TransportBar
             isPlaying={isPlaying}
             currentTime={currentTime}
@@ -259,32 +319,26 @@ export default function AuraEditor() {
         {/* EFFECTS PANEL */}
         <EffectsPanel
           selectedLayer={selectedLayer}
-          onUpdateLayer={(updates) =>
-            selectedLayer && updateLayer(selectedLayer.id, updates)
-          }
-
-          /* FX VALUES FROM REACT STATE */
+          onUpdateLayer={(updates) => {
+            if (!selectedLayer) return;
+            updateLayer(selectedLayer.id, updates);
+          }}
           reverbWet={reverbWet}
           delayWet={delayWet}
           delayTime={delayTime}
-
-          /* FX CALLBACKS (UI → React state → Engine) */
           onReverbChange={(v) => {
             setReverbWet(v);
             audioRef.current?.setReverb(v);
           }}
-
           onDelayChange={(v) => {
             setDelayWet(v);
             audioRef.current?.setDelayWet(v);
           }}
-
           onDelayTime={(v) => {
             setDelayTime(v);
             audioRef.current?.setDelayTime(v);
           }}
         />
-
       </div>
     </div>
   );
