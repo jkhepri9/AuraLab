@@ -10,7 +10,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-import { createAudioEngine } from "../editor/audio/AudioEngine";
+import { createAudioEngine } from "../audio/AudioEngine";
 import Timeline from "../editor/timeline/Timeline";
 import TransportBar from "../editor/transport/TransportBar";
 import LayerList from "../editor/layers/LayerList";
