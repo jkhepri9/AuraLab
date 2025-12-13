@@ -117,32 +117,38 @@ export default function AuraGenerator() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <header className="space-y-2 mb-12">
-        <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">AuraGenerator
-
+      <header className="space-y-2 mb-10">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
+          <span className="text-white">Aura</span>
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
+            {" "}
+            Generator
+          </span>
         </h1>
-        <p className="text-gray-400 text-lg">Pure tone frequencies from 0.1Hz to 20kHz.
-
+        <p className="text-gray-400 text-sm sm:text-base">
+          Pure tone frequencies from 0.1Hz to 20kHz.
         </p>
       </header>
 
       <div className="grid md:grid-cols-2 gap-8 items-start">
         {/* Controls Panel */}
         <div className="space-y-8 bg-white/5 p-8 rounded-3xl border border-white/10 backdrop-blur-sm">
-          
           {/* Play/Stop Button */}
           <div className="flex justify-center pb-6">
             <Button
               onClick={togglePlay}
               className={`
                 w-24 h-24 rounded-full flex items-center justify-center transition-all duration-500 shadow-lg
-                ${isPlaying ?
-              'bg-red-500/20 hover:bg-red-500/30 text-red-500 border-2 border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.3)]' :
-              'bg-emerald-500 hover:bg-emerald-400 text-black border-none shadow-[0_0_30px_rgba(16,185,129,0.4)]'}
-              `
-              }>
-
-              {isPlaying ? <Square className="w-8 h-8 fill-current" /> : <Play className="w-8 h-8 fill-current ml-1" />}
+                ${isPlaying
+                  ? 'bg-red-500/20 hover:bg-red-500/30 text-red-500 border-2 border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.3)]'
+                  : 'bg-emerald-500 hover:bg-emerald-400 text-black border-none shadow-[0_0_30px_rgba(16,185,129,0.4)]'}
+              `}
+            >
+              {isPlaying ? (
+                <Square className="w-8 h-8 fill-current" />
+              ) : (
+                <Play className="w-8 h-8 fill-current ml-1" />
+              )}
             </Button>
           </div>
 
@@ -165,29 +171,31 @@ export default function AuraGenerator() {
                   className="w-32 text-right font-mono text-2xl font-bold text-white bg-transparent border-white/10 h-12 focus-visible:ring-emerald-500"
                   step="0.1"
                   min="0.1"
-                  max="20000" />
-
+                  max="20000"
+                />
                 <span className="text-sm text-gray-500">Hz</span>
               </div>
             </div>
+
             <Slider
               value={[frequency]}
               onValueChange={(val) => setFrequency(val[0])}
               min={0.1}
               max={20000}
               step={0.1}
-              className="py-4" />
+              className="py-4"
+            />
 
             <div className="flex gap-2">
-               {[432, 528, 963].map((freq) =>
-              <button
-                key={freq}
-                onClick={() => setFrequency(freq)}
-                className="px-3 py-1 rounded-full bg-white/5 hover:bg-white/10 text-xs text-gray-400 border border-white/5 transition-colors">
-
-                   {freq}Hz
-                 </button>
-              )}
+              {[432, 528, 963].map((freq) => (
+                <button
+                  key={freq}
+                  onClick={() => setFrequency(freq)}
+                  className="px-3 py-1 rounded-full bg-white/5 hover:bg-white/10 text-xs text-gray-400 border border-white/5 transition-colors"
+                >
+                  {freq}Hz
+                </button>
+              ))}
             </div>
           </div>
 
@@ -196,38 +204,42 @@ export default function AuraGenerator() {
             onClick={handleDownload}
             disabled={isDownloading}
             variant="outline"
-            className="w-full border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300">
-
-            {isDownloading ?
-            <>
+            className="w-full border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+          >
+            {isDownloading ? (
+              <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating WAV...
-              </> :
-
-            <>
+              </>
+            ) : (
+              <>
                 <Download className="w-4 h-4 mr-2" /> Download 3m WAV
               </>
-            }
+            )}
           </Button>
 
           {/* Waveform & Volume */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-300">Waveform</label>
-              <Select value={waveform} onValueChange={(val) => {
-                setWaveform(val);
-                if (isPlaying) {// Restart to apply new waveform cleanly
-                  stopOscillator();
-                  setTimeout(() => {
-                    const osc = audioContextRef.current.createOscillator();
-                    osc.type = val;
-                    osc.frequency.setValueAtTime(frequency, audioContextRef.current.currentTime);
-                    osc.connect(gainNodeRef.current);
-                    osc.start();
-                    oscillatorRef.current = osc;
-                    setIsPlaying(true);
-                  }, 10);
-                }
-              }}>
+              <Select
+                value={waveform}
+                onValueChange={(val) => {
+                  setWaveform(val);
+                  if (isPlaying) {
+                    // Restart to apply new waveform cleanly
+                    stopOscillator();
+                    setTimeout(() => {
+                      const osc = audioContextRef.current.createOscillator();
+                      osc.type = val;
+                      osc.frequency.setValueAtTime(frequency, audioContextRef.current.currentTime);
+                      osc.connect(gainNodeRef.current);
+                      osc.start();
+                      oscillatorRef.current = osc;
+                      setIsPlaying(true);
+                    }, 10);
+                  }
+                }}
+              >
                 <SelectTrigger className="bg-black/20 border-white/10 text-white">
                   <SelectValue />
                 </SelectTrigger>
@@ -250,8 +262,8 @@ export default function AuraGenerator() {
                 min={0}
                 max={1}
                 step={0.01}
-                className="py-3" />
-
+                className="py-3"
+              />
             </div>
           </div>
         </div>
@@ -259,15 +271,22 @@ export default function AuraGenerator() {
         {/* Visualizer Panel */}
         <div className="space-y-4">
           <div className="bg-black/40 p-1 rounded-3xl border border-white/10 shadow-2xl overflow-hidden relative">
-             <div className="absolute top-4 right-6 flex items-center gap-2 z-10">
-                <div className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-emerald-500 animate-pulse' : 'bg-red-900'}`}></div>
-                <span className="text-xs font-mono text-gray-500">{isPlaying ? 'LIVE SIGNAL' : 'OFFLINE'}</span>
-             </div>
-             <Visualizer
+            <div className="absolute top-4 right-6 flex items-center gap-2 z-10">
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  isPlaying ? 'bg-emerald-500 animate-pulse' : 'bg-red-900'
+                }`}
+              ></div>
+              <span className="text-xs font-mono text-gray-500">
+                {isPlaying ? 'LIVE SIGNAL' : 'OFFLINE'}
+              </span>
+            </div>
+
+            <Visualizer
               audioContext={audioContextRef.current}
               sourceNode={gainNodeRef.current}
-              isPlaying={isPlaying} />
-
+              isPlaying={isPlaying}
+            />
           </div>
 
           <div className="bg-white/5 p-6 rounded-2xl border border-white/10 text-sm text-gray-400">
@@ -288,6 +307,6 @@ export default function AuraGenerator() {
           </div>
         </div>
       </div>
-    </div>);
-
+    </div>
+  );
 }
