@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { Menu, X } from 'lucide-react';
+import { Download, Menu, X } from 'lucide-react';
+import usePWAInstall from '../hooks/usePWAInstall';
 
 const navItems = [
   { name: 'Home', path: '/' },
@@ -13,7 +14,9 @@ const navItems = [
 
 export default function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { canShowInstall, isInstallable, promptInstall } = usePWAInstall();
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
   const toggleMobileMenu = () => setMobileMenuOpen((v) => !v);
@@ -86,8 +89,34 @@ export default function Navbar() {
               </button>
             </div>
 
-            {/* Links (ONLY page names) */}
             <div className="px-3 py-3 space-y-2">
+              {/* Install CTA at top of hamburger */}
+              {canShowInstall && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (isInstallable) {
+                      await promptInstall();
+                      closeMobileMenu();
+                    } else {
+                      closeMobileMenu();
+                      navigate('/Install');
+                    }
+                  }}
+                  className="
+                    w-full rounded-2xl px-4 py-4
+                    bg-emerald-500 text-black
+                    font-extrabold text-base
+                    flex items-center justify-center gap-2
+                    shadow-lg shadow-emerald-500/20
+                    active:scale-[0.99]
+                  "
+                >
+                  <Download className="w-5 h-5" /> Install App
+                </button>
+              )}
+
+              {/* Links */}
               {navItems.map((item) => {
                 const active = isActive(item.path);
                 return (
@@ -147,6 +176,31 @@ export default function Navbar() {
                 </Link>
               );
             })}
+
+            {/* Top-right Install button */}
+            {canShowInstall && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (isInstallable) {
+                    await promptInstall();
+                  } else {
+                    navigate('/Install');
+                  }
+                }}
+                className="
+                  ml-2 inline-flex items-center gap-2
+                  px-3 py-2 rounded-2xl
+                  bg-white/10 hover:bg-white/15
+                  border border-white/10
+                  text-white text-sm font-bold
+                  transition-all
+                "
+              >
+                <Download className="w-4 h-4 text-emerald-400" />
+                Install
+              </button>
+            )}
           </nav>
 
           {/* Mobile hamburger */}
