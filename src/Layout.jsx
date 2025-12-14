@@ -1,14 +1,15 @@
 import React from 'react';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from './components/ui/button';
-import { Square, RefreshCw, Layers, Pause, Play, RotateCcw } from 'lucide-react';
+import { RefreshCw, Layers, Pause, Play, RotateCcw, Square } from 'lucide-react';
 import { cn } from './lib/utils';
 import { toast } from 'sonner';
 
-// Global Player Component
 function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onStop, onTogglePlayPause, onBack }) {
+  const navigate = useNavigate();
+
   if (!currentPlayingPreset) return null;
 
   const { id, name, color, imageUrl } = currentPlayingPreset;
@@ -19,7 +20,6 @@ function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onStop, onTogglePl
   return (
     <div className="fixed left-0 right-0 z-40 p-4 bottom-[calc(4rem+env(safe-area-inset-bottom))] md:bottom-0 w-screen max-w-[100vw] overflow-x-hidden">
       <div className="relative overflow-hidden border border-white/10 rounded-2xl shadow-2xl max-w-full">
-        {/* Background vibe image (if available) */}
         {imageUrl && (
           <div
             className="absolute inset-0 bg-cover bg-center"
@@ -27,7 +27,6 @@ function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onStop, onTogglePl
           />
         )}
 
-        {/* Always-on overlay for readability (stronger if no image) */}
         <div
           className={cn(
             "absolute inset-0",
@@ -35,7 +34,6 @@ function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onStop, onTogglePl
           )}
         />
 
-        {/* Color/gradient wash to preserve brand identity */}
         <div
           className="absolute inset-0 opacity-70"
           style={{
@@ -45,9 +43,14 @@ function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onStop, onTogglePl
           }}
         />
 
-        {/* Content */}
         <div className="relative p-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3 min-w-0">
+          {/* CLICKABLE LEFT AREA: opens current session */}
+          <button
+            type="button"
+            className="flex items-center space-x-3 min-w-0 text-left hover:opacity-95 active:opacity-90"
+            onClick={() => navigate("/NowPlaying")}
+            title="Open current session"
+          >
             <Layers className="w-6 h-6 text-white/80 shrink-0" />
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-bold text-white leading-none">
@@ -57,10 +60,9 @@ function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onStop, onTogglePl
                 {name}
               </span>
             </div>
-          </div>
+          </button>
 
           <div className="flex items-center space-x-3 shrink-0">
-            {/* BACK = restart current sound */}
             <Button
               variant="ghost"
               size="icon"
@@ -71,7 +73,6 @@ function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onStop, onTogglePl
               <RotateCcw className="w-5 h-5" />
             </Button>
 
-            {/* Play/Pause */}
             <Button
               variant="ghost"
               size="icon"
@@ -82,16 +83,13 @@ function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onStop, onTogglePl
               {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
             </Button>
 
-            {/* Optional: jump back into Modes */}
             {!isInternalTrack && (
               <Link to={modesLink}>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="text-white/80 hover:text-white hover:bg-white/10"
-                  onClick={() => {
-                    toast.success(`Opening ${name} in Aura Modes.`);
-                  }}
+                  onClick={() => toast.success(`Opening ${name} in Aura Modes.`)}
                   title="Open in Aura Modes"
                 >
                   <RefreshCw className="w-5 h-5" />
@@ -99,7 +97,6 @@ function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onStop, onTogglePl
               </Link>
             )}
 
-            {/* STOP */}
             <Button
               onClick={onStop}
               className="bg-white/90 text-black hover:bg-white font-bold h-10 w-24 shadow-md"
@@ -121,7 +118,6 @@ export default function Layout({
   onTogglePlayPause,
   onBack,
 }) {
-  // Sticky player should be visible whenever anything has a “now playing” identity.
   const showStickyPlayer = Boolean(currentPlayingPreset);
 
   const mainPadBottom = showStickyPlayer
@@ -137,23 +133,16 @@ export default function Layout({
       "
       style={{ overscrollBehaviorX: 'none' }}
     >
-      {/* Aura shimmer overlay */}
       <div
         className="fixed inset-0 pointer-events-none opacity-20 w-screen max-w-[100vw] overflow-x-hidden"
         style={{
-          background:
-            'radial-gradient(circle at top, #ffffff33, transparent 75%)',
+          background: 'radial-gradient(circle at top, #ffffff33, transparent 75%)',
         }}
       />
 
       <Navbar />
 
-      <main
-        className={cn(
-          'z-20 relative w-screen max-w-[100vw] overflow-x-hidden',
-          mainPadBottom
-        )}
-      >
+      <main className={cn('z-20 relative w-screen max-w-[100vw] overflow-x-hidden', mainPadBottom)}>
         {children}
       </main>
 

@@ -18,12 +18,9 @@ export function GlobalPlayerProvider({ children }) {
 
     const seq = ++playSeqRef.current;
 
-    // Hard-stop always before new play
     engineRef.current.stop();
-
     await engineRef.current.play(layers);
 
-    // If another play started while we awaited, ignore this completion
     if (seq !== playSeqRef.current) return;
 
     engineRef.current.setNowPlaying(meta);
@@ -36,7 +33,6 @@ export function GlobalPlayerProvider({ children }) {
 
     const seq = ++playSeqRef.current;
 
-    // Update UI identity immediately
     setCurrentPlayingPreset(preset);
 
     engineRef.current.stop();
@@ -120,6 +116,7 @@ export function GlobalPlayerProvider({ children }) {
     () => ({
       engine: engineRef.current,
       currentPlayingPreset,
+      currentLayers, // ✅ EXPOSE LIVE SESSION LAYERS
       isPlaying,
       playPreset,
       playLayers,
@@ -131,7 +128,7 @@ export function GlobalPlayerProvider({ children }) {
       updateNowPlaying,
       togglePlayPause,
     }),
-    [currentPlayingPreset, isPlaying, currentLayers]
+    [currentPlayingPreset, currentLayers, isPlaying]
   );
 
   return (

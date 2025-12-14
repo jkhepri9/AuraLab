@@ -8,6 +8,7 @@ import AuraGenerator from './pages/AuraGenerator';
 import AuraConverter from './pages/AuraConverter';
 import AuraModes from './pages/AuraModes';
 import AuraEditor from './pages/AuraEditor';
+import NowPlaying from './pages/NowPlaying';
 
 import { GlobalPlayerProvider, useGlobalPlayer } from './audio/GlobalPlayerContext';
 
@@ -30,6 +31,7 @@ function AppInner() {
           <Route path="/AuraConverter" element={<AuraConverter />} />
           <Route path="/AuraModes" element={<AuraModes />} />
           <Route path="/AuraEditor" element={<AuraEditor />} />
+          <Route path="/NowPlaying" element={<NowPlaying />} />
         </Routes>
       </Layout>
     </Router>
