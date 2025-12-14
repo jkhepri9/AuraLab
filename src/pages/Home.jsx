@@ -19,12 +19,18 @@ import {
 import { motion } from 'framer-motion';
 import usePWAInstall from '../hooks/usePWAInstall';
 
+// ✅ Pull images/colors from your real preset source of truth
+import FEATURED_PRESETS from '../data/presets/featuredPresets';
+
 const quickModes = [
   { id: 'm_deep_sleep', title: 'Deep Sleep', subtitle: 'Downshift and shut off mental noise.', icon: Moon },
   { id: 'm_theta_gate', title: 'Theta Gate', subtitle: 'Meditation depth and inner stillness.', icon: Sparkles },
   { id: 'm_focus_forge', title: 'Focus Forge', subtitle: 'Clean focus for work and creation.', icon: Brain },
   { id: 'm_heart_coherence', title: 'Heart Coherence', subtitle: 'Steady the rhythm of your field.', icon: HeartPulse },
-  { id: 'm_shielded_calm', title: 'Shielded Calm', subtitle: 'Smooth the edges and stabilize.', icon: Shield },
+
+  // ✅ MATCHES YOUR featuredPresets.js (your Stress Relief entry is id: "c_stress_relief")
+  { id: 'c_stress_relief', title: 'Stress Relief', subtitle: 'Calm the nervous system and ease tension.', icon: Shield },
+
   { id: 'm_energy_ignition', title: 'Energy Ignition', subtitle: 'Wake up the system without chaos.', icon: Flame },
 ];
 
@@ -33,6 +39,15 @@ export default function Home() {
   const studioUrl = createPageUrl('AuraEditor');
   const navigate = useNavigate();
   const { canShowInstall, isInstallable, promptInstall } = usePWAInstall();
+
+  // ✅ Build a lookup so Home can render the actual preset image/color behind each featured card
+  const presetMetaById = useMemo(() => {
+    const map = new Map();
+    for (const p of FEATURED_PRESETS || []) {
+      map.set(p.id, { imageUrl: p.imageUrl, color: p.color, name: p.name });
+    }
+    return map;
+  }, [FEATURED_PRESETS]);
 
   const [installBannerDismissed, setInstallBannerDismissed] = useState(() => {
     try {
@@ -175,22 +190,51 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {quickModes.map((m) => {
               const Icon = m.icon;
+              const meta = presetMetaById.get(m.id);
+              const bgImage = meta?.imageUrl || null;
+              const tint =
+                meta?.color || 'linear-gradient(135deg, rgba(16,185,129,.35), rgba(0,0,0,.85))';
+
               return (
                 <Link key={m.id} to={`${modesUrl}?activate=${encodeURIComponent(m.id)}`} className="group">
-                  <div className="p-4 rounded-3xl bg-gradient-to-br from-gray-900 to-black border border-white/10 hover:border-emerald-500/40 transition-colors overflow-hidden">
-                    <div className="flex items-center justify-between gap-3">
+                  <div className="relative p-4 rounded-3xl border border-white/10 hover:border-emerald-500/40 transition-all overflow-hidden bg-black/40">
+                    {/* Background image */}
+                    {bgImage && (
+                      <div
+                        className="absolute inset-0 bg-cover bg-center scale-[1.02] group-hover:scale-[1.05] transition-transform duration-500"
+                        style={{ backgroundImage: `url(${bgImage})` }}
+                      />
+                    )}
+
+                    {/* Brand tint layer (uses preset color/gradient) */}
+                    <div
+                      className="absolute inset-0 opacity-70"
+                      style={{
+                        background:
+                          typeof tint === 'string' && tint.includes('gradient')
+                            ? tint
+                            : `linear-gradient(135deg, ${tint || '#10b981'}, #000000)`,
+                      }}
+                    />
+
+                    {/* Readability overlay */}
+                    <div className="absolute inset-0 bg-black/55 group-hover:bg-black/45 transition-colors" />
+
+                    {/* Content */}
+                    <div className="relative flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                          <Icon className="w-5 h-5 text-emerald-400" />
+                        <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
+                          <Icon className="w-5 h-5 text-white/90" />
                         </div>
+
                         <div className="min-w-0">
-                          <div className="text-white font-bold truncate">{m.title}</div>
-                          <div className="text-xs text-gray-400 truncate">{m.subtitle}</div>
+                          <div className="text-white font-extrabold truncate">{m.title}</div>
+                          <div className="text-xs text-white/70 truncate">{m.subtitle}</div>
                         </div>
                       </div>
 
-                      <div className="w-9 h-9 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 transition-colors shrink-0">
-                        <ArrowRight className="w-4 h-4 text-white/70 group-hover:text-white" />
+                      <div className="w-9 h-9 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/15 transition-colors shrink-0">
+                        <ArrowRight className="w-4 h-4 text-white/80 group-hover:text-white" />
                       </div>
                     </div>
                   </div>

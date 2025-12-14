@@ -69,21 +69,21 @@ export const FEATURED_PRESETS = [
     order: 3,
   },
 
-  {
-    id: "m_shielded_calm",
-    name: "Shielded Calm",
-    symbol: "⟡",
-    color: "linear-gradient(135deg, #101a24, #1b2a3a)",
-    imageUrl: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=2400&auto=format&fit=crop",
-    description: "Smooth the edges and stabilize your field. Built for emotional regulation and steady calm.",
+    {
+    id: "c_stress_relief",
+    name: "Stress Relief",
+    color: "linear-gradient(135deg, #071a14, #0b3a2a)",
+    imageUrl:
+      "/modeimages/stressrelief.jpg",
+    description: "Helps calm the nervous system and reduce stress for relaxed focus.",
     layers: [
-      { id: "sc_amb", name: "Ambient: Rain Light", type: "ambient", waveform: "rain_light", volume: 0.18, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
-      { id: "sc_l", name: "Binaural Carrier L (200 Hz)", type: "oscillator", frequency: 200, volume: 0.14, pan: -1, waveform: "sine", enabled: true },
-      { id: "sc_r", name: "Binaural Carrier R (208 Hz)", type: "oscillator", frequency: 208, volume: 0.14, pan: 1, waveform: "sine", enabled: true },
-      { id: "sc_brown", name: "Brown Noise (Ground)", type: "noise", frequency: 0, volume: 0.10, pan: 0, waveform: "brown", enabled: true },
-      { id: "sc_55", name: "Sub Anchor (55 Hz)", type: "oscillator", frequency: 55, volume: 0.03, pan: 0, waveform: "sine", enabled: true },
+      { id: "sr_l", name: "Binaural L (200 Hz)", type: "oscillator", frequency: 200, volume: 0.13, pan: -1, waveform: "sine", enabled: true },
+      { id: "sr_r", name: "Binaural R (210 Hz)", type: "oscillator", frequency: 210, volume: 0.13, pan: 1, waveform: "sine", enabled: true },
+      { id: "sr_brown", name: "Brown Noise", type: "noise", frequency: 0, volume: 0.10, pan: 0, waveform: "brown", enabled: true },
+      { id: "sr_rain", name: "Rain (Light)", type: "ambient", frequency: 0, volume: 0.20, pan: 0, waveform: "rain_light", enabled: true },
+      { id: "sr_110", name: "Anchor (110 Hz)", type: "oscillator", frequency: 110, volume: 0.03, pan: 0, waveform: "sine", enabled: true },
     ],
-    order: 4,
+    order: 101,
   },
 
   {
