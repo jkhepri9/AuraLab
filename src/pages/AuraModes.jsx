@@ -27,6 +27,7 @@ import { toast } from 'sonner';
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useGlobalPlayer } from '../audio/GlobalPlayerContext';
 
 function ModeCard({
   preset,
@@ -190,6 +191,7 @@ function ModeCard({
 }
 
 export default function AuraModes() {
+  const player = useGlobalPlayer();
   const [view, setView] = useState('list'); // 'list' | 'edit' | 'create'
   const [editingPreset, setEditingPreset] = useState(null);
   const [isRenaming, setIsRenaming] = useState(null);
@@ -259,6 +261,8 @@ export default function AuraModes() {
   };
 
   const handleEditRequest = (preset) => {
+    // Selecting a different preset (even just to edit) should stop any previous audio.
+    player.stop();
     setEditingPreset(preset);
     setAutoPlay(false);
     setView('edit');
@@ -273,6 +277,7 @@ export default function AuraModes() {
   };
 
   const handleCreateNew = () => {
+    player.stop();
     setEditingPreset(null);
     setAutoPlay(false);
     setView('create');
@@ -281,9 +286,10 @@ export default function AuraModes() {
   const startRename = (id) => setIsRenaming(id);
   const finishRename = () => setIsRenaming(null);
 
-  // Green activate button handler
   const handleActivate = (e, preset) => {
     e.stopPropagation();
+    // Ensure only one active program at a time.
+    player.stop();
     setEditingPreset(preset);
     setAutoPlay(true);
     setView('edit');
@@ -375,6 +381,8 @@ export default function AuraModes() {
         </div>
       ) : (
         <PresetEditor
+          // CRITICAL FIX: force remount so internal state cannot “stick” to the previous preset
+          key={`${view}:${editingPreset?.id || "new"}`}
           initialPreset={editingPreset}
           onSave={handleSave}
           onCancel={handleEditorCancel}

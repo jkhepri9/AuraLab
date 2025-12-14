@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
@@ -7,73 +7,60 @@ import { Play, Square, Volume2, Activity, Download, Loader2 } from 'lucide-react
 import { bufferToWave } from '@/components/utils';
 import Visualizer from '../components/Visualizer';
 
+import { useGlobalPlayer } from '../audio/GlobalPlayerContext';
+
 export default function AuraGenerator() {
-  const [isPlaying, setIsPlaying] = useState(false);
+  const player = useGlobalPlayer();
+
   const [frequency, setFrequency] = useState(432);
   const [waveform, setWaveform] = useState('sine');
   const [volume, setVolume] = useState(0.5);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const audioContextRef = useRef(null);
-  const oscillatorRef = useRef(null);
-  const gainNodeRef = useRef(null);
-
-  // Initialize Audio Context
-  useEffect(() => {
-    audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    gainNodeRef.current = audioContextRef.current.createGain();
-    gainNodeRef.current.connect(audioContextRef.current.destination);
-    gainNodeRef.current.gain.value = volume;
-
-    return () => {
-      if (audioContextRef.current) audioContextRef.current.close();
+  const generatorPreset = useMemo(() => {
+    const title = `Generator: ${frequency}Hz ${waveform}`;
+    return {
+      id: "__generator__",
+      name: title,
+      color: "linear-gradient(135deg, #0f172a, #10b981)",
+      imageUrl: null,
+      layers: [
+        {
+          id: "__generator_layer__",
+          type: "oscillator",
+          frequency,
+          waveform,
+          volume,
+          pan: 0,
+          enabled: true,
+          filterEnabled: false,
+          filter: { type: "lowpass", frequency: 20000, Q: 1 },
+        },
+      ],
     };
-  }, []);
+  }, [frequency, waveform, volume]);
 
-  // Handle Frequency Changes
-  useEffect(() => {
-    if (oscillatorRef.current) {
-      oscillatorRef.current.frequency.setValueAtTime(frequency, audioContextRef.current.currentTime);
-    }
-  }, [frequency]);
+  const isActiveGenerator = player.currentPlayingPreset?.id === "__generator__";
+  const isPlaying = player.isPlaying && isActiveGenerator;
 
-  // Handle Volume Changes
-  useEffect(() => {
-    if (gainNodeRef.current) {
-      gainNodeRef.current.gain.setTargetAtTime(volume, audioContextRef.current.currentTime, 0.1);
-    }
-  }, [volume]);
-
-  const togglePlay = () => {
+  const togglePlay = async () => {
     if (isPlaying) {
-      stopOscillator();
+      player.stop();
     } else {
-      startOscillator();
+      await player.playPreset(generatorPreset);
     }
   };
 
-  const startOscillator = () => {
-    if (audioContextRef.current.state === 'suspended') {
-      audioContextRef.current.resume();
-    }
-
-    const osc = audioContextRef.current.createOscillator();
-    osc.type = waveform;
-    osc.frequency.setValueAtTime(frequency, audioContextRef.current.currentTime);
-    osc.connect(gainNodeRef.current);
-    osc.start();
-    oscillatorRef.current = osc;
-    setIsPlaying(true);
-  };
-
-  const stopOscillator = () => {
-    if (oscillatorRef.current) {
-      oscillatorRef.current.stop();
-      oscillatorRef.current.disconnect();
-      oscillatorRef.current = null;
-    }
-    setIsPlaying(false);
-  };
+  // Live-update the running tone without stopping playback.
+  useEffect(() => {
+    if (!isPlaying) return;
+    player.updateLayers(generatorPreset.layers);
+    player.updateNowPlaying(generatorPreset, {
+      title: generatorPreset.name,
+      artist: "AuraLab",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generatorPreset, isPlaying]);
 
   const handleDownload = async () => {
     setIsDownloading(true);
@@ -225,19 +212,6 @@ export default function AuraGenerator() {
                 value={waveform}
                 onValueChange={(val) => {
                   setWaveform(val);
-                  if (isPlaying) {
-                    // Restart to apply new waveform cleanly
-                    stopOscillator();
-                    setTimeout(() => {
-                      const osc = audioContextRef.current.createOscillator();
-                      osc.type = val;
-                      osc.frequency.setValueAtTime(frequency, audioContextRef.current.currentTime);
-                      osc.connect(gainNodeRef.current);
-                      osc.start();
-                      oscillatorRef.current = osc;
-                      setIsPlaying(true);
-                    }, 10);
-                  }
                 }}
               >
                 <SelectTrigger className="bg-black/20 border-white/10 text-white">
@@ -283,8 +257,8 @@ export default function AuraGenerator() {
             </div>
 
             <Visualizer
-              audioContext={audioContextRef.current}
-              sourceNode={gainNodeRef.current}
+              audioContext={player.engine?.ctx}
+              sourceNode={player.engine?.master?.output}
               isPlaying={isPlaying}
             />
           </div>

@@ -10,7 +10,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-import { createAudioEngine } from "../audio/AudioEngine";
+import { useGlobalPlayer } from "../audio/GlobalPlayerContext";
 import Timeline from "../editor/timeline/Timeline";
 import TransportBar from "../editor/transport/TransportBar";
 import LayerList from "../editor/layers/LayerList";
@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import useUnsavedChangesGuard from "../hooks/useUnsavedChangesGuard";
 
 export default function AuraEditor() {
+  const player = useGlobalPlayer();
   // ----------------------------
   // PROJECT
   // ----------------------------
@@ -49,15 +50,15 @@ export default function AuraEditor() {
   const [delayTime, setDelayTime] = useState(0.5);
 
   // ----------------------------
-  // AUDIO ENGINE
+  // AUDIO ENGINE (GLOBAL)
   // ----------------------------
-  const audioRef = useRef(null);
-
+  // We use the single global engine so playback is continuous across pages
+  // and selecting another sound/preset always replaces the previous mix.
   useEffect(() => {
-    audioRef.current = createAudioEngine({
-      onTick: (time) => setCurrentTime(time),
-    });
-  }, []);
+    if (!player?.engine) return;
+    player.engine.onTick = (time) => setCurrentTime(time);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [player?.engine]);
 
   // ----------------------------
   // UNSAVED CHANGES (baseline snapshot)
@@ -128,20 +129,35 @@ export default function AuraEditor() {
   // TRANSPORT HANDLERS
   // ----------------------------
   const handlePlay = async () => {
-    if (!audioRef.current) return;
-    await audioRef.current.play(layers);
+    if (!player) return;
+    await player.playLayers(layers, {
+      title: projectName || "Aura Studio",
+      artist: "AuraLab",
+    });
+    player.updateNowPlaying(
+      {
+        id: "__studio__",
+        name: projectName || "Aura Studio",
+        color: "linear-gradient(135deg, #0f172a, #10b981)",
+        imageUrl: null,
+      },
+      {
+        title: projectName || "Aura Studio",
+        artist: "AuraLab",
+      }
+    );
     setIsPlaying(true);
   };
 
   const handlePause = () => {
-    if (!audioRef.current) return;
-    audioRef.current.pause();
+    if (!player) return;
+    player.pause();
     setIsPlaying(false);
   };
 
   const handleStop = () => {
-    if (!audioRef.current) return;
-    audioRef.current.stop();
+    if (!player) return;
+    player.stop();
     setIsPlaying(false);
     setCurrentTime(0);
   };
@@ -149,13 +165,13 @@ export default function AuraEditor() {
   const handleJumpForward = () => {
     const next = Math.min(duration, currentTime + 10);
     setCurrentTime(next);
-    audioRef.current?.seek(next);
+    player?.engine?.seek?.(next);
   };
 
   const handleJumpBackward = () => {
     const next = Math.max(0, currentTime - 10);
     setCurrentTime(next);
-    audioRef.current?.seek(next);
+    player?.engine?.seek?.(next);
   };
 
   // ----------------------------
@@ -224,11 +240,18 @@ export default function AuraEditor() {
   // EXPORT WAV
   // ----------------------------
   const handleExportWAV = async () => {
-    if (!audioRef.current) return;
+    if (!player?.engine) return;
+
+    // The current engine does not yet implement an offline renderer for all
+    // layer types (ambient buffers, synth graphs, FX). Avoid a runtime crash.
+    if (typeof player.engine.render !== "function") {
+      toast.error("Export is not enabled yet in this build.");
+      return;
+    }
 
     try {
       toast("Rendering audio…");
-      const blob = await audioRef.current.render(layers, duration);
+      const blob = await player.engine.render(layers, duration);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -328,15 +351,15 @@ export default function AuraEditor() {
           delayTime={delayTime}
           onReverbChange={(v) => {
             setReverbWet(v);
-            audioRef.current?.setReverb(v);
+            player?.engine?.setReverb?.(v);
           }}
           onDelayChange={(v) => {
             setDelayWet(v);
-            audioRef.current?.setDelayWet(v);
+            player?.engine?.setDelayWet?.(v);
           }}
           onDelayTime={(v) => {
             setDelayTime(v);
-            audioRef.current?.setDelayTime(v);
+            player?.engine?.setDelayTime?.(v);
           }}
         />
       </div>

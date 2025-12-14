@@ -9,10 +9,20 @@ import AuraConverter from './pages/AuraConverter';
 import AuraModes from './pages/AuraModes';
 import AuraEditor from './pages/AuraEditor';
 
-export default function App() {
+import { GlobalPlayerProvider, useGlobalPlayer } from './audio/GlobalPlayerContext';
+
+function AppInner() {
+  const { currentPlayingPreset, isPlaying, stop, togglePlayPause, restart } = useGlobalPlayer();
+
   return (
     <Router>
-      <Layout>
+      <Layout
+        currentPlayingPreset={currentPlayingPreset}
+        isPlaying={isPlaying}
+        onStop={stop}
+        onTogglePlayPause={togglePlayPause}
+        onBack={restart}
+      >
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/Install" element={<Install />} />
@@ -23,5 +33,13 @@ export default function App() {
         </Routes>
       </Layout>
     </Router>
+  );
+}
+
+export default function App() {
+  return (
+    <GlobalPlayerProvider>
+      <AppInner />
+    </GlobalPlayerProvider>
   );
 }

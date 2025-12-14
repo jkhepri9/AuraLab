@@ -1,28 +1,24 @@
 import React from 'react';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button } from './components/ui/button';
-import { Square, RefreshCw, Layers } from 'lucide-react';
+import { Square, RefreshCw, Layers, Pause, Play, RotateCcw } from 'lucide-react';
 import { cn } from './lib/utils';
 import { toast } from 'sonner';
 
 // Global Player Component
-function GlobalAudioPlayer({ currentPlayingPreset, handleStopPlaying }) {
+function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onStop, onTogglePlayPause, onBack }) {
   if (!currentPlayingPreset) return null;
 
-  const { name, color, imageUrl } = currentPlayingPreset;
+  const { id, name, color, imageUrl } = currentPlayingPreset;
 
-  const handleRestart = () => {
-    handleStopPlaying?.();
-    toast.success(`Restarted ${name}. (Click Activate in Modes to resume)`);
-  };
+  const isInternalTrack = typeof id === "string" && id.startsWith("__");
+  const modesLink = !isInternalTrack && id ? `/AuraModes?activate=${encodeURIComponent(id)}` : "/AuraModes";
 
   return (
     <div className="fixed left-0 right-0 z-40 p-4 bottom-[calc(4rem+env(safe-area-inset-bottom))] md:bottom-0 w-screen max-w-[100vw] overflow-x-hidden">
-      <div
-        className="relative overflow-hidden border border-white/10 rounded-2xl shadow-2xl max-w-full"
-      >
+      <div className="relative overflow-hidden border border-white/10 rounded-2xl shadow-2xl max-w-full">
         {/* Background vibe image (if available) */}
         {imageUrl && (
           <div
@@ -64,19 +60,48 @@ function GlobalAudioPlayer({ currentPlayingPreset, handleStopPlaying }) {
           </div>
 
           <div className="flex items-center space-x-3 shrink-0">
-            <Link to="/AuraModes">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-white/80 hover:text-white hover:bg-white/10"
-                onClick={handleRestart}
-              >
-                <RefreshCw className="w-5 h-5" />
-              </Button>
-            </Link>
-
+            {/* BACK = restart current sound */}
             <Button
-              onClick={handleStopPlaying}
+              variant="ghost"
+              size="icon"
+              className="text-white/80 hover:text-white hover:bg-white/10"
+              onClick={onBack}
+              title="Back (Restart)"
+            >
+              <RotateCcw className="w-5 h-5" />
+            </Button>
+
+            {/* Play/Pause */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white/80 hover:text-white hover:bg-white/10"
+              onClick={onTogglePlayPause}
+              title={isPlaying ? "Pause" : "Play"}
+            >
+              {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+            </Button>
+
+            {/* Optional: jump back into Modes */}
+            {!isInternalTrack && (
+              <Link to={modesLink}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white/80 hover:text-white hover:bg-white/10"
+                  onClick={() => {
+                    toast.success(`Opening ${name} in Aura Modes.`);
+                  }}
+                  title="Open in Aura Modes"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                </Button>
+              </Link>
+            )}
+
+            {/* STOP */}
+            <Button
+              onClick={onStop}
               className="bg-white/90 text-black hover:bg-white font-bold h-10 w-24 shadow-md"
             >
               <Square className="w-4 h-4 mr-2 fill-current" /> Stop
@@ -91,15 +116,13 @@ function GlobalAudioPlayer({ currentPlayingPreset, handleStopPlaying }) {
 export default function Layout({
   children,
   currentPlayingPreset,
-  handleStopPlaying,
+  isPlaying,
+  onStop,
+  onTogglePlayPause,
+  onBack,
 }) {
-  const location = useLocation();
-
-  const isEditorPage = location.pathname.includes('/AuraModes');
-  const isStudioPage = location.pathname.includes('/AuraEditor');
-
-  const showStickyPlayer =
-    currentPlayingPreset && !isEditorPage && !isStudioPage;
+  // Sticky player should be visible whenever anything has a “now playing” identity.
+  const showStickyPlayer = Boolean(currentPlayingPreset);
 
   const mainPadBottom = showStickyPlayer
     ? 'pb-[calc(11rem+env(safe-area-inset-bottom))] md:pb-0'
@@ -137,7 +160,10 @@ export default function Layout({
       {showStickyPlayer && (
         <GlobalAudioPlayer
           currentPlayingPreset={currentPlayingPreset}
-          handleStopPlaying={handleStopPlaying}
+          isPlaying={isPlaying}
+          onStop={onStop}
+          onTogglePlayPause={onTogglePlayPause}
+          onBack={onBack}
         />
       )}
 
