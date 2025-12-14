@@ -3,6 +3,12 @@
 // AURA LAB — COMPLETE, STABLE AUDIO ENGINE
 // Supports UI types: frequency, color, synth, ambient
 // -----------------------------------------------------------------------------
+//
+// CHANGE: Adds a global ambient gain boost (ambientGainBoost) applied ONLY
+// to ambient layers app-wide via this engine.
+//
+// Effective ambient layer gain = (layer.volume ?? 0.5) * ambientGainBoost
+// -----------------------------------------------------------------------------
 
 import { createNoiseBuffer } from "./NoiseEngines";
 import { createSynthGraph } from "./SynthEngines";
@@ -13,11 +19,16 @@ import { loadAmbientBuffer } from "./AmbientLoader";
 // -----------------------------------------------------------------------------
 function resolveType(uiType) {
   switch (uiType) {
-    case "frequency": return "oscillator";
-    case "color": return "noise";
-    case "synth": return "synth";
-    case "ambient": return "ambient";
-    default: return uiType;
+    case "frequency":
+      return "oscillator";
+    case "color":
+      return "noise";
+    case "synth":
+      return "synth";
+    case "ambient":
+      return "ambient";
+    default:
+      return uiType;
   }
 }
 
@@ -42,6 +53,9 @@ class AudioEngineClass {
 
     this.onTick = null;
     this.tickRAF = null;
+
+    // ✅ GLOBAL AMBIENT BOOST (tune this)
+    this.ambientGainBoost = 1.8;
   }
 
   init() {
@@ -172,11 +186,17 @@ class AudioEngineClass {
     }
   }
 
+  _effectiveGainForLayer(layer, engineType) {
+    const base = layer.volume ?? 0.5;
+    const mult = engineType === "ambient" ? this.ambientGainBoost : 1.0;
+    return base * mult;
+  }
+
   async _createLayerNodes(layer, engineType) {
     const ctx = this.ctx;
 
     const gain = ctx.createGain();
-    gain.gain.value = layer.volume ?? 0.5;
+    gain.gain.value = this._effectiveGainForLayer(layer, engineType);
 
     const pan = ctx.createStereoPanner();
     pan.pan.value = layer.pan ?? 0;
@@ -216,6 +236,7 @@ class AudioEngineClass {
     } else if (engineType === "synth") {
       oscs = createSynthGraph(ctx, layer.waveform, layer.frequency, filter);
     } else if (engineType === "ambient") {
+      // ✅ Uses SAME ctx; caches buffers in this.ambientCache
       const buffer = await loadAmbientBuffer(ctx, layer.waveform, this.ambientCache);
       if (buffer) {
         const src = ctx.createBufferSource();
@@ -233,7 +254,13 @@ class AudioEngineClass {
   async _updateLayerNodes(layer, engineType, group) {
     const now = this.ctx.currentTime;
 
-    group.gain.gain.setTargetAtTime(layer.volume ?? 0.5, now, 0.05);
+    // ✅ Apply ambient gain boost ONLY for ambient layers
+    group.gain.gain.setTargetAtTime(
+      this._effectiveGainForLayer(layer, engineType),
+      now,
+      0.05
+    );
+
     group.pan.pan.setTargetAtTime(layer.pan ?? 0, now, 0.05);
 
     // Correct: filter is on unless explicitly disabled
@@ -258,7 +285,11 @@ class AudioEngineClass {
       if (group.ambient?.currentName !== layer.waveform) {
         const buf = await loadAmbientBuffer(this.ctx, layer.waveform, this.ambientCache);
         if (buf) {
-          group.ambient.sources.forEach((s) => { try { s.stop(); } catch {} });
+          group.ambient.sources.forEach((s) => {
+            try {
+              s.stop();
+            } catch {}
+          });
 
           const src = this.ctx.createBufferSource();
           src.buffer = buf;
@@ -278,9 +309,15 @@ class AudioEngineClass {
   }
 
   _stopNodeGroup(group) {
-    try { group.source?.stop(); } catch {}
-    try { group.oscs?.forEach((o) => o.stop()); } catch {}
-    try { group.ambient?.sources?.forEach((s) => s.stop()); } catch {}
+    try {
+      group.source?.stop();
+    } catch {}
+    try {
+      group.oscs?.forEach((o) => o.stop());
+    } catch {}
+    try {
+      group.ambient?.sources?.forEach((s) => s.stop());
+    } catch {}
   }
 
   _startTick() {
@@ -349,7 +386,15 @@ const AudioEngine = new AudioEngineClass();
 
 export function createAudioEngine(config = {}) {
   AudioEngine.init();
+
   if (config.onTick) AudioEngine.onTick = config.onTick;
+
+  // ✅ Optional override at creation time:
+  // createAudioEngine({ ambientGainBoost: 2.0 })
+  if (typeof config.ambientGainBoost === "number" && !Number.isNaN(config.ambientGainBoost)) {
+    AudioEngine.ambientGainBoost = config.ambientGainBoost;
+  }
+
   return AudioEngine;
 }
 

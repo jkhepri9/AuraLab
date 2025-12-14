@@ -1,10 +1,10 @@
 // src/components/presets/PresetEditor.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Play, Square, ArrowLeft, Monitor } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 // ✅ Correct relative path from: src/components/presets -> src/audio
@@ -12,6 +12,9 @@ import { loadAmbientBuffer } from "../../audio/AmbientLoader";
 
 // ✅ Optional: show human label for ambient waveform
 import { getAmbientLabel } from "../../editor/effects/sourceDefs";
+
+// ✅ GLOBAL AMBIENT BOOST for preset preview
+const AMBIENT_GAIN_BOOST = 1.8;
 
 // --- NOISE HELPERS (noise layers only) ---
 function createNoiseBuffer(ctx, seconds = 2) {
@@ -33,6 +36,8 @@ export default function PresetEditor({
   autoPlay = false,
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const prevPathRef = useRef(location.pathname);
 
   const [name] = useState(initialPreset?.name || "Aura Mode");
   const [color] = useState(initialPreset?.color || "#10b981");
@@ -75,26 +80,6 @@ export default function PresetEditor({
   // Cache decoded ambient WAV buffers across play/stop cycles
   const ambientCacheRef = useRef(new Map());
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => stopAudio(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // AutoPlay
-  useEffect(() => {
-    if (initialPreset && autoPlay && !isPlaying) {
-      startAudio(); // fine to fire-and-forget; user gesture may be required
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialPreset, autoPlay]);
-
-  // Update only mix parameters live (pan/volume)
-  useEffect(() => {
-    if (isPlaying) updateAudioParams();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layers]);
-
   const ensureCtx = async () => {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext ||
@@ -106,10 +91,45 @@ export default function PresetEditor({
     return audioContextRef.current;
   };
 
+  // Stops nodes. If fully=true, also updates UI state.
+  const stopAudio = useCallback((fully = true) => {
+    nodesRef.current.forEach((node) => {
+      try {
+        node.source?.stop?.();
+      } catch {}
+      try {
+        node.source?.disconnect?.();
+      } catch {}
+      try {
+        node.gain?.disconnect?.();
+      } catch {}
+      try {
+        node.panner?.disconnect?.();
+      } catch {}
+    });
+    nodesRef.current.clear();
+    if (fully) setIsPlaying(false);
+  }, []);
+
+  // HARD STOP: stop nodes + CLOSE AudioContext
+  // This prevents “ghost audio” when navigation doesn’t unmount, especially on iOS.
+  const hardStop = useCallback(async () => {
+    stopAudio(true);
+
+    const ctx = audioContextRef.current;
+    audioContextRef.current = null;
+
+    if (ctx) {
+      try {
+        await ctx.close();
+      } catch {}
+    }
+  }, [stopAudio]);
+
   const startAudio = async () => {
     const ctx = await ensureCtx();
 
-    // Stop current nodes but keep context alive
+    // Stop current nodes but keep context alive for immediate restart
     stopAudio(false);
 
     for (const layer of layers) {
@@ -118,7 +138,11 @@ export default function PresetEditor({
       const gain = ctx.createGain();
       const panner = ctx.createStereoPanner();
 
-      gain.gain.value = safeNum(layer.volume, 0.5);
+      const baseVol = safeNum(layer.volume, 0.5);
+      const effectiveVol =
+        layer.type === "ambient" ? baseVol * AMBIENT_GAIN_BOOST : baseVol;
+
+      gain.gain.value = effectiveVol;
       panner.pan.value = safeNum(layer.pan, 0);
 
       gain.connect(panner);
@@ -155,7 +179,7 @@ export default function PresetEditor({
         source.start();
       }
 
-      // ✅ AMBIENT (REAL WAV) — uses the SAME ctx as playback
+      // ✅ AMBIENT (REAL WAV) — uses SAME ctx as playback
       else if (layer.type === "ambient") {
         const buffer = await loadAmbientBuffer(
           layer.waveform,
@@ -179,22 +203,6 @@ export default function PresetEditor({
     setIsPlaying(true);
   };
 
-  const stopAudio = (fully = true) => {
-    nodesRef.current.forEach((node) => {
-      try {
-        node.source?.stop?.();
-      } catch {}
-      try {
-        node.gain?.disconnect?.();
-      } catch {}
-      try {
-        node.panner?.disconnect?.();
-      } catch {}
-    });
-    nodesRef.current.clear();
-    if (fully) setIsPlaying(false);
-  };
-
   const updateAudioParams = () => {
     const ctx = audioContextRef.current;
     if (!ctx) return;
@@ -204,17 +212,23 @@ export default function PresetEditor({
       const node = nodesRef.current.get(layer.id);
       if (!node) continue;
 
-      const vol = safeNum(layer.volume, 0.5);
+      const baseVol = safeNum(layer.volume, 0.5);
+      const effectiveVol =
+        layer.type === "ambient" ? baseVol * AMBIENT_GAIN_BOOST : baseVol;
+
       const pan = safeNum(layer.pan, 0);
 
-      node.gain.gain.setTargetAtTime(vol, now, 0.05);
+      node.gain.gain.setTargetAtTime(effectiveVol, now, 0.05);
       node.panner.pan.setTargetAtTime(pan, now, 0.05);
     }
   };
 
   const togglePlay = async () => {
-    if (isPlaying) stopAudio(true);
-    else await startAudio();
+    if (isPlaying) {
+      await hardStop();
+    } else {
+      await startAudio();
+    }
   };
 
   // HARD LOCK: only allow volume + pan changes
@@ -232,6 +246,50 @@ export default function PresetEditor({
     if (layer?.type === "ambient") return getAmbientLabel(layer.waveform);
     return layer?.type || "";
   };
+
+  // ✅ If user adjusts sliders while playing, update mix
+  useEffect(() => {
+    if (isPlaying) updateAudioParams();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers]);
+
+  // ✅ Autoplay
+  useEffect(() => {
+    if (initialPreset && autoPlay && !isPlaying) {
+      startAudio();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPreset, autoPlay]);
+
+  // ✅ Stop audio if route/path changes (covers “leave page” without unmount)
+  useEffect(() => {
+    const prev = prevPathRef.current;
+    if (prev && prev !== location.pathname) {
+      hardStop();
+    }
+    prevPathRef.current = location.pathname;
+  }, [location.pathname, hardStop]);
+
+  // ✅ Stop audio on tab hide / pagehide / unload (critical for mobile Safari)
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === "hidden") hardStop();
+    };
+    const onPageHide = () => hardStop();
+    const onBeforeUnload = () => hardStop();
+
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    // Cleanup: always hard stop (works whether unmount happens or not)
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      hardStop();
+    };
+  }, [hardStop]);
 
   return (
     <div className="relative w-full overflow-hidden rounded-3xl border border-white/10">
@@ -258,8 +316,8 @@ export default function PresetEditor({
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
           <Button
             variant="ghost"
-            onClick={() => {
-              stopAudio(true);
+            onClick={async () => {
+              await hardStop();
               onCancel?.();
             }}
             className="text-gray-400 hover:text-white shrink-0"
@@ -276,8 +334,8 @@ export default function PresetEditor({
             </div>
 
             <Button
-              onClick={() => {
-                stopAudio(true);
+              onClick={async () => {
+                await hardStop();
                 navigate("/AuraEditor", {
                   state: { preset: { name, color, layers, id: initialPreset?.id } },
                 });
@@ -325,9 +383,7 @@ export default function PresetEditor({
                     <div className="flex gap-2 items-center">
                       <Slider
                         value={[safeNum(layer.volume, 0.5)]}
-                        onValueChange={(v) =>
-                          updateLayer(layer.id, "volume", v[0])
-                        }
+                        onValueChange={(v) => updateLayer(layer.id, "volume", v[0])}
                         max={1}
                         step={0.01}
                         className="flex-1"

@@ -61,14 +61,32 @@ async function decodeArrayBuffer(ctx, arrayBuffer) {
  * Load an ambient AudioBuffer by waveform key (e.g. "ocean_soft").
  * IMPORTANT: decode using the SAME AudioContext that will play it.
  *
- * @param {string} waveform
- * @param {Map<string, AudioBuffer|Promise<AudioBuffer|null>>} cache
- * @param {AudioContext} ctx
+ * Supports BOTH signatures:
+ *  1) loadAmbientBuffer(ctx, waveform, cache)
+ *  2) loadAmbientBuffer(waveform, cache, ctx)
+ *
  * @returns {Promise<AudioBuffer|null>}
  */
-export async function loadAmbientBuffer(waveform, cache = new Map(), ctx) {
+export async function loadAmbientBuffer(a, b, c) {
+  let ctx, waveform, cache;
+
+  // Signature 1: (ctx, waveform, cache)
+  if (a && typeof a.decodeAudioData === "function") {
+    ctx = a;
+    waveform = b;
+    cache = c;
+  } else {
+    // Signature 2: (waveform, cache, ctx)
+    waveform = a;
+    cache = b;
+    ctx = c;
+  }
+
+  if (!ctx) return null;
+  if (!cache) cache = new Map();
+
   const url = resolveAmbientUrl(waveform);
-  if (!url || !ctx) return null;
+  if (!url) return null;
 
   // Cache hit (buffer or in-flight promise)
   if (cache.has(waveform)) {
@@ -87,6 +105,7 @@ export async function loadAmbientBuffer(waveform, cache = new Map(), ctx) {
     return buffer || null;
   })();
 
+  // store in-flight promise
   cache.set(waveform, p);
 
   const out = await p;
