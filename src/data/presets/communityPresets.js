@@ -24,7 +24,7 @@ export const communityPresets = [
     name: "Stress Relief",
     color: "linear-gradient(135deg, #071a14, #0b3a2a)",
     imageUrl:
-      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=2400&auto=format&fit=crop",
+      "/modeimages/stressrelief.jpg",
     description: "Helps calm the nervous system and reduce stress for relaxed focus.",
     layers: [
       { id: "sr_l", name: "Binaural L (200 Hz)", type: "oscillator", frequency: 200, volume: 0.13, pan: -1, waveform: "sine", enabled: true },
@@ -75,7 +75,7 @@ export const communityPresets = [
     name: "Golden Ratio",
     color: "linear-gradient(135deg, #0b1a12, #2a5a3a)",
     imageUrl:
-      "https://images.unsplash.com/photo-1547926179-883a93c78096?q=80&w=2400&auto=format&fit=crop",
+      "/modeimages/goldenratio.png",
     description: "Supports calm coherence and creative flow using phi/Fibonacci-inspired harmonics.",
     layers: [
       { id: "gr_161", name: "Phi Center (161.8 Hz)", type: "oscillator", frequency: 161.8, volume: 0.08, pan: 0, waveform: "sine", enabled: true },
@@ -88,12 +88,13 @@ export const communityPresets = [
     order: 104,
   },
 
+  // ✅ YOU SAID DO NOT CHANGE THIS ONE
   {
     id: "c_third_eye",
     name: "Third Eye",
     color: "linear-gradient(135deg, #120a2a, #183a6a)",
     imageUrl:
-      "https://images.unsplash.com/photo-1519682577862-22b62b24e493?q=80&w=2400&auto=format&fit=crop",
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Ajna_chakra.svg?width=2400",
     description: "Supports meditative focus and inner visualization with theta-style entrainment.",
     layers: [
       { id: "te_l", name: "Binaural L (210 Hz)", type: "oscillator", frequency: 210, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
@@ -109,8 +110,7 @@ export const communityPresets = [
     id: "c_genius_mode",
     name: "Genius Mode",
     color: "linear-gradient(135deg, #041329, #0a3a5a)",
-    imageUrl:
-      "https://images.unsplash.com/photo-1526378722484-bd91ca387e72?q=80&w=2400&auto=format&fit=crop",
+    imageUrl: "/modeimages/geniusmode.jpg",
     description: "Boosts concentration and task-drive using a crisp beta-style entrainment bed.",
     layers: [
       { id: "gm_l", name: "Binaural L (200 Hz)", type: "oscillator", frequency: 200, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
@@ -126,8 +126,7 @@ export const communityPresets = [
     id: "c_master_musician",
     name: "Master Musician",
     color: "linear-gradient(135deg, #1a0a00, #5a1a00)",
-    imageUrl:
-      "https://images.unsplash.com/photo-1546410531-d8527a051d95?q=80&w=2400&auto=format&fit=crop",
+    imageUrl: "/modeimages/mastermusician.jpg",
     description: "Supports musical flow-state, timing, and relaxed precision for practice sessions.",
     layers: [
       { id: "mm_l", name: "Binaural L (220 Hz)", type: "oscillator", frequency: 220, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
@@ -143,8 +142,7 @@ export const communityPresets = [
     id: "c_wealth_abundance",
     name: "Wealth & Abundance",
     color: "linear-gradient(135deg, #1a1200, #5a4a00)",
-    imageUrl:
-      "https://images.unsplash.com/photo-1516627145497-ae6968895b74?q=80&w=2400&auto=format&fit=crop",
+    imageUrl: "/modeimages/wealthabundance.jpg",
     description: "Supports calm confidence and long-horizon thinking for disciplined abundance.",
     layers: [
       { id: "wa_l", name: "Binaural L (200 Hz)", type: "oscillator", frequency: 200, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
@@ -156,12 +154,13 @@ export const communityPresets = [
     order: 108,
   },
 
+  // ✅ YOU SAID DO NOT CHANGE THIS ONE
   {
     id: "c_earth_frequency",
     name: "Earth Frequency",
     color: "linear-gradient(135deg, #07130a, #1f3a20)",
     imageUrl:
-      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=2400&auto=format&fit=crop",
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Earth_from_Space.jpg?width=2400",
     description: "Promotes grounding and steady calm using a Schumann-style binaural profile.",
     layers: [
       { id: "ef_l", name: "Binaural L (200 Hz)", type: "oscillator", frequency: 200, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
