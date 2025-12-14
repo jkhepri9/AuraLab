@@ -92,10 +92,12 @@ export default function Home() {
             className="relative z-10"
           >
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-              Choose a Mode. Start Now.
+              Enter the Lab. Shift Your State.
             </h1>
             <p className="mt-2 text-sm sm:text-base text-gray-400 max-w-2xl">
-              Sleep, focus, calm, energy — one tap to enter a state. Studio is here when you want full control.
+              Sleep. Focus. Calm. Energy. Each Mode is a crafted resonance field: real frequencies layered with
+              nature ambience and noise texture. One tap to attune. Studio is where you sculpt your own sonic
+              architecture.
             </p>
 
             {/* One-time Home install banner */}
@@ -187,7 +189,8 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Bigger, squarer featured cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             {quickModes.map((m) => {
               const Icon = m.icon;
               const meta = presetMetaById.get(m.id);
@@ -197,7 +200,7 @@ export default function Home() {
 
               return (
                 <Link key={m.id} to={`${modesUrl}?activate=${encodeURIComponent(m.id)}`} className="group">
-                  <div className="relative p-4 rounded-3xl border border-white/10 hover:border-emerald-500/40 transition-all overflow-hidden bg-black/40">
+                  <div className="relative aspect-square p-5 sm:p-6 rounded-2xl border border-white/10 hover:border-emerald-500/40 transition-all overflow-hidden bg-black/40">
                     {/* Background image */}
                     {bgImage && (
                       <div
@@ -221,20 +224,26 @@ export default function Home() {
                     <div className="absolute inset-0 bg-black/55 group-hover:bg-black/45 transition-colors" />
 
                     {/* Content */}
-                    <div className="relative flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
-                          <Icon className="w-5 h-5 text-white/90" />
+                    <div className="relative h-full flex flex-col justify-between">
+                      {/* Top row */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
+                          <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-white/90" />
                         </div>
 
-                        <div className="min-w-0">
-                          <div className="text-white font-extrabold truncate">{m.title}</div>
-                          <div className="text-xs text-white/70 truncate">{m.subtitle}</div>
+                        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/15 transition-colors shrink-0">
+                          <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-white/80 group-hover:text-white" />
                         </div>
                       </div>
 
-                      <div className="w-9 h-9 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/15 transition-colors shrink-0">
-                        <ArrowRight className="w-4 h-4 text-white/80 group-hover:text-white" />
+                      {/* Bottom copy */}
+                      <div className="min-w-0">
+                        <div className="text-white text-base sm:text-lg font-extrabold leading-tight">
+                          {m.title}
+                        </div>
+                        <div className="mt-1 text-xs sm:text-sm text-white/70 leading-snug line-clamp-2">
+                          {m.subtitle}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -242,32 +251,6 @@ export default function Home() {
               );
             })}
           </div>
-        </section>
-
-        <section className="grid md:grid-cols-3 gap-3">
-          <Link to={modesUrl} className="group md:col-span-1">
-            <div className="h-full p-5 rounded-3xl bg-gradient-to-br from-gray-900 to-black border border-white/10 hover:border-amber-500/40 transition-colors">
-              <div className="text-white font-bold">Aura Modes</div>
-              <div className="mt-1 text-xs text-gray-400">
-                Curated presets built for states: sleep, focus, calm, energy.
-              </div>
-              <div className="mt-3 text-xs font-semibold text-amber-400 group-hover:text-amber-300 transition-colors">
-                Open Modes →
-              </div>
-            </div>
-          </Link>
-
-          <Link to={studioUrl} className="group md:col-span-2">
-            <div className="h-full p-5 rounded-3xl bg-gradient-to-br from-gray-900 to-black border border-white/10 hover:border-emerald-500/40 transition-colors">
-              <div className="text-white font-bold">Aura Studio</div>
-              <div className="mt-1 text-xs text-gray-400">
-                Layer synth, noise, ambience, effects — build and save your own field architecture.
-              </div>
-              <div className="mt-3 text-xs font-semibold text-emerald-400 group-hover:text-emerald-300 transition-colors">
-                Open Studio →
-              </div>
-            </div>
-          </Link>
         </section>
       </div>
     </div>
