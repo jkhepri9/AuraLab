@@ -52,7 +52,7 @@ export const communityPresets = [
     name: "Pain Relief",
     color: "linear-gradient(135deg, #120b18, #2a1b3a)",
     imageUrl:
-      "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2400&auto=format&fit=crop",
+      "/modeimages/painrelief.jpg",
     description: "Promotes deep relaxation to help reduce tension and discomfort perception.",
     layers: [
       // Popular “pain relief” tone: 174 Hz, with a gentle low-offset beat
@@ -73,7 +73,7 @@ export const communityPresets = [
     name: "Stargate",
     color: "linear-gradient(135deg, #06071a, #2b0b3a)",
     imageUrl:
-      "https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?q=80&w=2400&auto=format&fit=crop",
+      "/modeimages/stargate.jpg",
     description: "Energizes attention and clarity with a bright, high-focus entrainment profile.",
     layers: [
       // Bright “portal” bed: 963 anchor with a subtle offset, plus an audible 432 stabilizer
@@ -206,7 +206,7 @@ export const communityPresets = [
       { id: "ef_55", name: "Sub (55 Hz)", type: "oscillator", frequency: 55, volume: 0.03, pan: 0, waveform: "sine", enabled: true },
     ],
     order: 109,
-  },
-];
-
+  }
+]
+  
 export default communityPresets;
