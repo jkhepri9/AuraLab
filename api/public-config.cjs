@@ -1,4 +1,4 @@
-// api/public-config.js
+// api/public-config.cjs
 module.exports = (req, res) => {
   try {
     const supabaseUrl =
@@ -16,7 +16,6 @@ module.exports = (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     res.end(JSON.stringify({ supabaseUrl, supabaseAnonKey }));
   } catch (e) {
-    // Never return HTML. Never throw.
     res.statusCode = 200;
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Cache-Control", "no-store");

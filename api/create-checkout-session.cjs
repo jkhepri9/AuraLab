@@ -1,4 +1,4 @@
-// api/create-checkout-session.js
+// api/create-checkout-session.cjs
 const Stripe = require("stripe");
 
 function json(res, code, payload) {

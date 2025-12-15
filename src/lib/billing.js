@@ -1,6 +1,6 @@
 // src/lib/billing.js
 export async function startCheckout(plan = "monthly", { userId = null, email = null } = {}) {
-  const res = await fetch("/api/create-checkout-session", {
+  const res = await fetch("/api/create-checkout-session.cjs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ plan, userId, email }),
@@ -8,7 +8,6 @@ export async function startCheckout(plan = "monthly", { userId = null, email = n
 
   const ct = res.headers.get("content-type") || "";
   const isJson = ct.includes("application/json");
-
   const data = isJson ? await res.json().catch(() => null) : null;
 
   if (!res.ok) {

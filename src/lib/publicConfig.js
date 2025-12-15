@@ -4,9 +4,15 @@ let cached = null;
 export async function loadPublicConfig() {
   if (cached) return cached;
 
+  const tryFetch = async (url) => {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  };
+
   try {
-    const res = await fetch("/api/public-config", { cache: "no-store" });
-    const data = await res.json();
+    // Call the .cjs endpoint explicitly
+    const data = await tryFetch("/api/public-config.cjs");
 
     cached = {
       supabaseUrl: data?.supabaseUrl || "",
