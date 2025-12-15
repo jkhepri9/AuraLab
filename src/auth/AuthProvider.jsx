@@ -1,6 +1,6 @@
 // src/auth/AuthProvider.jsx
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 
 const AuthContext = createContext(null);
 
@@ -9,6 +9,13 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // If Supabase isn’t configured, don’t crash the app.
+    if (!isSupabaseConfigured || !supabase) {
+      setSession(null);
+      setLoading(false);
+      return;
+    }
+
     let mounted = true;
 
     supabase.auth.getSession().then(({ data }) => {
@@ -30,7 +37,7 @@ export function AuthProvider({ children }) {
 
   const value = useMemo(() => {
     const user = session?.user ?? null;
-    return { session, user, loading };
+    return { session, user, loading, isSupabaseConfigured };
   }, [session, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
