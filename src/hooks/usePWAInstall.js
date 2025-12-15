@@ -3,6 +3,24 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 // Shared reference (persists across hook instances)
 let deferredPromptEvent = null;
 
+// Persisted flag so the CTA stays hidden for a user who already installed.
+// Chrome may stop firing `beforeinstallprompt` after install; this keeps UI consistent.
+const INSTALLED_KEY = 'auralab_pwa_installed';
+
+function readInstalledFlag() {
+  try {
+    return localStorage.getItem(INSTALLED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeInstalledFlag() {
+  try {
+    localStorage.setItem(INSTALLED_KEY, '1');
+  } catch {}
+}
+
 function detectIOS() {
   if (typeof window === 'undefined') return false;
   const ua = window.navigator.userAgent || '';
@@ -25,13 +43,13 @@ function detectStandalone() {
  * - Hides CTA when already installed
  */
 export default function usePWAInstall() {
-  const [isInstalled, setIsInstalled] = useState(() => detectStandalone());
+  const [isInstalled, setIsInstalled] = useState(() => detectStandalone() || readInstalledFlag());
   const [isInstallable, setIsInstallable] = useState(() => Boolean(deferredPromptEvent));
   const isIOS = useMemo(() => detectIOS(), []);
 
   useEffect(() => {
     // Some platforms only update display-mode after a reload; keep it fresh.
-    const onVisibility = () => setIsInstalled(detectStandalone());
+    const onVisibility = () => setIsInstalled(detectStandalone() || readInstalledFlag());
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, []);
@@ -50,6 +68,7 @@ export default function usePWAInstall() {
       window.deferredPrompt = null;
       setIsInstallable(false);
       setIsInstalled(true);
+      writeInstalledFlag();
     };
 
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
@@ -73,6 +92,7 @@ export default function usePWAInstall() {
 
     if (choiceResult?.outcome === 'accepted') {
       setIsInstalled(true);
+      writeInstalledFlag();
     }
 
     return choiceResult;

@@ -20,6 +20,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { canShowInstall, isInstallable, promptInstall } = usePWAInstall();
+  const isHome = location.pathname === '/';
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
   const toggleMobileMenu = () => setMobileMenuOpen((v) => !v);
@@ -181,7 +182,7 @@ export default function Navbar() {
             })}
 
             {/* Top-right Install button */}
-            {canShowInstall && (
+            {isHome && canShowInstall && (
               <button
                 type="button"
                 onClick={async () => {
@@ -206,16 +207,44 @@ export default function Navbar() {
             )}
           </nav>
 
-          {/* Mobile hamburger */}
-          <button
-            type="button"
-            onClick={toggleMobileMenu}
-            className="md:hidden text-white hover:text-emerald-400 transition-colors"
-            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={mobileMenuOpen}
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          {/* Mobile actions */}
+          <div className="md:hidden flex items-center gap-2">
+            {/* Mobile install button (visible on Home only) */}
+            {isHome && canShowInstall && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (isInstallable) {
+                    await promptInstall();
+                  } else {
+                    navigate('/Install');
+                  }
+                }}
+                aria-label="Install AuraLab"
+                className="
+                  inline-flex items-center justify-center
+                  w-10 h-10 rounded-2xl
+                  bg-white/10 hover:bg-white/15
+                  border border-white/10
+                  text-white
+                  transition-all
+                "
+              >
+                <Download className="w-5 h-5 text-emerald-400" />
+              </button>
+            )}
+
+            {/* Mobile hamburger */}
+            <button
+              type="button"
+              onClick={toggleMobileMenu}
+              className="text-white hover:text-emerald-400 transition-colors"
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
       </header>
 

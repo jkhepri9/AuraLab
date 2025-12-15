@@ -119,7 +119,9 @@ export default function Home() {
 
   const [installBannerDismissed, setInstallBannerDismissed] = useState(() => {
     try {
-      return localStorage.getItem('auralab_install_banner_dismissed') === '1';
+      // Session-level dismissal: we want new users to always see the CTA,
+      // but allow hiding it for the current session.
+      return sessionStorage.getItem('auralab_install_banner_dismissed') === '1';
     } catch {
       return false;
     }
@@ -133,7 +135,7 @@ export default function Home() {
   const dismissInstallBanner = () => {
     setInstallBannerDismissed(true);
     try {
-      localStorage.setItem('auralab_install_banner_dismissed', '1');
+      sessionStorage.setItem('auralab_install_banner_dismissed', '1');
     } catch {}
   };
 
