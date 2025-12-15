@@ -2,12 +2,11 @@
 // -----------------------------------------------------------------------------
 // AURA LAB — AURA STUDIO (AuraEditor)
 // -----------------------------------------------------------------------------
-// FIXES IN THIS PATCH (SESSION WORK + DUPLICATE LAYER + LIVE UPDATES):
+// FIXES IN THIS PATCH (SESSION WORK + STICKY NAV IN Layout.jsx):
 // 1) Studio work persists across page navigation within the same app session.
 //    - Stored in sessionStorage (clears automatically when the tab/app is closed).
 //    - Restored when user returns to Aura Studio.
 // 2) Live layer updates remain enabled (volume/filter/pulse update instantly).
-// 3) Adds per-layer Duplicate support via LayerList -> LayerItem.
 // -----------------------------------------------------------------------------
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -53,6 +52,13 @@ export default function AuraEditor() {
   const [reverbWet, setReverbWet] = useState(0);
   const [delayWet, setDelayWet] = useState(0);
   const [delayTime, setDelayTime] = useState(0.5);
+
+  // ----------------------------
+  // EXPORT (WAV)
+  // ----------------------------
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportMinutes, setExportMinutes] = useState(10);
+  const [exporting, setExporting] = useState(false);
 
   // ----------------------------
   // AUDIO ENGINE (GLOBAL)
@@ -181,6 +187,8 @@ export default function AuraEditor() {
   // Establish baseline after first stable render (including session restore)
   useEffect(() => {
     if (readyForDirtyRef.current) return;
+    // After mount + any restore state updates have applied, set the baseline once.
+    // We allow a microtask to avoid capturing intermediate state.
     const id = window.setTimeout(() => {
       baselineRef.current = snapshot;
       readyForDirtyRef.current = true;
@@ -360,10 +368,9 @@ export default function AuraEditor() {
       // Deep clone: structuredClone if available, otherwise JSON fallback.
       let copy;
       try {
-        copy =
-          typeof structuredClone === "function"
-            ? structuredClone(original)
-            : JSON.parse(JSON.stringify(original));
+        copy = typeof structuredClone === "function"
+          ? structuredClone(original)
+          : JSON.parse(JSON.stringify(original));
       } catch {
         copy = { ...original };
       }
@@ -395,6 +402,7 @@ export default function AuraEditor() {
     });
   };
 
+
   const deleteLayer = (id) => {
     setLayers((prev) => {
       const next = prev.filter((l) => l.id !== id);
@@ -409,26 +417,44 @@ export default function AuraEditor() {
   // ----------------------------
   // EXPORT WAV
   // ----------------------------
-  const handleExportWAV = async () => {
+  const openExport = () => setExportOpen(true);
+
+  const doExport = async (minutes) => {
     if (!player?.engine) return;
 
-    if (typeof player.engine.render !== "function") {
-      toast.error("Export is not enabled yet in this build.");
+    const secs = Math.max(60, Math.min(20 * 60, Number(minutes) * 60 || 10 * 60));
+
+    if (typeof player.engine.renderWav !== "function") {
+      toast.error("Export engine is missing (renderWav). Apply patch v9 AudioEngine.js.");
       return;
     }
 
     try {
-      toast("Rendering audio…");
-      const blob = await player.engine.render(layers, duration);
+      setExporting(true);
+      toast("Rendering WAV… (this can take a bit)");
+
+      const blob = await player.engine.renderWav(layers, secs, {
+        reverbWet,
+        delayWet,
+        delayTime,
+      });
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${projectName.replace(/\s+/g, "_")}.wav`;
+      const safe = (projectName || "Aura_Studio").replace(/\s+/g, "_");
+      a.download = `${safe}_${Math.round(secs / 60)}min.wav`;
+      document.body.appendChild(a);
       a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
       toast.success("Exported WAV successfully!");
     } catch (e) {
       console.error(e);
       toast.error("Export failed.");
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -451,13 +477,14 @@ export default function AuraEditor() {
 
         <div className="flex items-center gap-2">
           <Button
-            onClick={handleExportWAV}
+            onClick={openExport}
             variant="outline"
             size="sm"
             className="gap-2 border-white/10 text-gray-400 hover:text-white"
+            disabled={exporting}
           >
             <Download className="w-4 h-4" />
-            Export WAV
+            {exporting ? "Exporting…" : "Export WAV"}
           </Button>
 
           <Button
@@ -496,7 +523,12 @@ export default function AuraEditor() {
           />
 
           <div className="flex-1 min-h-0">
-            <Timeline layers={layers} currentTime={currentTime} duration={duration} isPlaying={isPlaying} />
+            <Timeline
+              layers={layers}
+              currentTime={currentTime}
+              duration={duration}
+              isPlaying={isPlaying}
+            />
           </div>
         </div>
 
@@ -523,6 +555,82 @@ export default function AuraEditor() {
           }}
         />
       </div>
+
+      {/* EXPORT MODAL */}
+      {exportOpen ? (
+        <div
+          className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 backdrop-blur-[2px]"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={() => {
+            if (!exporting) setExportOpen(false);
+          }}
+        >
+          <div
+            className="w-[92vw] max-w-md rounded-xl border border-white/10 bg-[#0a0a0a] shadow-xl p-4"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-sm font-semibold text-white">Export WAV</div>
+                <div className="text-xs text-white/55 mt-1">
+                  Choose a length to render. This exports the current Studio mix (layers + FX).
+                </div>
+              </div>
+              <button
+                type="button"
+                className="text-white/50 hover:text-white/80"
+                onClick={() => {
+                  if (!exporting) setExportOpen(false);
+                }}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {[5, 10, 15, 20].map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  disabled={exporting}
+                  onClick={() => setExportMinutes(m)}
+                  className={
+                    "h-10 rounded-lg border text-sm transition " +
+                    (exportMinutes === m
+                      ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200"
+                      : "border-white/10 bg-white/5 text-white/75 hover:bg-white/10")
+                  }
+                >
+                  {m} minutes
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                className="border-white/10 text-white/70 hover:text-white"
+                disabled={exporting}
+                onClick={() => setExportOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-emerald-500 hover:bg-emerald-600 text-black"
+                disabled={exporting}
+                onClick={async () => {
+                  setExportOpen(false);
+                  await doExport(exportMinutes);
+                }}
+              >
+                Export {exportMinutes} min
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

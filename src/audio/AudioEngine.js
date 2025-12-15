@@ -1,18 +1,26 @@
+
 // src/audio/AudioEngine.js
 // -----------------------------------------------------------------------------
-// AURA LAB — RELIABLE WEB AUDIO ENGINE (WITH LIVE FX + LIVE PULSE)
+// AURA LAB — RELIABLE WEB AUDIO ENGINE (WITH LIVE FX)
 // -----------------------------------------------------------------------------
 // What this fixes:
-// 1) Aura Studio Pulse (LFO) had no audible effect because it was never wired
-//    into the per-layer gain path.
-// 2) Volume/filter changes in Aura Studio were not being pushed to the engine
-//    while playing (handled in AuraEditor.jsx in this patch).
+// - Aura Studio Reverb/Delay sliders were updating UI state but not audibly
+//   affecting the mix because the FX nodes were either missing or not wired
+//   into the audio graph.
+// - This build creates a proper insert-style FX chain:
 //
-// This build includes:
-// - Always-audible output via ctx.destination.
-// - Live FX chain (Delay + Reverb) wired into the graph.
-// - Live Pulse (LFO) per layer, modulating amplitude.
-// - Run token cancellation for async ambient loads.
+//   [SUM MIX] -> [Delay Dry/Wet] -> [Reverb Dry/Wet] -> [Analyser] -> [Output]
+//
+// API exposed (used by AuraEditor):
+//   - setReverb(wet0to1)
+//   - setDelayWet(wet0to1)
+//   - setDelayTime(seconds)
+//   - setDelayFeedback(value0to0_95)  (optional)
+//
+// Reliability requirements preserved:
+// - Always connect to ctx.destination for audible output.
+// - Optional MediaStreamDestination + hidden <audio> is best-effort only.
+// - Cancel stale async work (ambient loads) with a run token.
 // - Ambient decode failures are non-fatal (other layers still play).
 // -----------------------------------------------------------------------------
 
@@ -42,6 +50,78 @@ function clamp(v, min, max) {
   const n = typeof v === "number" ? v : Number(v);
   if (Number.isNaN(n)) return min;
   return Math.min(max, Math.max(min, n));
+}
+
+// -----------------------------------------------------------------------------
+// OFFLINE RENDER HELPERS (WAV EXPORT)
+// -----------------------------------------------------------------------------
+function impulseForContext(ctx, durationSec = 2.0, decay = 2.0) {
+  const rate = ctx.sampleRate || 44100;
+  const len = Math.max(1, Math.floor(rate * durationSec));
+  const buf = ctx.createBuffer(2, len, rate);
+
+  for (let c = 0; c < 2; c++) {
+    const ch = buf.getChannelData(c);
+    for (let i = 0; i < len; i++) {
+      ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+    }
+  }
+
+  return buf;
+}
+
+function audioBufferToWavBlob(audioBuffer) {
+  const numChannels = audioBuffer.numberOfChannels;
+  const sampleRate = audioBuffer.sampleRate;
+  const numFrames = audioBuffer.length;
+
+  const bytesPerSample = 2; // 16-bit PCM
+  const blockAlign = numChannels * bytesPerSample;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = numFrames * blockAlign;
+
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  const writeString = (offset, str) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  };
+
+  // RIFF header
+  writeString(0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, "WAVE");
+
+  // fmt chunk
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true); // PCM
+  view.setUint16(20, 1, true);  // format
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, 16, true); // bits
+
+  // data chunk
+  writeString(36, "data");
+  view.setUint32(40, dataSize, true);
+
+  // Interleave channels
+  const channels = [];
+  for (let c = 0; c < numChannels; c++) channels.push(audioBuffer.getChannelData(c));
+
+  let offset = 44;
+  for (let i = 0; i < numFrames; i++) {
+    for (let c = 0; c < numChannels; c++) {
+      let sample = channels[c][i];
+      sample = Math.max(-1, Math.min(1, sample));
+      // Convert float [-1..1] to int16
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      offset += 2;
+    }
+  }
+
+  return new Blob([buffer], { type: "audio/wav" });
 }
 
 class AudioEngineClass {
@@ -493,6 +573,8 @@ class AudioEngineClass {
   }
 
   // ---------------------------------------------------------------------------
+  
+  // ---------------------------------------------------------------------------
   // PULSE (LFO) — live tremolo/gating per layer
   // ---------------------------------------------------------------------------
   _syncPulse(group, layer) {
@@ -557,8 +639,7 @@ class AudioEngineClass {
     group.pulse = null;
   }
 
-  // ---------------------------------------------------------------------------
-  // GRAPH BUILD (run-safe, non-fatal per layer)
+// GRAPH BUILD (run-safe, non-fatal per layer)
   // ---------------------------------------------------------------------------
   async _buildGraph(layers, runId) {
     if (!this._isRunActive(runId)) return;
@@ -613,7 +694,6 @@ class AudioEngineClass {
     const mult = engineType === "ambient" ? this.ambientGainBoost : 1.0;
     return base * mult;
   }
-
   _createCommonNodes(layer, engineType) {
     const ctx = this.ctx;
 
@@ -824,6 +904,209 @@ class AudioEngineClass {
         }
       }
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // OFFLINE EXPORT (WAV)
+  // ---------------------------------------------------------------------------
+  /**
+   * Render a layer stack to a downloadable WAV (16-bit PCM) using OfflineAudioContext.
+   * The render uses the same source engines (oscillator/noise/synth/ambient) and
+   * applies current Studio FX (delay/reverb) as supplied in options.
+   *
+   * @param {Array} layers
+   * @param {number} seconds
+   * @param {object} options
+   * @returns {Promise<Blob>}
+   */
+  async renderWav(layers, seconds, options = {}) {
+    const OfflineAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!OfflineAC) {
+      throw new Error("OfflineAudioContext is not supported in this browser.");
+    }
+
+    const secs = clamp(Number(seconds) || 0, 1, 60 * 60); // hard cap 60 minutes
+    const sampleRate = this.ctx?.sampleRate || 44100;
+    const length = Math.ceil(secs * sampleRate);
+    const ctx = new OfflineAC(2, length, sampleRate);
+
+    // -----------------------------------------------------------------------
+    // PRE-FX SUM BUS (all layers feed here)
+    // -----------------------------------------------------------------------
+    const mixIn = ctx.createGain();
+    mixIn.gain.value = 1.0;
+
+    // -----------------------------------------------------------------------
+    // DELAY (insert-style)
+    // -----------------------------------------------------------------------
+    const delayNode = ctx.createDelay(5.0);
+    delayNode.delayTime.value = clamp(
+      options.delayTime ?? this._fx.delayTime,
+      0.01,
+      5.0
+    );
+
+    const feedback = ctx.createGain();
+    feedback.gain.value = clamp(
+      options.delayFeedback ?? this._fx.delayFeedback,
+      0.0,
+      0.95
+    );
+
+    const dlDry = ctx.createGain();
+    const dlWet = ctx.createGain();
+    const delaySum = ctx.createGain();
+
+    const delayWet = clamp(options.delayWet ?? this._fx.delayWet, 0, 1);
+    dlDry.gain.value = 1 - delayWet;
+    dlWet.gain.value = delayWet;
+
+    mixIn.connect(dlDry);
+    mixIn.connect(delayNode);
+
+    delayNode.connect(feedback);
+    feedback.connect(delayNode);
+    delayNode.connect(dlWet);
+
+    dlDry.connect(delaySum);
+    dlWet.connect(delaySum);
+
+    // -----------------------------------------------------------------------
+    // REVERB (insert-style)
+    // -----------------------------------------------------------------------
+    const conv = ctx.createConvolver();
+    conv.buffer = impulseForContext(ctx, 2.0, 2.0);
+
+    const rvDry = ctx.createGain();
+    const rvWet = ctx.createGain();
+    const reverbSum = ctx.createGain();
+
+    const reverbWet = clamp(options.reverbWet ?? this._fx.reverbWet, 0, 1);
+    const wetGain = Math.min(3, reverbWet * 2.5);
+    rvDry.gain.value = 1 - reverbWet;
+    rvWet.gain.value = wetGain;
+
+    delaySum.connect(rvDry);
+    delaySum.connect(conv);
+    conv.connect(rvWet);
+
+    rvDry.connect(reverbSum);
+    rvWet.connect(reverbSum);
+
+    // Output
+    const out = ctx.createGain();
+    out.gain.value = 1.0;
+    reverbSum.connect(out);
+    out.connect(ctx.destination);
+
+    // -----------------------------------------------------------------------
+    // LAYERS (sources -> filter -> amp/pulse -> pan -> layerGain -> mixIn)
+    // -----------------------------------------------------------------------
+    const ambientCache = new Map();
+    const list = Array.isArray(layers) ? layers : [];
+
+    for (const layer of list) {
+      if (!layer || layer.enabled === false) continue;
+
+      const engineType = resolveType(layer.type);
+      const baseVol = clamp(layer.volume ?? 0.5, 0, 1);
+      const panVal = clamp(layer.pan ?? 0, -1, 1);
+
+      // Filter
+      const filter = ctx.createBiquadFilter();
+      const fEnabled = Boolean(layer.filterEnabled);
+      const fType = layer.filter?.type || "lowpass";
+      const fFreq = clamp(layer.filter?.frequency ?? 20000, 20, 20000);
+      const fQ = clamp(layer.filter?.Q ?? 1, 0.1, 18);
+      filter.type = fType;
+      filter.frequency.value = fEnabled ? fFreq : 20000;
+      filter.Q.value = fEnabled ? fQ : 0.7;
+
+      // Amp (volume + pulse)
+      const amp = ctx.createGain();
+      amp.gain.value = baseVol;
+
+      const pulseRate = clamp(layer.pulseRate ?? 0, 0, 40);
+      const pulseDepth = clamp(layer.pulseDepth ?? 0, 0, 1);
+      if (pulseRate > 0 && pulseDepth > 0) {
+        // Range: baseVol*(1-depth) -> baseVol*(1)
+        amp.gain.value = baseVol * (1 - pulseDepth / 2);
+        const lfo = ctx.createOscillator();
+        lfo.type = "sine";
+        lfo.frequency.value = pulseRate;
+
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.value = baseVol * (pulseDepth / 2);
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(amp.gain);
+        lfo.start(0);
+      }
+
+      // Pan
+      let panNode;
+      if (typeof ctx.createStereoPanner === "function") {
+        panNode = ctx.createStereoPanner();
+        panNode.pan.value = panVal;
+      } else {
+        // Fallback: no pan support
+        panNode = ctx.createGain();
+      }
+
+      // Layer gain (ambient boost)
+      const layerGain = ctx.createGain();
+      layerGain.gain.value = engineType === "ambient" ? this.ambientGainBoost : 1.0;
+
+      // Wire chain
+      filter.connect(amp);
+      amp.connect(panNode);
+      panNode.connect(layerGain);
+      layerGain.connect(mixIn);
+
+      // Create source
+      if (engineType === "oscillator") {
+        const osc = ctx.createOscillator();
+        osc.type = layer.waveform || "sine";
+        osc.frequency.value = clamp(layer.frequency ?? 432, 0, 24000);
+        osc.connect(filter);
+        osc.start(0);
+      }
+
+      if (engineType === "noise") {
+        const src = ctx.createBufferSource();
+        src.buffer = createNoiseBuffer(ctx, layer.waveform || "white");
+        src.loop = true;
+        src.connect(filter);
+        src.start(0);
+      }
+
+      if (engineType === "synth") {
+        // Synth graph starts its internal oscillators immediately.
+        createSynthGraph(ctx, layer.waveform ?? "analog", layer.frequency ?? 432, filter);
+      }
+
+      if (engineType === "ambient") {
+        const waveform = layer.waveform;
+        if (!waveform) continue;
+        let buffer = null;
+        try {
+          buffer = await loadAmbientBuffer(ctx, waveform, ambientCache);
+        } catch (e) {
+          console.warn("[AudioEngine] Offline ambient load failed:", e);
+          buffer = null;
+        }
+        if (!buffer) continue;
+
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        src.loop = true;
+        src.connect(filter);
+        src.start(0);
+      }
+    }
+
+    const rendered = await ctx.startRendering();
+    return audioBufferToWavBlob(rendered);
   }
 
   // ---------------------------------------------------------------------------

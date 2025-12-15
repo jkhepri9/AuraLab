@@ -7,6 +7,11 @@
 //  - delay sliders stable
 //  - always-safe numeric defaults
 // -------------------------------------------------------------
+//
+// MINOR UI PATCH:
+//  - Collapse Arrow moved to LEFT
+//  - "Effects" label moved to RIGHT
+// -------------------------------------------------------------
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -47,7 +52,7 @@ export default function EffectsPanel({
     return (
       <div
         className={cn(
-          "border-l border-white/10 bg-[#0d0d0d] flex flex-col items-center justify-center text-gray-600 transition-all duration-300",
+          "border-l border-white/10 bg-[#0d0d0d] flex flex-col items-center justify-center text-gray-600 transition-all duration-300 relative",
           collapsed ? "w-12" : "w-80"
         )}
       >
@@ -57,11 +62,14 @@ export default function EffectsPanel({
           </p>
         )}
 
+        {/* Collapse Arrow on LEFT */}
         <Button
           size="icon"
           variant="ghost"
           onClick={() => setCollapsed(!collapsed)}
-          className="absolute top-2 right-2 h-8 w-8"
+          className="absolute top-2 left-2 h-8 w-8"
+          aria-label={collapsed ? "Expand effects panel" : "Collapse effects panel"}
+          title={collapsed ? "Expand" : "Collapse"}
         >
           {collapsed ? <ChevronLeft /> : <ChevronRight />}
         </Button>
@@ -81,26 +89,29 @@ export default function EffectsPanel({
     >
       {/* HEADER */}
       <div className="h-12 border-b border-white/10 flex items-center justify-between px-3 shrink-0">
-        {!collapsed && (
-          <span className="text-xs font-bold text-gray-500 uppercase">
-            Effects
-          </span>
-        )}
-
+        {/* Collapse Arrow on LEFT */}
         <Button
           size="icon"
           variant="ghost"
           className="h-8 w-8"
           onClick={() => setCollapsed(!collapsed)}
+          aria-label={collapsed ? "Expand effects panel" : "Collapse effects panel"}
+          title={collapsed ? "Expand" : "Collapse"}
         >
           {collapsed ? <ChevronLeft /> : <ChevronRight />}
         </Button>
+
+        {/* "Effects" label on RIGHT */}
+        {!collapsed && (
+          <span className="text-xs font-bold text-gray-500 uppercase">
+            Effects
+          </span>
+        )}
       </div>
 
       {/* CONTENT */}
       {!collapsed && (
         <div className="p-6 space-y-6">
-
           {/* LAYER TITLE */}
           <div>
             <h3 className="text-lg font-bold text-white mb-1">
@@ -113,28 +124,16 @@ export default function EffectsPanel({
           </div>
 
           {/* SOURCE */}
-          <SourceControls
-            layer={selectedLayer}
-            onUpdate={onUpdateLayer}
-          />
+          <SourceControls layer={selectedLayer} onUpdate={onUpdateLayer} />
 
           {/* FILTER */}
-          <FilterControls
-            layer={selectedLayer}
-            onUpdate={onUpdateLayer}
-          />
+          <FilterControls layer={selectedLayer} onUpdate={onUpdateLayer} />
 
           {/* PULSE */}
-          <PulseControls
-            layer={selectedLayer}
-            onUpdate={onUpdateLayer}
-          />
+          <PulseControls layer={selectedLayer} onUpdate={onUpdateLayer} />
 
           {/* MIX */}
-          <MixControls
-            layer={selectedLayer}
-            onUpdate={onUpdateLayer}
-          />
+          <MixControls layer={selectedLayer} onUpdate={onUpdateLayer} />
 
           {/* FX — FULLY ENABLED + PATCHED */}
           <FXControls

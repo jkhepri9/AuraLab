@@ -4,6 +4,8 @@
 // - Outer wrapper is NOT a <button> to avoid nested <button> warnings.
 // - Duplicate button calls onDuplicate(layer).
 // -----------------------------------------------------------------------------
+// PATCH v9:
+//  - Full layer names are now always visible (wraps instead of truncating).
 
 import React, { useEffect, useRef, useState } from "react";
 import { Trash2, Pencil, Check, Copy } from "lucide-react";
@@ -81,6 +83,8 @@ export default function LayerItem({
     if (!editing) onSelect?.();
   };
 
+  const displayName = (layer.name || typeLabel || "Layer").toString();
+
   return (
     <div
       role="button"
@@ -100,9 +104,9 @@ export default function LayerItem({
           : "bg-white/0 border-white/10 hover:bg-white/5"
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-2">
             {editing ? (
               <input
                 ref={inputRef}
@@ -120,23 +124,27 @@ export default function LayerItem({
                   }
                 }}
                 onBlur={commit}
-                className="w-full max-w-[220px] bg-black/30 border border-white/10 rounded px-2 py-1 text-sm font-semibold text-white outline-none focus:border-white/20"
+                className="w-full bg-black/30 border border-white/10 rounded px-2 py-1 text-sm font-semibold text-white outline-none focus:border-white/20"
               />
             ) : (
               <span
-                className="text-sm font-semibold text-white truncate max-w-[220px]"
-                title="Double-click to rename"
+                className="text-sm font-semibold text-white whitespace-normal break-words leading-snug"
+                title={displayName}
                 onDoubleClick={(e) => {
                   e.stopPropagation();
                   setEditing(true);
                 }}
               >
-                {layer.name || typeLabel}
+                {displayName}
               </span>
             )}
           </div>
 
-          {detail ? <div className="text-[11px] text-gray-500 truncate mt-0.5">{detail}</div> : null}
+          {detail ? (
+            <div className="text-[11px] text-gray-500 mt-0.5 whitespace-normal break-words">
+              {detail}
+            </div>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-2 shrink-0">

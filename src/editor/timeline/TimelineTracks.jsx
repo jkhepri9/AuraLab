@@ -2,6 +2,8 @@
 // -------------------------------------------------------------
 // Renders track lanes + waveform visualizers
 // -------------------------------------------------------------
+// PATCH v9:
+//  - Layer name label upgraded for readability (pill + wrap + title).
 
 import React from "react";
 import WaveformVisualizer from "../visualizer/WaveformVisualizer";
@@ -15,6 +17,8 @@ export default function TimelineTracks({ layers, pixelsPerSecond, isPlaying }) {
         if (layer.type === "synth") color = "#facc15";
         if (layer.type === "ambient") color = "#60a5fa";
 
+        const name = layer?.name || "Layer";
+
         return (
           <div
             key={layer.id}
@@ -26,14 +30,17 @@ export default function TimelineTracks({ layers, pixelsPerSecond, isPlaying }) {
               <WaveformVisualizer
                 type={layer.type}
                 waveform={layer.waveform}
-                isPlaying={isPlaying && layer.enabled}   // <<< FIXED
+                isPlaying={isPlaying && layer.enabled}
                 color={color}
               />
             </div>
 
-            {/* Layer name */}
-            <div className="absolute top-2 left-2 text-xs font-bold text-white/60">
-              {layer.name}
+            {/* Layer name (readable + full name available) */}
+            <div
+              className="absolute top-2 left-2 max-w-[320px] text-[11px] leading-snug font-semibold text-white/80 bg-black/50 border border-white/10 rounded-md px-2 py-1 whitespace-normal break-words"
+              title={name}
+            >
+              {name}
             </div>
           </div>
         );
