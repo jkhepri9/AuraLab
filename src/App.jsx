@@ -1,3 +1,4 @@
+// src/App.jsx
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Layout from "./Layout";
@@ -12,6 +13,7 @@ import NowPlaying from "./pages/NowPlaying";
 import Account from "./pages/Account";
 
 import { GlobalPlayerProvider, useGlobalPlayer } from "./audio/GlobalPlayerContext";
+import { AuthProvider } from "@/auth/AuthProvider";
 
 function AppInner() {
   const { currentPlayingPreset, isPlaying, stop, togglePlayPause, restart } =
@@ -35,11 +37,11 @@ function AppInner() {
           <Route path="/AuraEditor" element={<AuraEditor />} />
           <Route path="/NowPlaying" element={<NowPlaying />} />
 
-          {/* ✅ Account (support both cases so you never get a blank main area) */}
+          {/* Account */}
           <Route path="/account" element={<Account />} />
           <Route path="/Account" element={<Account />} />
 
-          {/* ✅ Fallback so unmatched routes never look “blank” */}
+          {/* Fallback */}
           <Route path="*" element={<Home />} />
         </Routes>
       </Layout>
@@ -49,8 +51,10 @@ function AppInner() {
 
 export default function App() {
   return (
-    <GlobalPlayerProvider>
-      <AppInner />
-    </GlobalPlayerProvider>
+    <AuthProvider>
+      <GlobalPlayerProvider>
+        <AppInner />
+      </GlobalPlayerProvider>
+    </AuthProvider>
   );
 }

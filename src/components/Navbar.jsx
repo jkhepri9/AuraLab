@@ -10,6 +10,9 @@ const navItems = [
   { name: 'AuraConverter', path: '/AuraConverter' },
   { name: 'AuraModes', path: '/AuraModes' },
   { name: 'AuraStudio', path: '/AuraEditor' },
+
+  // ✅ NEW: Account (visible in desktop nav + hamburger)
+  { name: 'Account', path: '/account' },
 ];
 
 export default function Navbar() {
