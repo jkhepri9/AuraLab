@@ -1,7 +1,7 @@
 import React from 'react';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from './components/ui/button';
 import { RefreshCw, Layers, Pause, Play, RotateCcw, Square } from 'lucide-react';
 import { cn } from './lib/utils';
@@ -118,7 +118,16 @@ export default function Layout({
   onTogglePlayPause,
   onBack,
 }) {
-  const showStickyPlayer = Boolean(currentPlayingPreset);
+  const location = useLocation();
+
+  // UX RULE:
+  // - If user entered Aura Studio while a Mode is playing, keep the sticky player visible.
+  // - Once Aura Studio claims playback (__studio__), hide the sticky player while inside Aura Studio.
+  const hideStickyInStudio =
+    location.pathname === "/AuraEditor" &&
+    currentPlayingPreset?.id === "__studio__";
+
+  const showStickyPlayer = Boolean(currentPlayingPreset) && !hideStickyInStudio;
 
   const mainPadBottom = showStickyPlayer
     ? 'pb-[calc(11rem+env(safe-area-inset-bottom))] md:pb-0'

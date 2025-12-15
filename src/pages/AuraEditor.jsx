@@ -130,10 +130,8 @@ export default function AuraEditor() {
   // ----------------------------
   const handlePlay = async () => {
     if (!player) return;
-    await player.playLayers(layers, {
-      title: projectName || "Aura Studio",
-      artist: "AuraLab",
-    });
+
+    // Claim playback immediately so any Mode sticky player hides in Aura Studio.
     player.updateNowPlaying(
       {
         id: "__studio__",
@@ -146,7 +144,17 @@ export default function AuraEditor() {
         artist: "AuraLab",
       }
     );
-    setIsPlaying(true);
+
+    try {
+      const ok = await player.playLayers(layers, {
+        title: projectName || "Aura Studio",
+        artist: "AuraLab",
+      });
+      setIsPlaying(Boolean(ok));
+    } catch (e) {
+      console.warn("[AuraEditor] playLayers failed:", e);
+      setIsPlaying(false);
+    }
   };
 
   const handlePause = () => {

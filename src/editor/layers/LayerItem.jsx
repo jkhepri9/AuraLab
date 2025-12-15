@@ -60,21 +60,31 @@ export default function LayerItem({ layer, selected, onSelect, onUpdate, onDelet
     setEditing(false);
   };
 
+  const onActivate = () => {
+    if (!editing) onSelect?.();
+  };
+
   return (
-    <button
-      type="button"
-      onClick={() => {
-        if (!editing) onSelect?.();
+    // IMPORTANT: outer container is NOT a <button> so inner <button>s are valid.
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onActivate}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onActivate();
+        }
       }}
       className={cn(
-        "w-full text-left rounded-lg px-3 py-2 border transition",
+        "w-full text-left rounded-lg px-3 py-2 border transition cursor-pointer outline-none",
+        "focus-visible:ring-2 focus-visible:ring-emerald-500/40",
         selected ? "bg-white/10 border-white/20" : "bg-white/0 border-white/10 hover:bg-white/5"
       )}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            {/* NAME (RENAMABLE) */}
             {editing ? (
               <input
                 ref={inputRef}
@@ -108,13 +118,10 @@ export default function LayerItem({ layer, selected, onSelect, onUpdate, onDelet
             )}
           </div>
 
-          {detail ? (
-            <div className="text-[11px] text-gray-500 truncate mt-0.5">{detail}</div>
-          ) : null}
+          {detail ? <div className="text-[11px] text-gray-500 truncate mt-0.5">{detail}</div> : null}
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {/* Rename button */}
           <button
             type="button"
             onClick={(e) => {
@@ -130,7 +137,6 @@ export default function LayerItem({ layer, selected, onSelect, onUpdate, onDelet
             {editing ? <Check className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}
           </button>
 
-          {/* Enable / Disable */}
           <button
             type="button"
             onClick={(e) => {
@@ -146,7 +152,6 @@ export default function LayerItem({ layer, selected, onSelect, onUpdate, onDelet
             {layer.enabled ? "ON" : "OFF"}
           </button>
 
-          {/* Delete */}
           <button
             type="button"
             onClick={(e) => {
@@ -160,6 +165,6 @@ export default function LayerItem({ layer, selected, onSelect, onUpdate, onDelet
           </button>
         </div>
       </div>
-    </button>
+    </div>
   );
 }

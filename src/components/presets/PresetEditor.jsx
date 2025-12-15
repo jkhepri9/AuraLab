@@ -87,7 +87,9 @@ export default function PresetEditor({
 
     if (initialPreset && autoPlay) {
       // Play using the hydrated layers immediately (no stale state).
-      player.playPreset({
+      // Never allow ambient decode failures to bubble as an unhandled rejection.
+      // GlobalPlayerContext is already decode-safe, but this keeps the console clean.
+      void player.playPreset({
         ...initialPreset,
         id: presetId,
         name,
@@ -109,13 +111,19 @@ export default function PresetEditor({
       return;
     }
 
-    await player.playPreset({
-      ...(initialPreset || {}),
-      id: presetId,
-      name,
-      color,
-      layers,
-    });
+    try {
+      await player.playPreset({
+        ...(initialPreset || {}),
+        id: presetId,
+        name,
+        color,
+        layers,
+      });
+    } catch (e) {
+      // Decode failures are handled upstream; this is extra safety to prevent
+      // "Uncaught (in promise) EncodingError" from surfacing here.
+      console.warn("[PresetEditor] playPreset failed:", e);
+    }
   };
 
   // HARD LOCK: only allow volume + pan changes

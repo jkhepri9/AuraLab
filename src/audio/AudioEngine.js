@@ -1,26 +1,21 @@
 // src/audio/AudioEngine.js
 // -----------------------------------------------------------------------------
-// AURA LAB — STABLE AUDIO ENGINE (overlap-safe)
+// AURA LAB — RELIABLE WEB AUDIO ENGINE
 // -----------------------------------------------------------------------------
-//
-// CRITICAL FIX:
-// Prevent overlapping presets by invalidating any in-flight async play/build
-// when a new preset starts (or stop/pause is pressed).
-//
-// Root cause of overlay: async awaits (ambient buffer loads) returning after
-// stop(), then starting sources anyway.
-//
-// Fix: run token (this._runId). Every play/stop/pause increments it.
-// Any async continuation checks token and aborts if stale.
+// Reliability requirements:
+// 1) ALWAYS connect to ctx.destination for audible output.
+//    (Using only a MediaStreamDestination + <audio> can fail silently due to
+//     autoplay/gesture rules, resulting in "UI says playing, but silence".)
+// 2) MediaElement path is OPTIONAL (best-effort lockscreen/background help).
+// 3) Never let a single layer failure (e.g., ambient decode) prevent the whole
+//    preset from starting.
+// 4) Cancel stale async work (ambient loads) when a new run starts.
 // -----------------------------------------------------------------------------
 
 import { createNoiseBuffer } from "./NoiseEngines";
 import { createSynthGraph } from "./SynthEngines";
 import { loadAmbientBuffer } from "./AmbientLoader";
 
-// -----------------------------------------------------------------------------
-// TYPE MAPPING
-// -----------------------------------------------------------------------------
 function resolveType(uiType) {
   switch (uiType) {
     case "frequency":
@@ -41,10 +36,9 @@ class AudioEngineClass {
     this.ctx = null;
 
     this.master = null;
-    this.reverb = null;
     this.delay = null;
 
-    // MediaElement output (improves background/lockscreen behavior on mobile)
+    // Optional media output (best-effort only)
     this.useMediaOutput = false;
     this.mediaDest = null;
     this.mediaEl = null;
@@ -54,36 +48,42 @@ class AudioEngineClass {
     this.ambientCache = new Map();
 
     this.initialized = false;
+    this.isPlaying = false;
 
     this.startTime = 0;
     this.seekOffset = 0;
-    this.isPlaying = false;
 
     this.onTick = null;
     this.tickRAF = null;
 
-    // Global ambient boost (keep your existing behavior)
     this.ambientGainBoost = 1.8;
 
-    // Last-known program for system actions
     this.lastLayers = null;
     this.lastNowPlaying = null;
 
-    // Run token to cancel stale async work
+    // Run token cancels stale async continuations
     this._runId = 0;
+
+    // One-time unlock hint
+    this._unlockedOnce = false;
   }
 
-  // Invalidate any in-flight async work immediately
-  _bumpRun() {
-    this._runId += 1;
-    return this._runId;
-  }
-
-  _isRunActive(runId) {
-    return runId === this._runId;
-  }
-
+  // ---------------------------------------------------------------------------
+  // INIT / UNLOCK
+  // ---------------------------------------------------------------------------
   init() {
+    // If something closed our context (rare but possible), rebuild cleanly.
+    if (this.ctx && this.ctx.state === "closed") {
+      this.initialized = false;
+      this.ctx = null;
+      this.master = null;
+      this.delay = null;
+      this.mediaDest = null;
+      this.mediaEl = null;
+      this.layers.clear();
+      this.ambientCache.clear();
+    }
+
     if (this.initialized) return;
 
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -97,74 +97,109 @@ class AudioEngineClass {
     const masterIn = this.ctx.createGain();
     masterIn.gain.value = 1.0;
 
-    const shaper = this.ctx.createWaveShaper();
-    shaper.curve = this._softClip(2.5);
+    const analyser = this.ctx.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.85;
 
     const masterOut = this.ctx.createGain();
     masterOut.gain.value = 1.0;
 
-    masterIn.connect(shaper);
-    shaper.connect(masterOut);
+    // Route: input -> analyser -> out
+    masterIn.connect(analyser);
+    analyser.connect(masterOut);
 
-    // IMPORTANT: only ONE output path.
+    // CRITICAL: always audible output
+    masterOut.connect(this.ctx.destination);
+
+    // Optional: also feed a MediaStreamDestination
     if (this.useMediaOutput) {
       this.mediaDest = this.ctx.createMediaStreamDestination();
       masterOut.connect(this.mediaDest);
       this._ensureMediaElement();
-    } else {
-      masterOut.connect(this.ctx.destination);
     }
 
-    this.master = { input: masterIn, shaper, output: masterOut };
+    this.master = { input: masterIn, analyser, output: masterOut };
+    this.analyser = analyser;
 
-    // REVERB (kept for API compatibility)
-    const conv = this.ctx.createConvolver();
-    conv.buffer = this._impulse(2, 2);
-    const rvDry = this.ctx.createGain();
-    rvDry.gain.value = 1;
-    const rvWet = this.ctx.createGain();
-    rvWet.gain.value = 0;
-    this.reverb = { convolver: conv, dry: rvDry, wet: rvWet };
-
-    // DELAY
+    // DELAY (dry/wet buses)
     const delayNode = this.ctx.createDelay(5.0);
     delayNode.delayTime.value = 0.5;
 
     const feedback = this.ctx.createGain();
     feedback.gain.value = 0.3;
 
-    const dlDry = this.ctx.createGain();
-    dlDry.gain.value = 1;
+    const dry = this.ctx.createGain();
+    dry.gain.value = 1;
 
-    const dlWet = this.ctx.createGain();
-    dlWet.gain.value = 0;
+    const wet = this.ctx.createGain();
+    wet.gain.value = 0;
 
     delayNode.connect(feedback);
     feedback.connect(delayNode);
-    delayNode.connect(dlWet);
-    dlDry.connect(masterIn);
-    dlWet.connect(masterIn);
+    delayNode.connect(wet);
 
-    this.delay = { delay: delayNode, feedback, dry: dlDry, wet: dlWet };
+    dry.connect(masterIn);
+    wet.connect(masterIn);
+
+    this.delay = { delay: delayNode, feedback, dry, wet };
 
     this.initialized = true;
-
     this._bindVisibilityHandlers();
     this._bindMediaSession();
   }
 
+  unlock() {
+    this.init();
+    if (this._unlockedOnce) {
+      this._kickMediaElement();
+      return;
+    }
+    this._unlockedOnce = true;
+
+    // Gesture-friendly: do not await
+    try {
+      this.ctx?.resume?.();
+    } catch {}
+
+    this._kickMediaElement();
+  }
+
+  async _resumeIfNeeded() {
+    if (!this.ctx) return;
+    if (this.ctx.state !== "suspended") return;
+
+    // If we are inside a user gesture, resume should succeed.
+    try {
+      await this.ctx.resume();
+    } catch (e) {
+      // If resume fails, do not throw; the UI will still update,
+      // but we preserve a console trace for diagnosis.
+      console.warn("[AudioEngine] ctx.resume() failed:", e);
+    }
+  }
+
+  getAnalyser() {
+    return this.analyser || null;
+  }
+
   // ---------------------------------------------------------------------------
-  // MEDIA ELEMENT
+  // MEDIA ELEMENT (best-effort only)
   // ---------------------------------------------------------------------------
   _ensureMediaElement() {
     if (!this.mediaDest) return;
 
-    // Defensive cleanup (dev/HMR)
+    // HMR-safe cleanup
     try {
       document.querySelectorAll("audio#aura_media_el").forEach((n) => {
-        try { n.pause(); } catch {}
-        try { n.srcObject = null; } catch {}
-        try { n.remove(); } catch {}
+        try {
+          n.pause();
+        } catch {}
+        try {
+          n.srcObject = null;
+        } catch {}
+        try {
+          n.remove();
+        } catch {}
       });
     } catch {}
 
@@ -180,24 +215,26 @@ class AudioEngineClass {
     el.setAttribute("webkit-playsinline", "");
 
     el.srcObject = this.mediaDest.stream;
-    el.muted = false;
-    el.volume = 1.0;
 
-    el.addEventListener("pause", () => {
-      if (this.isPlaying) this.pause();
-    });
+    // Keep silent to avoid double audio (audible path is ctx.destination).
+    el.muted = false;
+    el.volume = 0.0;
 
     document.body.appendChild(el);
     this.mediaEl = el;
   }
 
-  async _ensureMediaElementPlaying() {
+  _kickMediaElement() {
     if (!this.useMediaOutput) return;
     if (!this.mediaEl) return;
+
     try {
-      if (this.mediaEl.paused) await this.mediaEl.play();
+      if (this.mediaEl.paused) {
+        // Do not await — keep gesture attribution when possible
+        this.mediaEl.play();
+      }
     } catch {
-      // Autoplay policies may block without gesture; fine.
+      // If autoplay blocks, that's fine. We still have ctx.destination.
     }
   }
 
@@ -207,15 +244,12 @@ class AudioEngineClass {
 
     document.addEventListener("visibilitychange", async () => {
       if (!this.isPlaying) return;
-      if (!this.ctx) return;
 
-      try {
-        if (this.ctx.state === "suspended") await this.ctx.resume();
-      } catch {}
+      // Try to keep the context alive
+      await this._resumeIfNeeded();
 
-      try {
-        await this._ensureMediaElementPlaying();
-      } catch {}
+      // Optional keep-alive path
+      this._kickMediaElement();
     });
   }
 
@@ -261,48 +295,47 @@ class AudioEngineClass {
   }
 
   // ---------------------------------------------------------------------------
+  // RUN TOKEN (cancels stale async work)
+  // ---------------------------------------------------------------------------
+  _bumpRun() {
+    this._runId += 1;
+    return this._runId;
+  }
+
+  _isRunActive(runId) {
+    return runId === this._runId;
+  }
+
+  // ---------------------------------------------------------------------------
   // PLAYBACK
   // ---------------------------------------------------------------------------
   async play(layers, opts = {}) {
     this.init();
 
-    // Invalidate any in-flight prior run immediately
+    // Invalidate any stale async continuation immediately
     const runId = this._bumpRun();
 
-    // Ensure context is running
+    // Gesture-friendly unlock + resume attempt
+    this._kickMediaElement();
+    await this._resumeIfNeeded();
+    this._kickMediaElement();
+
+    // Ensure we can hear output
     try {
-      if (this.ctx.state === "suspended") await this.ctx.resume();
+      this.master.input.gain.setValueAtTime(1.0, this.ctx.currentTime);
     } catch {}
 
-    // Ensure media output element exists
-    if (this.useMediaOutput && (!this.mediaEl || !this.mediaDest)) {
-      if (!this.mediaDest) {
-        this.mediaDest = this.ctx.createMediaStreamDestination();
-        this.master.output.connect(this.mediaDest);
-      }
-      this._ensureMediaElement();
-    }
-
-    // Unmute
-    try {
-      this.master?.input?.gain?.setValueAtTime(1.0, this.ctx.currentTime);
-    } catch {}
-
-    if (!opts.fromSystem) await this._ensureMediaElementPlaying();
-
-    // If another run started during awaits, abort
-    if (!this._isRunActive(runId)) return;
-
-    // Hard-stop any currently built graph before building new (prevents layering)
+    // Replace program cleanly
     this._stopAllLayers();
 
     this.isPlaying = true;
-    this.startTime = this.ctx.currentTime - this.seekOffset;
     this.lastLayers = layers;
 
+    this.startTime = this.ctx.currentTime - this.seekOffset;
+
+    // Build graph (non-fatal per layer)
     await this._buildGraph(layers, runId);
 
-    // If run got invalidated mid-build, do not tick
     if (!this._isRunActive(runId) || !this.isPlaying) return;
 
     this._startTick();
@@ -310,19 +343,15 @@ class AudioEngineClass {
 
   async updateLayers(layers) {
     if (!this.isPlaying) return;
-
-    const runId = this._runId; // current active run only
+    const runId = this._runId; // current run only
     this.lastLayers = layers;
-
     await this._buildGraph(layers, runId);
   }
 
-  // HARD PAUSE: silence guaranteed
   pause() {
     if (!this.isPlaying) return;
 
-    // Invalidate async continuations immediately
-    this._bumpRun();
+    this._bumpRun(); // cancel stale awaits
 
     this.isPlaying = false;
     this.seekOffset = this.ctx.currentTime - this.startTime;
@@ -330,23 +359,14 @@ class AudioEngineClass {
     this._stopAllLayers();
     this._stopTick();
 
+    // Do NOT suspend here (suspend/resume can be flaky across browsers)
     try {
-      this.master?.input?.gain?.setValueAtTime(0.0, this.ctx.currentTime);
-    } catch {}
-
-    try {
-      this.mediaEl?.pause?.();
-    } catch {}
-
-    try {
-      this.ctx?.suspend?.();
+      this.master.input.gain.setValueAtTime(0.0, this.ctx.currentTime);
     } catch {}
   }
 
-  // HARD STOP: silence + reset time
   stop() {
-    // Invalidate async continuations immediately
-    this._bumpRun();
+    this._bumpRun(); // cancel stale awaits
 
     this.isPlaying = false;
     this.seekOffset = 0;
@@ -356,35 +376,19 @@ class AudioEngineClass {
     this._stopTick();
 
     try {
-      this.master?.input?.gain?.setValueAtTime(0.0, this.ctx.currentTime);
-    } catch {}
-
-    try {
-      this.mediaEl?.pause?.();
-      if (this.mediaEl) this.mediaEl.currentTime = 0;
+      this.master.input.gain.setValueAtTime(0.0, this.ctx.currentTime);
     } catch {}
 
     this.clearNowPlaying();
-
-    try {
-      this.delay.feedback.gain.setValueAtTime(0, this.ctx.currentTime);
-      this.delay.delay.delayTime.setValueAtTime(0.5, this.ctx.currentTime);
-    } catch {}
-
-    try {
-      this.ctx?.suspend?.();
-    } catch {}
   }
 
   seek(time) {
     this.seekOffset = time;
-    if (this.isPlaying) {
-      this.startTime = this.ctx.currentTime - this.seekOffset;
-    }
+    if (this.isPlaying) this.startTime = this.ctx.currentTime - this.seekOffset;
   }
 
   // ---------------------------------------------------------------------------
-  // GRAPH BUILD (run-safe)
+  // GRAPH BUILD (run-safe, non-fatal per layer)
   // ---------------------------------------------------------------------------
   async _buildGraph(layers, runId) {
     if (!this._isRunActive(runId)) return;
@@ -396,22 +400,37 @@ class AudioEngineClass {
 
       if (!layer.enabled) {
         const node = this.layers.get(layer.id);
-        if (node) node.gain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
+        if (node) {
+          try {
+            node.gain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
+          } catch {}
+        }
         continue;
       }
 
       const existing = this.layers.get(layer.id);
 
       if (!existing) {
-        const group = await this._createLayerNodes(layer, engineType, runId);
-        if (!this._isRunActive(runId)) {
-          // Ensure no stray nodes if we got invalidated right after creation
-          try { this._stopNodeGroup(group); } catch {}
-          return;
+        try {
+          const group = await this._createLayerNodes(layer, engineType, runId);
+          if (!this._isRunActive(runId)) {
+            // kill stray nodes if invalidated post-create
+            try {
+              this._stopNodeGroup(group);
+            } catch {}
+            return;
+          }
+          if (group) this.layers.set(layer.id, group);
+        } catch (e) {
+          // NON-FATAL: keep building other layers
+          console.warn(`[AudioEngine] Layer create failed (${layer.id}):`, e);
         }
-        if (group) this.layers.set(layer.id, group);
       } else {
-        await this._updateLayerNodes(layer, engineType, existing, runId);
+        try {
+          await this._updateLayerNodes(layer, engineType, existing, runId);
+        } catch (e) {
+          console.warn(`[AudioEngine] Layer update failed (${layer.id}):`, e);
+        }
       }
     }
 
@@ -432,9 +451,7 @@ class AudioEngineClass {
     return base * mult;
   }
 
-  async _createLayerNodes(layer, engineType, runId) {
-    if (!this._isRunActive(runId)) return null;
-
+  _createCommonNodes(layer, engineType) {
     const ctx = this.ctx;
 
     const gain = ctx.createGain();
@@ -448,12 +465,21 @@ class AudioEngineClass {
     filter.frequency.value = layer.filter?.frequency || 20000;
     filter.Q.value = layer.filter?.Q || 1;
 
+    // filter -> gain -> pan -> (dry + delay)
     filter.connect(gain);
     gain.connect(pan);
 
-    // Send to master path (via delay dry/wet nodes)
     pan.connect(this.delay.dry);
     pan.connect(this.delay.delay);
+
+    return { filter, gain, pan };
+  }
+
+  async _createLayerNodes(layer, engineType, runId) {
+    if (!this._isRunActive(runId)) return null;
+
+    const ctx = this.ctx;
+    const { filter, gain, pan } = this._createCommonNodes(layer, engineType);
 
     let source = null;
     let synth = null;
@@ -477,15 +503,16 @@ class AudioEngineClass {
       synth = createSynthGraph(ctx, layer.waveform, layer.frequency, filter);
       oscs = synth?.oscs || [];
     } else if (engineType === "ambient") {
-      const buffer = await loadAmbientBuffer(ctx, layer.waveform, this.ambientCache);
-
-      // If a new preset started while we were loading, abort safely.
-      if (!this._isRunActive(runId)) {
-        try { pan.disconnect(); } catch {}
-        try { gain.disconnect(); } catch {}
-        try { filter.disconnect(); } catch {}
-        return null;
+      // Ambient decode failures should not block the whole preset.
+      let buffer = null;
+      try {
+        buffer = await loadAmbientBuffer(ctx, layer.waveform, this.ambientCache);
+      } catch (e) {
+        console.warn("[AudioEngine] Ambient load failed:", e);
+        buffer = null;
       }
+
+      if (!this._isRunActive(runId)) return null;
 
       if (buffer) {
         const src = ctx.createBufferSource();
@@ -493,122 +520,127 @@ class AudioEngineClass {
         src.loop = true;
         src.connect(filter);
         src.start();
-
-        // If invalidated immediately after starting, kill it.
-        if (!this._isRunActive(runId)) {
-          try { src.stop(); } catch {}
-          try { pan.disconnect(); } catch {}
-          try { gain.disconnect(); } catch {}
-          try { filter.disconnect(); } catch {}
-          return null;
-        }
-
         ambient = { sources: [src], currentName: layer.waveform };
+      } else {
+        // If missing/corrupt, keep a placeholder so other layers still play.
+        ambient = { sources: [], currentName: layer.waveform };
       }
     }
 
-    return {
-      id: layer.id,
-      gain,
-      pan,
-      filter,
-      source,
-      synth,
-      oscs, // always array for synth
-      ambient,
-      _synthType: engineType === "synth" ? (layer.waveform || "analog").toLowerCase() : null,
-      _synthFreq: engineType === "synth" ? (layer.frequency ?? 432) : null,
-    };
+    // Filter enabled/bypass handling
+    if (layer.filterEnabled === false) {
+      try {
+        filter.frequency.setValueAtTime(20000, ctx.currentTime);
+        filter.Q.setValueAtTime(0.0001, ctx.currentTime);
+      } catch {}
+    }
+
+    return { source, synth, oscs, ambient, gain, pan, filter, engineType };
   }
 
   async _updateLayerNodes(layer, engineType, group, runId) {
     if (!this._isRunActive(runId)) return;
 
-    const now = this.ctx.currentTime;
+    const t = this.ctx.currentTime;
 
-    group.gain.gain.setTargetAtTime(
-      this._effectiveGainForLayer(layer, engineType),
-      now,
-      0.05
-    );
+    // volume / pan
+    const eff = this._effectiveGainForLayer(layer, engineType);
+    try {
+      group.gain.gain.setTargetAtTime(eff, t, 0.05);
+    } catch {}
+    try {
+      group.pan.pan.setTargetAtTime(layer.pan ?? 0, t, 0.05);
+    } catch {}
 
-    group.pan.pan.setTargetAtTime(layer.pan ?? 0, now, 0.05);
-
-    const filterOn = layer.filterEnabled !== false;
-
-    if (filterOn) {
-      group.filter.type = layer.filter?.type || "lowpass";
-      group.filter.frequency.setTargetAtTime(layer.filter?.frequency ?? 20000, now, 0.05);
-      group.filter.Q.setTargetAtTime(layer.filter?.Q ?? 1, now, 0.05);
+    // filter
+    if (layer.filterEnabled === false) {
+      try {
+        group.filter.frequency.setTargetAtTime(20000, t, 0.05);
+        group.filter.Q.setTargetAtTime(0.0001, t, 0.05);
+      } catch {}
     } else {
-      group.filter.type = "lowpass";
-      group.filter.frequency.setTargetAtTime(20000, now, 0.05);
-      group.filter.Q.setTargetAtTime(0.0001, now, 0.05);
+      try {
+        group.filter.type = layer.filter?.type || "lowpass";
+      } catch {}
+      try {
+        group.filter.frequency.setTargetAtTime(layer.filter?.frequency || 20000, t, 0.05);
+      } catch {}
+      try {
+        group.filter.Q.setTargetAtTime(layer.filter?.Q || 1, t, 0.05);
+      } catch {}
     }
 
+    // oscillator
     if (engineType === "oscillator" && group.source) {
-      group.source.frequency.setTargetAtTime(layer.frequency ?? 432, now, 0.05);
-      group.source.type = layer.waveform;
+      try {
+        group.source.type = layer.waveform ?? "sine";
+      } catch {}
+      try {
+        group.source.frequency.setTargetAtTime(layer.frequency ?? 432, t, 0.02);
+      } catch {}
     }
 
-    if (engineType === "synth") {
-      const nextType = (layer.waveform || "analog").toLowerCase();
-      const nextFreq = layer.frequency ?? 432;
+    // synth
+    if (engineType === "synth" && group.synth) {
+      try {
+        group.synth.setWaveform?.(layer.waveform);
+      } catch {}
+      try {
+        group.synth.setFrequency?.(layer.frequency);
+      } catch {}
+    }
 
-      if (group._synthType !== nextType || group._synthFreq !== nextFreq) {
+    // noise waveform swap
+    if (engineType === "noise" && group.source) {
+      const desired = layer.waveform || "white";
+      if (group._noiseWaveform !== desired) {
+        group._noiseWaveform = desired;
         try {
-          (group.oscs || []).forEach((o) => {
-            try { o.stop(); } catch {}
-          });
+          group.source.buffer = createNoiseBuffer(this.ctx, desired);
         } catch {}
-
-        try {
-          group.synth?.masterGain?.disconnect?.();
-        } catch {}
-
-        const newSynth = createSynthGraph(this.ctx, layer.waveform, nextFreq, group.filter);
-
-        // If invalidated during rebuild, stop immediately
-        if (!this._isRunActive(runId)) {
-          try {
-            (newSynth?.oscs || []).forEach((o) => {
-              try { o.stop(); } catch {}
-            });
-          } catch {}
-          try { newSynth?.masterGain?.disconnect?.(); } catch {}
-          return;
-        }
-
-        group.synth = newSynth;
-        group.oscs = newSynth?.oscs || [];
-        group._synthType = nextType;
-        group._synthFreq = nextFreq;
       }
     }
 
+    // ambient swap
     if (engineType === "ambient") {
-      if (group.ambient?.currentName !== layer.waveform) {
-        const buf = await loadAmbientBuffer(this.ctx, layer.waveform, this.ambientCache);
+      const desired = layer.waveform;
+      const current = group.ambient?.currentName;
+
+      if (desired && desired !== current) {
+        // stop old
+        try {
+          group.ambient?.sources?.forEach((s) => {
+            try {
+              s.stop();
+            } catch {}
+            try {
+              s.disconnect();
+            } catch {}
+          });
+        } catch {}
+
+        let buffer = null;
+        try {
+          buffer = await loadAmbientBuffer(this.ctx, desired, this.ambientCache);
+        } catch (e) {
+          console.warn("[AudioEngine] Ambient load failed:", e);
+          buffer = null;
+        }
 
         if (!this._isRunActive(runId)) return;
 
-        if (buf) {
-          group.ambient?.sources?.forEach((s) => {
-            try { s.stop(); } catch {}
-          });
-
+        if (buffer) {
           const src = this.ctx.createBufferSource();
-          src.buffer = buf;
+          src.buffer = buffer;
           src.loop = true;
           src.connect(group.filter);
-          src.start();
+          try {
+            src.start();
+          } catch {}
 
-          if (!this._isRunActive(runId)) {
-            try { src.stop(); } catch {}
-            return;
-          }
-
-          group.ambient = { sources: [src], currentName: layer.waveform };
+          group.ambient = { sources: [src], currentName: desired };
+        } else {
+          group.ambient = { sources: [], currentName: desired };
         }
       }
     }
@@ -618,103 +650,81 @@ class AudioEngineClass {
   // STOP HELPERS
   // ---------------------------------------------------------------------------
   _stopAllLayers() {
-    for (const group of this.layers.values()) this._stopNodeGroup(group);
+    for (const [, group] of this.layers.entries()) this._stopNodeGroup(group);
     this.layers.clear();
   }
 
   _stopNodeGroup(group) {
     if (!group) return;
-    try { group.source?.stop(); } catch {}
-    try {
-      (group.oscs || []).forEach((o) => {
-        try { o.stop(); } catch {}
+
+    if (group.source) {
+      try {
+        group.source.stop();
+      } catch {}
+      try {
+        group.source.disconnect();
+      } catch {}
+    }
+
+    if (group.oscs?.length) {
+      group.oscs.forEach((o) => {
+        try {
+          o.stop();
+        } catch {}
+        try {
+          o.disconnect();
+        } catch {}
       });
-    } catch {}
-    try { group.synth?.masterGain?.disconnect?.(); } catch {}
-    try {
-      group.ambient?.sources?.forEach((s) => {
-        try { s.stop(); } catch {}
+    }
+
+    if (group.ambient?.sources?.length) {
+      group.ambient.sources.forEach((s) => {
+        try {
+          s.stop();
+        } catch {}
+        try {
+          s.disconnect();
+        } catch {}
       });
+    }
+
+    try {
+      group.filter?.disconnect();
     } catch {}
-    try { group.pan?.disconnect?.(); } catch {}
-    try { group.gain?.disconnect?.(); } catch {}
-    try { group.filter?.disconnect?.(); } catch {}
+    try {
+      group.gain?.disconnect();
+    } catch {}
+    try {
+      group.pan?.disconnect();
+    } catch {}
   }
 
   // ---------------------------------------------------------------------------
   // TICK
   // ---------------------------------------------------------------------------
   _startTick() {
-    if (!this.onTick) return;
+    if (this.tickRAF) cancelAnimationFrame(this.tickRAF);
 
     const tick = () => {
-      if (this.isPlaying) {
-        const t = this.ctx.currentTime - this.startTime;
-        this.onTick(t);
-      }
+      if (!this.isPlaying) return;
+      const time = this.ctx.currentTime - this.startTime;
+      if (this.onTick) this.onTick(time);
       this.tickRAF = requestAnimationFrame(tick);
     };
 
-    tick();
+    this.tickRAF = requestAnimationFrame(tick);
   }
 
   _stopTick() {
-    cancelAnimationFrame(this.tickRAF);
+    if (this.tickRAF) cancelAnimationFrame(this.tickRAF);
     this.tickRAF = null;
-  }
-
-  // ---------------------------------------------------------------------------
-  // FX API
-  // ---------------------------------------------------------------------------
-  setReverb(value) {
-    const t = this.ctx.currentTime;
-    const wet = Math.min(3, value * 2.5);
-    this.reverb.dry.gain.setTargetAtTime(1 - value, t, 0.05);
-    this.reverb.wet.gain.setTargetAtTime(wet, t, 0.05);
-  }
-
-  setDelayWet(value) {
-    const t = this.ctx.currentTime;
-    this.delay.dry.gain.setTargetAtTime(1 - value, t, 0.05);
-    this.delay.wet.gain.setTargetAtTime(value, t, 0.05);
-  }
-
-  setDelayTime(value) {
-    const t = this.ctx.currentTime;
-    this.delay.delay.delayTime.linearRampToValueAtTime(value, t + 0.05);
-  }
-
-  // ---------------------------------------------------------------------------
-  // UTIL
-  // ---------------------------------------------------------------------------
-  _softClip(amount, samples = 2048) {
-    const c = new Float32Array(samples);
-    for (let i = 0; i < samples; i++) {
-      const x = (i * 2) / samples - 1;
-      c[i] = Math.tanh(amount * x) / Math.tanh(amount);
-    }
-    return c;
-  }
-
-  _impulse(duration, decay) {
-    const rate = this.ctx.sampleRate;
-    const len = rate * duration;
-    const buf = this.ctx.createBuffer(2, len, rate);
-
-    for (let c = 0; c < 2; c++) {
-      const ch = buf.getChannelData(c);
-      for (let i = 0; i < len; i++) {
-        ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
-      }
-    }
-    return buf;
   }
 }
 
 // HMR-safe singleton
 const ENGINE_KEY = "__AURA_AUDIO_ENGINE__";
 const AudioEngine =
-  (typeof window !== "undefined" && window[ENGINE_KEY])
+  typeof window !== "undefined" && window[ENGINE_KEY]
     ? window[ENGINE_KEY]
     : new AudioEngineClass();
 
@@ -725,7 +735,10 @@ if (typeof window !== "undefined" && !window[ENGINE_KEY]) {
 export function createAudioEngine(config = {}) {
   AudioEngine.init();
   if (config.onTick) AudioEngine.onTick = config.onTick;
-  if (typeof config.ambientGainBoost === "number" && !Number.isNaN(config.ambientGainBoost)) {
+  if (
+    typeof config.ambientGainBoost === "number" &&
+    !Number.isNaN(config.ambientGainBoost)
+  ) {
     AudioEngine.ambientGainBoost = config.ambientGainBoost;
   }
   return AudioEngine;

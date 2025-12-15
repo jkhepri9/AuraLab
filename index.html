@@ -1,30 +1,30 @@
+<!-- index.html -->
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>AuraLab</title>
+    <!-- Mobile + responsive -->
     <meta
-      name="description"
-      content="The world's first Aura-Design Studio for your mind, energy and environment."
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
 
-    <!-- PWA -->
+    <!-- Theme -->
     <meta name="theme-color" content="#09090b" />
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="color-scheme" content="dark" />
 
-    <!-- Favicons -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+    <!-- Icons -->
+    <link rel="icon" type="image/png" href="/icons/favicon-32.png" />
+    <link rel="icon" type="image/png" href="/icons/favicon-16.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png" />
 
-    <!-- iOS PWA -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="AuraLab" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon-180.png" />
+    <!-- IMPORTANT:
+         Do NOT hard-link manifest.webmanifest here for Codespaces dev.
+         vite-plugin-pwa injects the manifest + SW in production builds. -->
+    <title>AuraLab</title>
   </head>
+
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
