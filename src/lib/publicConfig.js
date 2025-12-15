@@ -13,13 +13,12 @@ export async function loadPublicConfig() {
       supabaseAnonKey: data?.supabaseAnonKey || "",
     };
 
-    // Stash on window for other modules (optional convenience)
     if (typeof window !== "undefined") {
       window.__AURALAB_PUBLIC_CONFIG__ = cached;
     }
 
     return cached;
-  } catch (e) {
+  } catch {
     cached = { supabaseUrl: "", supabaseAnonKey: "" };
     return cached;
   }
