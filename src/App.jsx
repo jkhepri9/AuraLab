@@ -1,23 +1,21 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Layout from './Layout';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Layout from "./Layout";
 
-import Home from './pages/Home';
-import Install from './pages/Install';
-import AuraGenerator from './pages/AuraGenerator';
-import AuraConverter from './pages/AuraConverter';
-import AuraModes from './pages/AuraModes';
-import AuraEditor from './pages/AuraEditor';
-import NowPlaying from './pages/NowPlaying';
-import { GlobalPlayerProvider, useGlobalPlayer } from './audio/GlobalPlayerContext';
+import Home from "./pages/Home";
+import Install from "./pages/Install";
+import AuraGenerator from "./pages/AuraGenerator";
+import AuraConverter from "./pages/AuraConverter";
+import AuraModes from "./pages/AuraModes";
+import AuraEditor from "./pages/AuraEditor";
+import NowPlaying from "./pages/NowPlaying";
+import Account from "./pages/Account";
 
-import Account from "@/pages/Account";
-
-// inside <Routes>…
-<Route path="/account" element={<Account />} />
+import { GlobalPlayerProvider, useGlobalPlayer } from "./audio/GlobalPlayerContext";
 
 function AppInner() {
-  const { currentPlayingPreset, isPlaying, stop, togglePlayPause, restart } = useGlobalPlayer();
+  const { currentPlayingPreset, isPlaying, stop, togglePlayPause, restart } =
+    useGlobalPlayer();
 
   return (
     <Router>
@@ -36,6 +34,9 @@ function AppInner() {
           <Route path="/AuraModes" element={<AuraModes />} />
           <Route path="/AuraEditor" element={<AuraEditor />} />
           <Route path="/NowPlaying" element={<NowPlaying />} />
+
+          {/* ✅ Account page route */}
+          <Route path="/account" element={<Account />} />
         </Routes>
       </Layout>
     </Router>

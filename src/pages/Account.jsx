@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { startCheckout } from "@/lib/billing";
 import { useAuth } from "@/auth/AuthProvider";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 
 export default function Account() {
   const { user, loading } = useAuth();
@@ -17,11 +17,14 @@ export default function Account() {
     let alive = true;
 
     async function loadSubscription() {
+      if (!isSupabaseConfigured || !supabase) return;
       if (!userId) {
         setSub(null);
         return;
       }
+
       setSubLoading(true);
+
       const { data, error } = await supabase
         .from("subscriptions")
         .select("status, current_period_end")
@@ -29,6 +32,7 @@ export default function Account() {
         .maybeSingle();
 
       if (!alive) return;
+
       if (error) {
         console.warn("subscription read error", error);
         setSub(null);
@@ -45,10 +49,12 @@ export default function Account() {
   }, [userId]);
 
   const signInGoogle = async () => {
+    if (!supabase) return;
     await supabase.auth.signInWithOAuth({ provider: "google" });
   };
 
   const signOut = async () => {
+    if (!supabase) return;
     await supabase.auth.signOut();
   };
 
@@ -62,6 +68,18 @@ export default function Account() {
           </p>
         </div>
 
+        {!isSupabaseConfigured && (
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-red-200">
+            Supabase is not configured in the frontend. Add:
+            <div className="mt-2 font-mono text-xs text-red-200/90">
+              VITE_SUPABASE_URL
+              <br />
+              VITE_SUPABASE_ANON_KEY
+            </div>
+            Then redeploy.
+          </div>
+        )}
+
         {loading ? (
           <div className="text-gray-400">Loading…</div>
         ) : !user ? (
@@ -72,6 +90,7 @@ export default function Account() {
             <Button
               className="bg-emerald-500 hover:bg-emerald-600 text-black font-bold"
               onClick={signInGoogle}
+              disabled={!supabase}
             >
               Sign in with Google
             </Button>
@@ -91,7 +110,9 @@ export default function Account() {
                   Status: <span className="font-semibold">{sub.status}</span>
                 </div>
               ) : (
-                <div className="text-sm text-gray-400 mt-1">No active subscription on file.</div>
+                <div className="text-sm text-gray-400 mt-1">
+                  No active subscription on file.
+                </div>
               )}
             </div>
 
@@ -115,6 +136,7 @@ export default function Account() {
                 variant="outline"
                 className="border-white/10 text-white hover:bg-white/10"
                 onClick={signOut}
+                disabled={!supabase}
               >
                 Sign out
               </Button>
