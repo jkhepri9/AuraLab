@@ -2,11 +2,12 @@
 // -----------------------------------------------------------------------------
 // AURA LAB — AURA STUDIO (AuraEditor)
 // -----------------------------------------------------------------------------
-// FIXES IN THIS PATCH (SESSION WORK + STICKY NAV IN Layout.jsx):
+// FIXES IN THIS PATCH (SESSION WORK + DUPLICATE LAYER + LIVE UPDATES):
 // 1) Studio work persists across page navigation within the same app session.
 //    - Stored in sessionStorage (clears automatically when the tab/app is closed).
 //    - Restored when user returns to Aura Studio.
 // 2) Live layer updates remain enabled (volume/filter/pulse update instantly).
+// 3) Adds per-layer Duplicate support via LayerList -> LayerItem.
 // -----------------------------------------------------------------------------
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -347,6 +348,53 @@ export default function AuraEditor() {
     });
   };
 
+  const duplicateLayer = (layerId) => {
+    if (!layerId) return;
+
+    setLayers((prev) => {
+      const idx = prev.findIndex((l) => l?.id === layerId);
+      if (idx === -1) return prev;
+
+      const original = prev[idx];
+
+      // Deep clone: structuredClone if available, otherwise JSON fallback.
+      let copy;
+      try {
+        copy =
+          typeof structuredClone === "function"
+            ? structuredClone(original)
+            : JSON.parse(JSON.stringify(original));
+      } catch {
+        copy = { ...original };
+      }
+
+      copy.id = crypto.randomUUID();
+
+      const baseName =
+        (original?.name && String(original.name).trim()) ||
+        (original?.type === "ambient"
+          ? "Ambient"
+          : original?.type === "noise"
+          ? "Noise"
+          : original?.type === "synth"
+          ? "Synth"
+          : "Frequency");
+
+      copy.name = `${baseName} Copy`;
+
+      const next = [...prev];
+      next.splice(idx + 1, 0, copy);
+
+      // Select the duplicated layer immediately.
+      setSelectedLayerId(copy.id);
+
+      // If currently playing, apply live update so audio reflects the new layer set.
+      if (isPlaying) scheduleLiveUpdate(next);
+
+      return next;
+    });
+  };
+
   const deleteLayer = (id) => {
     setLayers((prev) => {
       const next = prev.filter((l) => l.id !== id);
@@ -431,6 +479,7 @@ export default function AuraEditor() {
           onSelectLayer={setSelectedLayerId}
           onAddLayer={addLayer}
           onUpdateLayer={updateLayer}
+          onDuplicateLayer={duplicateLayer}
           onDeleteLayer={deleteLayer}
         />
 
@@ -447,12 +496,7 @@ export default function AuraEditor() {
           />
 
           <div className="flex-1 min-h-0">
-            <Timeline
-              layers={layers}
-              currentTime={currentTime}
-              duration={duration}
-              isPlaying={isPlaying}
-            />
+            <Timeline layers={layers} currentTime={currentTime} duration={duration} isPlaying={isPlaying} />
           </div>
         </div>
 

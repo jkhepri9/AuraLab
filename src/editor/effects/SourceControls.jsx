@@ -1,6 +1,6 @@
 // src/editor/effects/SourceControls.jsx
 
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Zap } from "lucide-react";
+import { Zap, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import EffectSection from "./EffectSection";
@@ -33,6 +33,57 @@ export default function SourceControls({ layer, onUpdate }) {
 
   // Safety: if layer is somehow undefined, don't crash the panel
   if (!layer) return null;
+
+  // ---------------------------------------------------------------------------
+  // AMBIENT GROUP COLLAPSE STATE
+  // - Each ambient category (birds, crickets, etc.) is collapsible.
+  // - Defaults: open the group containing the current waveform; otherwise open the first group.
+  // - If user selects a variant, ensure its group stays open.
+  // ---------------------------------------------------------------------------
+  const ambientInitialOpen = useMemo(() => {
+    const entries = Object.entries(AMBIENT_GROUPS);
+    const wf = layer?.waveform;
+    const open = {};
+
+    for (const [key, group] of entries) {
+      open[key] = Boolean(group?.variants?.some((v) => v.value === wf));
+    }
+
+    // If none active, open the first group by default.
+    if (!Object.values(open).some(Boolean)) {
+      const firstKey = entries[0]?.[0];
+      if (firstKey) open[firstKey] = true;
+    }
+
+    return open;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layer?.id]);
+
+  const [openGroups, setOpenGroups] = useState(() => ambientInitialOpen);
+
+  // Reset open state when selecting a different layer.
+  useEffect(() => {
+    if (uiType !== "ambient") return;
+    setOpenGroups(ambientInitialOpen);
+  }, [uiType, ambientInitialOpen]);
+
+  // If user selects a variant, ensure its group is open (without collapsing others).
+  useEffect(() => {
+    if (uiType !== "ambient") return;
+    const wf = layer?.waveform;
+    if (!wf) return;
+
+    for (const [key, group] of Object.entries(AMBIENT_GROUPS)) {
+      if (group?.variants?.some((v) => v.value === wf)) {
+        setOpenGroups((prev) => (prev?.[key] ? prev : { ...prev, [key]: true }));
+        break;
+      }
+    }
+  }, [uiType, layer?.waveform]);
+
+  const toggleGroup = (key) => {
+    setOpenGroups((prev) => ({ ...prev, [key]: !prev?.[key] }));
+  };
 
   return (
     <EffectSection title="Source" icon={Zap}>
@@ -122,32 +173,83 @@ export default function SourceControls({ layer, onUpdate }) {
           <span className="text-xs text-gray-400">Ambient Sound</span>
 
           <div className="space-y-1 rounded-md border border-white/10 bg-black/20 p-2">
-            {Object.entries(AMBIENT_GROUPS).map(([key, group]) => (
-              <div key={key}>
-                <span className="text-gray-300 text-xs">{group.label}</span>
+            {Object.entries(AMBIENT_GROUPS).map(([key, group]) => {
+              const isOpen = Boolean(openGroups?.[key]);
+              const activeInGroup = Boolean(
+                group?.variants?.some((v) => v.value === layer.waveform)
+              );
 
-                <div className="pl-3 mt-1 space-y-1">
-                  {group.variants.map((v) => {
-                    const active = layer.waveform === v.value;
-                    return (
-                      <button
-                        key={v.value}
-                        type="button"
-                        onClick={() => onUpdate({ waveform: v.value })}
+              return (
+                <div key={key} className="rounded-md">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(key)}
+                    className={cn(
+                      "w-full flex items-center justify-between gap-2 px-2 py-1 rounded-md",
+                      activeInGroup
+                        ? "bg-emerald-500/10 border border-emerald-500/20"
+                        : "hover:bg-white/5"
+                    )}
+                    aria-expanded={isOpen}
+                    aria-controls={`ambient_group_${key}`}
+                  >
+                    <span
+                      className={cn(
+                        "text-xs",
+                        activeInGroup ? "text-emerald-200" : "text-gray-300"
+                      )}
+                    >
+                      {group.label}
+                    </span>
+
+                    {isOpen ? (
+                      <ChevronDown
                         className={cn(
-                          "w-full text-left text-xs px-2 py-1 rounded-md",
-                          active
-                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                            : "text-gray-300 hover:bg-white/5"
+                          "w-4 h-4",
+                          activeInGroup ? "text-emerald-200" : "text-gray-400"
                         )}
-                      >
-                        {v.label}
-                      </button>
-                    );
-                  })}
+                      />
+                    ) : (
+                      <ChevronRight
+                        className={cn(
+                          "w-4 h-4",
+                          activeInGroup ? "text-emerald-200" : "text-gray-400"
+                        )}
+                      />
+                    )}
+                  </button>
+
+                  <div
+                    id={`ambient_group_${key}`}
+                    className={cn(
+                      "pl-3 mt-1 overflow-hidden transition-all",
+                      isOpen ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0"
+                    )}
+                  >
+                    <div className={cn("space-y-1", isOpen ? "pb-2" : "pb-0")}>
+                      {group.variants.map((v) => {
+                        const active = layer.waveform === v.value;
+                        return (
+                          <button
+                            key={v.value}
+                            type="button"
+                            onClick={() => onUpdate({ waveform: v.value })}
+                            className={cn(
+                              "w-full text-left text-xs px-2 py-1 rounded-md",
+                              active
+                                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                                : "text-gray-300 hover:bg-white/5"
+                            )}
+                          >
+                            {v.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

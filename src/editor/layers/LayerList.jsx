@@ -41,6 +41,7 @@ export default function LayerList({
   onSelectLayer,
   onAddLayer,
   onUpdateLayer,
+  onDuplicateLayer,
   onDeleteLayer,
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -177,6 +178,7 @@ export default function LayerList({
               selected={layer.id === selectedLayerId}
               onSelect={() => onSelectLayer(layer.id)}
               onUpdate={(updates) => onUpdateLayer(layer.id, updates)}
+              onDuplicate={() => onDuplicateLayer?.(layer.id)}
               onDelete={() => onDeleteLayer(layer.id)}
             />
           ))
