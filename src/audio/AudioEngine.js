@@ -1,33 +1,7 @@
 
-// src/audio/AudioEngine.js
-// -----------------------------------------------------------------------------
-// AURA LAB — RELIABLE WEB AUDIO ENGINE (WITH LIVE FX)
-// -----------------------------------------------------------------------------
-// What this fixes:
-// - Aura Studio Reverb/Delay sliders were updating UI state but not audibly
-//   affecting the mix because the FX nodes were either missing or not wired
-//   into the audio graph.
-// - This build creates a proper insert-style FX chain:
-//
-//   [SUM MIX] -> [Delay Dry/Wet] -> [Reverb Dry/Wet] -> [Analyser] -> [Output]
-//
-// API exposed (used by AuraEditor):
-//   - setReverb(wet0to1)
-//   - setDelayWet(wet0to1)
-//   - setDelayTime(seconds)
-//   - setDelayFeedback(value0to0_95)  (optional)
-//
-// Reliability requirements preserved:
-// - Always connect to ctx.destination for audible output.
-// - Optional MediaStreamDestination + hidden <audio> is best-effort only.
-// - Cancel stale async work (ambient loads) with a run token.
-// - Ambient decode failures are non-fatal (other layers still play).
-// -----------------------------------------------------------------------------
-
 import { createNoiseBuffer } from "./NoiseEngines";
 import { createSynthGraph } from "./SynthEngines";
 import { loadAmbientBuffer } from "./AmbientLoader";
-
 // -----------------------------------------------------------------------------
 // TYPE MAPPING
 // -----------------------------------------------------------------------------
@@ -51,7 +25,6 @@ function clamp(v, min, max) {
   if (Number.isNaN(n)) return min;
   return Math.min(max, Math.max(min, n));
 }
-
 // -----------------------------------------------------------------------------
 // OFFLINE RENDER HELPERS (WAV EXPORT)
 // -----------------------------------------------------------------------------
