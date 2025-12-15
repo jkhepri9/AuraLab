@@ -35,8 +35,12 @@ function AppInner() {
           <Route path="/AuraEditor" element={<AuraEditor />} />
           <Route path="/NowPlaying" element={<NowPlaying />} />
 
-          {/* ✅ Account page route */}
+          {/* ✅ Account (support both cases so you never get a blank main area) */}
           <Route path="/account" element={<Account />} />
+          <Route path="/Account" element={<Account />} />
+
+          {/* ✅ Fallback so unmatched routes never look “blank” */}
+          <Route path="*" element={<Home />} />
         </Routes>
       </Layout>
     </Router>
