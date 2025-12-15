@@ -9,11 +9,11 @@ import AuraConverter from './pages/AuraConverter';
 import AuraModes from './pages/AuraModes';
 import AuraEditor from './pages/AuraEditor';
 import NowPlaying from './pages/NowPlaying';
-
 import { GlobalPlayerProvider, useGlobalPlayer } from './audio/GlobalPlayerContext';
+
 import Account from "@/pages/Account";
 
-// inside <Routes>
+// inside <Routes>…
 <Route path="/account" element={<Account />} />
 
 function AppInner() {
