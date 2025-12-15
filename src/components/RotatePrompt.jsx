@@ -1,148 +1,115 @@
-import React, { useEffect, useMemo, useState } from "react";
+// src/components/RotatePrompt.jsx
+// -----------------------------------------------------------------------------
+// RotatePrompt — mobile portrait prompt to rotate to landscape
+// -----------------------------------------------------------------------------
+// Behavior (as requested):
+// - Shows EVERY time user enters the page while in portrait on mobile.
+// - "Continue anyway" only dismisses for the current visit.
+// - Navigating away/back (or returning to portrait) shows it again.
+// -----------------------------------------------------------------------------
+
+import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Smartphone, RotateCw } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { RotateCw } from "lucide-react";
 
-const STORAGE_KEY = "auralab_rotate_prompt_dismissed";
+function isMobileDevice() {
+  if (typeof window === "undefined") return false;
 
-function useIsPortrait() {
-  const [portrait, setPortrait] = useState(false);
+  const coarse =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(pointer: coarse)").matches;
 
-  useEffect(() => {
-    const mq = window.matchMedia("(orientation: portrait)");
-    const update = () => setPortrait(!!mq.matches);
+  const small =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(max-width: 900px)").matches;
 
-    update();
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+  const uaMobile = /Android|iPhone|iPad|iPod|Mobi/i.test(ua);
 
-    // Safari uses addListener/removeListener
-    if (mq.addEventListener) mq.addEventListener("change", update);
-    else mq.addListener(update);
-
-    return () => {
-      if (mq.removeEventListener) mq.removeEventListener("change", update);
-      else mq.removeListener(update);
-    };
-  }, []);
-
-  return portrait;
+  return coarse || small || uaMobile;
 }
 
-function useIsMobile() {
-  const [mobile, setMobile] = useState(false);
+function isPortrait() {
+  if (typeof window === "undefined") return false;
 
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 900px)");
-    const update = () => {
-      const uaMobile = !!navigator.userAgentData?.mobile;
-      setMobile(uaMobile || mq.matches);
-    };
+  if (typeof window.matchMedia === "function") {
+    const mq = window.matchMedia("(orientation: portrait)");
+    if (mq && typeof mq.matches === "boolean") return mq.matches;
+  }
 
-    update();
-
-    if (mq.addEventListener) mq.addEventListener("change", update);
-    else mq.addListener(update);
-
-    return () => {
-      if (mq.removeEventListener) mq.removeEventListener("change", update);
-      else mq.removeListener(update);
-    };
-  }, []);
-
-  return mobile;
+  return window.innerHeight > window.innerWidth;
 }
 
 export default function RotatePrompt({
-  className,
   title = "Rotate your device",
-  message = "Aura Studio is designed for landscape on mobile. Rotate for the best editing experience.",
+  message = "For the best experience on mobile, rotate your screen to landscape.",
 }) {
-  const isMobile = useIsMobile();
-  const isPortrait = useIsPortrait();
+  const location = useLocation();
 
   const [dismissed, setDismissed] = useState(false);
+  const [mobile, setMobile] = useState(false);
+  const [portrait, setPortrait] = useState(false);
 
+  // Re-check device + orientation on resize/orientation changes
   useEffect(() => {
-    try {
-      setDismissed(localStorage.getItem(STORAGE_KEY) === "1");
-    } catch {
-      setDismissed(false);
+    const handle = () => {
+      setMobile(isMobileDevice());
+      setPortrait(isPortrait());
+    };
+
+    handle();
+
+    window.addEventListener("resize", handle);
+    window.addEventListener("orientationchange", handle);
+
+    let mq = null;
+    if (typeof window.matchMedia === "function") {
+      mq = window.matchMedia("(orientation: portrait)");
+      if (mq && typeof mq.addEventListener === "function") mq.addEventListener("change", handle);
+      else if (mq && typeof mq.addListener === "function") mq.addListener(handle);
     }
+
+    return () => {
+      window.removeEventListener("resize", handle);
+      window.removeEventListener("orientationchange", handle);
+      if (mq && typeof mq.removeEventListener === "function") mq.removeEventListener("change", handle);
+      else if (mq && typeof mq.removeListener === "function") mq.removeListener(handle);
+    };
   }, []);
 
-  const shouldShow = useMemo(() => {
-    // Only show on mobile portrait, and only if user hasn't dismissed it
-    return isMobile && isPortrait && !dismissed;
-  }, [isMobile, isPortrait, dismissed]);
+  // ✅ Prompt again every time the user ENTERS the page (route changes)
+  useEffect(() => {
+    setDismissed(false);
+  }, [location.pathname]);
+
+  // ✅ If user rotates to landscape, clear dismissal.
+  // When they rotate back to portrait, prompt shows again.
+  useEffect(() => {
+    if (!portrait) setDismissed(false);
+  }, [portrait]);
+
+  const shouldShow = mobile && portrait && !dismissed;
 
   if (!shouldShow) return null;
 
-  const dismiss = () => {
-    setDismissed(true);
-    try {
-      localStorage.setItem(STORAGE_KEY, "1");
-    } catch {}
-  };
-
   return (
-    <div
-      className={cn(
-        "fixed inset-0 z-[9999] flex items-center justify-center",
-        "bg-black/85 backdrop-blur-md",
-        className
-      )}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Rotate device prompt"
-    >
-      <div className="w-[92vw] max-w-md rounded-2xl border border-white/10 bg-zinc-950/80 p-6 shadow-2xl">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-            <RotateCw className="w-5 h-5 text-emerald-300" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-lg font-extrabold text-white leading-tight">
-              {title}
-            </div>
-            <div className="text-xs text-gray-400">
-              Landscape recommended
-            </div>
-          </div>
+    <div className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6">
+      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0b0b0b] shadow-2xl p-6 text-center">
+        <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+          <RotateCw className="h-7 w-7 text-white/80" />
         </div>
 
-        <div className="text-sm text-gray-200 leading-relaxed">
-          {message}
-        </div>
+        <div className="text-lg font-extrabold text-white">{title}</div>
+        <div className="text-sm text-gray-400 mt-2 leading-relaxed">{message}</div>
 
-        <div className="mt-5 flex items-center gap-2">
-          <div className="flex-1 flex items-center justify-center rounded-xl border border-white/10 bg-white/5 py-3">
-            <Smartphone className="w-5 h-5 text-white/70" />
-            <span className="ml-2 text-xs text-white/80">
-              Rotate to landscape
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-5 flex gap-2">
+        <div className="mt-5 flex justify-center">
           <Button
-            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-black font-bold"
-            onClick={() => {
-              // No force; we simply let them rotate. Keep prompt visible until rotation.
-            }}
-          >
-            Got it
-          </Button>
-
-          <Button
-            className="flex-1"
-            variant="outline"
-            onClick={dismiss}
+            onClick={() => setDismissed(true)}
+            className="bg-emerald-500 hover:bg-emerald-600 text-black font-bold"
           >
             Continue anyway
           </Button>
-        </div>
-
-        <div className="mt-3 text-[10px] text-gray-500">
-          Tip: If you installed AuraLab as an app, landscape is usually smoother.
         </div>
       </div>
     </div>

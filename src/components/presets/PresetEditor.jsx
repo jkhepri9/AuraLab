@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
+import RotatePrompt from "@/components/RotatePrompt";
+
 import { useGlobalPlayer } from "../../audio/GlobalPlayerContext";
 
 // ✅ Optional: show human label for ambient waveform
@@ -87,9 +89,7 @@ export default function PresetEditor({
 
     if (initialPreset && autoPlay) {
       // Play using the hydrated layers immediately (no stale state).
-      // Never allow ambient decode failures to bubble as an unhandled rejection.
-      // GlobalPlayerContext is already decode-safe, but this keeps the console clean.
-      void player.playPreset({
+      player.playPreset({
         ...initialPreset,
         id: presetId,
         name,
@@ -100,7 +100,8 @@ export default function PresetEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [presetId]);
 
-  const isActivePreset = Boolean(player.currentPlayingPreset?.id) &&
+  const isActivePreset =
+    Boolean(player.currentPlayingPreset?.id) &&
     player.currentPlayingPreset?.id === presetId;
 
   const isPlaying = player.isPlaying && isActivePreset;
@@ -111,19 +112,13 @@ export default function PresetEditor({
       return;
     }
 
-    try {
-      await player.playPreset({
-        ...(initialPreset || {}),
-        id: presetId,
-        name,
-        color,
-        layers,
-      });
-    } catch (e) {
-      // Decode failures are handled upstream; this is extra safety to prevent
-      // "Uncaught (in promise) EncodingError" from surfacing here.
-      console.warn("[PresetEditor] playPreset failed:", e);
-    }
+    await player.playPreset({
+      ...(initialPreset || {}),
+      id: presetId,
+      name,
+      color,
+      layers,
+    });
   };
 
   // HARD LOCK: only allow volume + pan changes
@@ -151,6 +146,12 @@ export default function PresetEditor({
 
   return (
     <div className="relative w-full overflow-hidden rounded-3xl border border-white/10">
+      {/* MOBILE: rotate prompt for Preset Editor */}
+      <RotatePrompt
+        title="Rotate your device"
+        message="For the best experience in Preset Editor on mobile, rotate to landscape."
+      />
+
       {backgroundUrl && (
         <div
           className="absolute inset-0 bg-cover bg-center"
