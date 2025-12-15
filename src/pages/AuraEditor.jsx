@@ -1,18 +1,12 @@
 // src/pages/AuraEditor.jsx
 // -----------------------------------------------------------------------------
 // AURA LAB — AURA STUDIO (AuraEditor)
-// - Stable AudioEngine wiring
-// - Layer types aligned with LayerList + SourceControls (oscillator/noise/synth/ambient)
-// - Unsaved Changes guard WITHOUT react-router useBlocker (BrowserRouter-safe)
-//   • refresh/close prompt (beforeunload)
-//   • browser back prompt (popstate)
 // -----------------------------------------------------------------------------
-//
-// FIX IN THIS PATCH:
-// - While playing in Aura Studio, layer parameter edits (volume/filter/pulse/etc.)
-//   must be pushed to the engine live. Previously, edits updated React state only,
-//   and you heard changes only after pause/play (engine rebuild).
-// - We now coalesce rapid edits and call player.updateLayers(...) while playing.
+// FIXES IN THIS PATCH (SESSION WORK + STICKY NAV IN Layout.jsx):
+// 1) Studio work persists across page navigation within the same app session.
+//    - Stored in sessionStorage (clears automatically when the tab/app is closed).
+//    - Restored when user returns to Aura Studio.
+// 2) Live layer updates remain enabled (volume/filter/pulse update instantly).
 // -----------------------------------------------------------------------------
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -33,38 +27,10 @@ import { toast } from "sonner";
 
 import useUnsavedChangesGuard from "../hooks/useUnsavedChangesGuard";
 
+const STUDIO_SESSION_KEY = "auralab_studio_session_v1";
+
 export default function AuraEditor() {
   const player = useGlobalPlayer();
-
-  // ----------------------------
-  // LIVE LAYER UPDATES (apply volume/filter/pulse immediately while playing)
-  // - Coalesces rapid slider updates to 1 call per animation frame.
-  // ----------------------------
-  const liveRafRef = useRef(null);
-  const pendingLayersRef = useRef(null);
-
-  const scheduleLiveUpdate = (nextLayers) => {
-    if (!player?.updateLayers) return;
-    pendingLayersRef.current = nextLayers;
-
-    if (liveRafRef.current) return;
-    liveRafRef.current = requestAnimationFrame(() => {
-      liveRafRef.current = null;
-      const latest = pendingLayersRef.current;
-      pendingLayersRef.current = null;
-
-      // Only push live updates while Studio transport is playing.
-      if (isPlaying && latest) player.updateLayers(latest);
-    });
-  };
-
-  useEffect(() => {
-    return () => {
-      if (liveRafRef.current) cancelAnimationFrame(liveRafRef.current);
-      liveRafRef.current = null;
-      pendingLayersRef.current = null;
-    };
-  }, []);
 
   // ----------------------------
   // PROJECT
@@ -90,15 +56,13 @@ export default function AuraEditor() {
   // ----------------------------
   // AUDIO ENGINE (GLOBAL)
   // ----------------------------
-  // We use the single global engine so playback is continuous across pages
-  // and selecting another sound/preset always replaces the previous mix.
   useEffect(() => {
     if (!player?.engine) return;
     player.engine.onTick = (time) => setCurrentTime(time);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [player?.engine]);
 
-  // Keep FX applied live to the running engine (including after play/stop and HMR re-init).
+  // Keep FX applied live to the running engine.
   useEffect(() => {
     if (!player?.engine) return;
     player.engine.setReverb?.(reverbWet);
@@ -107,13 +71,105 @@ export default function AuraEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [player?.engine, reverbWet, delayWet, delayTime]);
 
+  // ---------------------------------------------------------------------------
+  // SESSION RESTORE / SAVE (persists until tab/app is closed)
+  // ---------------------------------------------------------------------------
+  const hydratedRef = useRef(false);
+
+  // Restore once on mount
+  useEffect(() => {
+    if (hydratedRef.current) return;
+    hydratedRef.current = true;
+
+    try {
+      const raw = sessionStorage.getItem(STUDIO_SESSION_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") return;
+
+      if (typeof parsed.projectName === "string") setProjectName(parsed.projectName);
+
+      if (Array.isArray(parsed.layers)) setLayers(parsed.layers);
+
+      if (parsed.fx && typeof parsed.fx === "object") {
+        if (typeof parsed.fx.reverbWet === "number") setReverbWet(parsed.fx.reverbWet);
+        if (typeof parsed.fx.delayWet === "number") setDelayWet(parsed.fx.delayWet);
+        if (typeof parsed.fx.delayTime === "number") setDelayTime(parsed.fx.delayTime);
+      }
+
+      if (typeof parsed.selectedLayerId === "string") setSelectedLayerId(parsed.selectedLayerId);
+
+      toast.success("Aura Studio session restored.");
+    } catch (e) {
+      console.warn("[AuraEditor] Failed to restore session:", e);
+    }
+  }, []);
+
+  // Save continuously (coalesced) while user edits; survives route changes.
+  const saveTimerRef = useRef(null);
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+
+    saveTimerRef.current = window.setTimeout(() => {
+      try {
+        const payload = {
+          projectName,
+          layers,
+          selectedLayerId,
+          fx: { reverbWet, delayWet, delayTime },
+          savedAt: Date.now(),
+        };
+        sessionStorage.setItem(STUDIO_SESSION_KEY, JSON.stringify(payload));
+      } catch (e) {
+        console.warn("[AuraEditor] Failed to persist session:", e);
+      }
+    }, 120); // short debounce for sliders/typing
+
+    return () => {
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+    };
+  }, [projectName, layers, selectedLayerId, reverbWet, delayWet, delayTime]);
+
+  // ----------------------------
+  // LIVE LAYER UPDATES (apply volume/filter/pulse immediately while playing)
+  // - Coalesces rapid slider updates to 1 call per animation frame.
+  // ----------------------------
+  const liveRafRef = useRef(null);
+  const pendingLayersRef = useRef(null);
+
+  const scheduleLiveUpdate = (nextLayers) => {
+    if (!player?.updateLayers) return;
+    pendingLayersRef.current = nextLayers;
+
+    if (liveRafRef.current) return;
+    liveRafRef.current = requestAnimationFrame(() => {
+      liveRafRef.current = null;
+      const latest = pendingLayersRef.current;
+      pendingLayersRef.current = null;
+
+      if (isPlaying && latest) player.updateLayers(latest);
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (liveRafRef.current) cancelAnimationFrame(liveRafRef.current);
+      liveRafRef.current = null;
+      pendingLayersRef.current = null;
+    };
+  }, []);
+
   // ----------------------------
   // UNSAVED CHANGES (baseline snapshot)
+  // NOTE: This is for "leave without saving to DB" prompt; session persists either way.
   // ----------------------------
   const baselineRef = useRef("");
+  const readyForDirtyRef = useRef(false);
 
   const snapshot = useMemo(() => {
-    // Keep it deterministic and lightweight
     return JSON.stringify({
       projectName,
       layers,
@@ -121,19 +177,24 @@ export default function AuraEditor() {
     });
   }, [projectName, layers, reverbWet, delayWet, delayTime]);
 
-  // Initialize baseline once
-  if (!baselineRef.current) baselineRef.current = snapshot;
+  // Establish baseline after first stable render (including session restore)
+  useEffect(() => {
+    if (readyForDirtyRef.current) return;
+    const id = window.setTimeout(() => {
+      baselineRef.current = snapshot;
+      readyForDirtyRef.current = true;
+    }, 0);
 
-  const isDirty = baselineRef.current !== snapshot;
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // BrowserRouter-safe unsaved guard:
-  // - handles refresh/close automatically
-  // - (return value can be used before manual navigation; not needed here)
+  const isDirty = readyForDirtyRef.current && baselineRef.current !== snapshot;
+
   useUnsavedChangesGuard(isDirty);
 
   // Also protect browser BACK when dirty (BrowserRouter-safe)
   useEffect(() => {
-    // Push a dummy state so the first "Back" triggers popstate inside the app
     window.history.pushState({ __aura_guard: true }, "", window.location.href);
 
     const onPopState = () => {
@@ -141,7 +202,6 @@ export default function AuraEditor() {
 
       const ok = window.confirm("You have unsaved changes. Leave without saving?");
       if (!ok) {
-        // Re-push state to prevent leaving
         window.history.pushState({ __aura_guard: true }, "", window.location.href);
       }
     };
@@ -151,7 +211,7 @@ export default function AuraEditor() {
   }, [isDirty]);
 
   // ----------------------------
-  // SAVE PROJECT
+  // SAVE PROJECT (to DB library)
   // ----------------------------
   const handleSaveProject = async () => {
     try {
@@ -162,9 +222,7 @@ export default function AuraEditor() {
         layers,
       });
 
-      // Reset baseline = not dirty anymore
       baselineRef.current = snapshot;
-
       toast.success("Project saved!");
     } catch (e) {
       console.error(e);
@@ -177,6 +235,7 @@ export default function AuraEditor() {
   // ----------------------------
   const handlePlay = async () => {
     if (!player) return;
+
     await player.playLayers(layers, {
       title: projectName || "Aura Studio",
       artist: "AuraLab",
@@ -187,6 +246,7 @@ export default function AuraEditor() {
     player.engine?.setDelayWet?.(delayWet);
     player.engine?.setDelayTime?.(delayTime);
 
+    // Claim playback so sticky (outside studio) routes back into studio.
     player.updateNowPlaying(
       {
         id: "__studio__",
@@ -199,6 +259,7 @@ export default function AuraEditor() {
         artist: "AuraLab",
       }
     );
+
     setIsPlaying(true);
   };
 
@@ -228,7 +289,7 @@ export default function AuraEditor() {
   };
 
   // ----------------------------
-  // LAYER OPS (types aligned with LayerList + SourceControls)
+  // LAYER OPS
   // ----------------------------
   const addLayer = (type) => {
     const safeType = ["oscillator", "noise", "synth", "ambient"].includes(type)
@@ -238,7 +299,6 @@ export default function AuraEditor() {
     const newLayer = {
       id: crypto.randomUUID(),
       type: safeType,
-
       name:
         safeType === "oscillator"
           ? "Frequency"
@@ -267,7 +327,6 @@ export default function AuraEditor() {
       pulseDepth: 0,
       phaseShift: 0,
 
-      // Filter default ON for everything except oscillator
       filterEnabled: safeType !== "oscillator",
       filter: { type: "lowpass", frequency: 20000, Q: 1 },
     };
@@ -305,8 +364,6 @@ export default function AuraEditor() {
   const handleExportWAV = async () => {
     if (!player?.engine) return;
 
-    // The current engine does not yet implement an offline renderer for all
-    // layer types (ambient buffers, synth graphs, FX). Avoid a runtime crash.
     if (typeof player.engine.render !== "function") {
       toast.error("Export is not enabled yet in this build.");
       return;
@@ -332,7 +389,6 @@ export default function AuraEditor() {
   // ----------------------------
   return (
     <div className="h-[calc(100vh-4rem)] w-full flex flex-col bg-[#080808]">
-      {/* MOBILE PORTRAIT ROTATION PROMPT */}
       <RotatePrompt />
 
       {/* TOP BAR */}
@@ -369,7 +425,6 @@ export default function AuraEditor() {
 
       {/* BODY */}
       <div className="flex flex-1 overflow-hidden">
-        {/* LEFT SIDEBAR */}
         <LayerList
           layers={layers}
           selectedLayerId={selectedLayerId}
@@ -379,7 +434,6 @@ export default function AuraEditor() {
           onDeleteLayer={deleteLayer}
         />
 
-        {/* CENTER TIMELINE */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <TransportBar
             isPlaying={isPlaying}
@@ -402,7 +456,6 @@ export default function AuraEditor() {
           </div>
         </div>
 
-        {/* EFFECTS PANEL */}
         <EffectsPanel
           selectedLayer={selectedLayer}
           onUpdateLayer={(updates) => {

@@ -15,7 +15,21 @@ function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onStop, onTogglePl
   const { id, name, color, imageUrl } = currentPlayingPreset;
 
   const isInternalTrack = typeof id === "string" && id.startsWith("__");
-  const modesLink = !isInternalTrack && id ? `/AuraModes?activate=${encodeURIComponent(id)}` : "/AuraModes";
+  const isStudioTrack = id === "__studio__";
+
+  const modesLink = !isInternalTrack && id
+    ? `/AuraModes?activate=${encodeURIComponent(id)}`
+    : "/AuraModes";
+
+  const handleOpen = () => {
+    // ✅ FIX: If the current session is Aura Studio playback, always navigate
+    // straight back into Aura Studio (not NowPlaying / PresetEditor).
+    if (isStudioTrack) {
+      navigate("/AuraEditor");
+      return;
+    }
+    navigate("/NowPlaying");
+  };
 
   return (
     <div className="fixed left-0 right-0 z-40 p-4 bottom-[calc(4rem+env(safe-area-inset-bottom))] md:bottom-0 w-screen max-w-[100vw] overflow-x-hidden">
@@ -48,7 +62,7 @@ function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onStop, onTogglePl
           <button
             type="button"
             className="flex items-center space-x-3 min-w-0 text-left hover:opacity-95 active:opacity-90"
-            onClick={() => navigate("/NowPlaying")}
+            onClick={handleOpen}
             title="Open current session"
           >
             <Layers className="w-6 h-6 text-white/80 shrink-0" />
