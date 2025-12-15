@@ -1,5 +1,5 @@
-// api/public-config.cjs
-module.exports = (req, res) => {
+// api/public-config.js
+export default function handler(req, res) {
   try {
     const supabaseUrl =
       process.env.SUPABASE_URL ||
@@ -11,14 +11,13 @@ module.exports = (req, res) => {
       process.env.VITE_SUPABASE_ANON_KEY ||
       "";
 
-    res.statusCode = 200;
-    res.setHeader("Content-Type", "application/json");
+    res.status(200).setHeader("Content-Type", "application/json");
     res.setHeader("Cache-Control", "no-store");
     res.end(JSON.stringify({ supabaseUrl, supabaseAnonKey }));
   } catch (e) {
-    res.statusCode = 200;
-    res.setHeader("Content-Type", "application/json");
+    // Always return JSON, even on failure
+    res.status(200).setHeader("Content-Type", "application/json");
     res.setHeader("Cache-Control", "no-store");
     res.end(JSON.stringify({ supabaseUrl: "", supabaseAnonKey: "" }));
   }
-};
+}
