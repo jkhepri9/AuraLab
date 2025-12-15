@@ -11,6 +11,10 @@ import AuraEditor from './pages/AuraEditor';
 import NowPlaying from './pages/NowPlaying';
 
 import { GlobalPlayerProvider, useGlobalPlayer } from './audio/GlobalPlayerContext';
+import Account from "@/pages/Account";
+
+// inside <Routes>
+<Route path="/account" element={<Account />} />
 
 function AppInner() {
   const { currentPlayingPreset, isPlaying, stop, togglePlayPause, restart } = useGlobalPlayer();
