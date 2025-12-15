@@ -96,7 +96,7 @@ export default function AuraConverter() {
           </span>
         </h1>
         <p className="text-gray-400 text-sm sm:text-base max-w-xl mx-auto">
-          Pitch-shift your audio from 440Hz to 432Hz.
+          Pitch-shift your audio from 440Hz to 432Hz!
         </p>
       </header>
 
