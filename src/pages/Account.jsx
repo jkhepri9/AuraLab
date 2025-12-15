@@ -3,12 +3,16 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { startCheckout } from "@/lib/billing";
 import { useAuth } from "@/auth/AuthProvider";
-import { supabase, isSupabaseConfigured } from "@/lib/supabaseClient";
+import { getSupabase, getIsSupabaseConfigured } from "@/lib/supabaseClient";
 
 export default function Account() {
   const { user, loading } = useAuth();
   const [sub, setSub] = useState(null);
   const [subLoading, setSubLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
+
+  const supabase = getSupabase();
+  const configured = getIsSupabaseConfigured();
 
   const userId = user?.id || null;
   const email = user?.email || null;
@@ -17,7 +21,7 @@ export default function Account() {
     let alive = true;
 
     async function loadSubscription() {
-      if (!isSupabaseConfigured || !supabase) return;
+      if (!configured || !supabase) return;
       if (!userId) {
         setSub(null);
         return;
@@ -39,6 +43,7 @@ export default function Account() {
       } else {
         setSub(data ?? null);
       }
+
       setSubLoading(false);
     }
 
@@ -46,14 +51,26 @@ export default function Account() {
     return () => {
       alive = false;
     };
-  }, [userId]);
+  }, [userId, configured]);
 
   const signInGoogle = async () => {
+    setAuthError("");
     if (!supabase) return;
-    await supabase.auth.signInWithOAuth({ provider: "google" });
+
+    const redirectTo = `${window.location.origin}/account`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo },
+    });
+
+    if (error) {
+      console.error("Supabase sign-in error:", error);
+      setAuthError(error.message || "Sign-in failed");
+    }
   };
 
   const signOut = async () => {
+    setAuthError("");
     if (!supabase) return;
     await supabase.auth.signOut();
   };
@@ -68,15 +85,15 @@ export default function Account() {
           </p>
         </div>
 
-        {!isSupabaseConfigured && (
+        {!configured && (
           <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-red-200">
-            Supabase is not configured in the frontend. Add:
-            <div className="mt-2 font-mono text-xs text-red-200/90">
-              VITE_SUPABASE_URL
-              <br />
-              VITE_SUPABASE_ANON_KEY
-            </div>
-            Then redeploy.
+            Supabase is not configured in the frontend.
+          </div>
+        )}
+
+        {authError && (
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-red-200">
+            {authError}
           </div>
         )}
 
@@ -87,6 +104,7 @@ export default function Account() {
             <div className="text-sm text-gray-300">
               You need to sign in before subscribing (so premium can be attached to your account).
             </div>
+
             <Button
               className="bg-emerald-500 hover:bg-emerald-600 text-black font-bold"
               onClick={signInGoogle}
@@ -110,9 +128,7 @@ export default function Account() {
                   Status: <span className="font-semibold">{sub.status}</span>
                 </div>
               ) : (
-                <div className="text-sm text-gray-400 mt-1">
-                  No active subscription on file.
-                </div>
+                <div className="text-sm text-gray-400 mt-1">No active subscription on file.</div>
               )}
             </div>
 

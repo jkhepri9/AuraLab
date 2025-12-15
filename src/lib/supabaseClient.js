@@ -1,17 +1,25 @@
 // src/lib/supabaseClient.js
 import { createClient } from "@supabase/supabase-js";
 
-// Live exports (ESM live bindings). Importers will see updates after init.
+/**
+ * ✅ Production-safe fallback
+ * Supabase anon key is public by design (safe for frontend).
+ * This prevents "not configured" in production even if Vercel env injection fails.
+ */
+const FALLBACK_SUPABASE_URL = "https://oditikwnckhbybycntqk.supabase.co";
+const FALLBACK_SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kaXRpa3duY2toYnlieWNudHFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4MTA1OTQsImV4cCI6MjA4MTM4NjU5NH0.1BRClO6Ja8qcYZKCrDti36J-mKGeYLJihAErvYPTFKE";
+
 export let supabase = null;
 export let isSupabaseConfigured = false;
 
-let _warned = false;
 let _initAttempted = false;
 
 function readFromViteEnv() {
-  const url = import.meta.env?.VITE_SUPABASE_URL || "";
-  const anon = import.meta.env?.VITE_SUPABASE_ANON_KEY || "";
-  return { supabaseUrl: url, supabaseAnonKey: anon };
+  return {
+    supabaseUrl: import.meta.env?.VITE_SUPABASE_URL || "",
+    supabaseAnonKey: import.meta.env?.VITE_SUPABASE_ANON_KEY || "",
+  };
 }
 
 function readFromWindowConfig() {
@@ -23,19 +31,6 @@ function readFromWindowConfig() {
   };
 }
 
-function warnOnce() {
-  if (_warned) return;
-  _warned = true;
-  console.warn(
-    "[Supabase] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. " +
-      "Auth/subscriptions are disabled until configured."
-  );
-}
-
-/**
- * Initialize Supabase from an explicit config object (optional).
- * If cfg is not provided, it will try window public config first, then Vite env.
- */
 export function initSupabaseFromConfig(cfg) {
   _initAttempted = true;
 
@@ -47,16 +42,24 @@ export function initSupabaseFromConfig(cfg) {
   const fromWindow = readFromWindowConfig();
   const fromEnv = readFromViteEnv();
 
-  const supabaseUrl = fromCfg.supabaseUrl || fromWindow.supabaseUrl || fromEnv.supabaseUrl || "";
+  const supabaseUrl =
+    fromCfg.supabaseUrl ||
+    fromWindow.supabaseUrl ||
+    fromEnv.supabaseUrl ||
+    FALLBACK_SUPABASE_URL;
+
   const supabaseAnonKey =
-    fromCfg.supabaseAnonKey || fromWindow.supabaseAnonKey || fromEnv.supabaseAnonKey || "";
+    fromCfg.supabaseAnonKey ||
+    fromWindow.supabaseAnonKey ||
+    fromEnv.supabaseAnonKey ||
+    FALLBACK_SUPABASE_ANON_KEY;
 
   const ok = Boolean(supabaseUrl && supabaseAnonKey);
 
   if (!ok) {
     supabase = null;
     isSupabaseConfigured = false;
-    warnOnce();
+    console.warn("[Supabase] Missing URL/anon key. Auth disabled.");
     return { supabase: null, isSupabaseConfigured: false };
   }
 
@@ -65,18 +68,12 @@ export function initSupabaseFromConfig(cfg) {
   return { supabase, isSupabaseConfigured: true };
 }
 
-/**
- * Safe getter that lazily initializes once (from window/env) if you forgot to init in main.jsx.
- */
 export function getSupabase() {
   if (supabase) return supabase;
   if (!_initAttempted) initSupabaseFromConfig();
   return supabase;
 }
 
-/**
- * Safe boolean that won’t throw.
- */
 export function getIsSupabaseConfigured() {
   if (!_initAttempted) initSupabaseFromConfig();
   return isSupabaseConfigured;
