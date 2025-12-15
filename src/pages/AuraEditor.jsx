@@ -7,6 +7,13 @@
 //   • refresh/close prompt (beforeunload)
 //   • browser back prompt (popstate)
 // -----------------------------------------------------------------------------
+//
+// FIX IN THIS PATCH:
+// - While playing in Aura Studio, layer parameter edits (volume/filter/pulse/etc.)
+//   must be pushed to the engine live. Previously, edits updated React state only,
+//   and you heard changes only after pause/play (engine rebuild).
+// - We now coalesce rapid edits and call player.updateLayers(...) while playing.
+// -----------------------------------------------------------------------------
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
@@ -28,6 +35,37 @@ import useUnsavedChangesGuard from "../hooks/useUnsavedChangesGuard";
 
 export default function AuraEditor() {
   const player = useGlobalPlayer();
+
+  // ----------------------------
+  // LIVE LAYER UPDATES (apply volume/filter/pulse immediately while playing)
+  // - Coalesces rapid slider updates to 1 call per animation frame.
+  // ----------------------------
+  const liveRafRef = useRef(null);
+  const pendingLayersRef = useRef(null);
+
+  const scheduleLiveUpdate = (nextLayers) => {
+    if (!player?.updateLayers) return;
+    pendingLayersRef.current = nextLayers;
+
+    if (liveRafRef.current) return;
+    liveRafRef.current = requestAnimationFrame(() => {
+      liveRafRef.current = null;
+      const latest = pendingLayersRef.current;
+      pendingLayersRef.current = null;
+
+      // Only push live updates while Studio transport is playing.
+      if (isPlaying && latest) player.updateLayers(latest);
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (liveRafRef.current) cancelAnimationFrame(liveRafRef.current);
+      liveRafRef.current = null;
+      pendingLayersRef.current = null;
+    };
+  }, []);
+
   // ----------------------------
   // PROJECT
   // ----------------------------
@@ -59,6 +97,15 @@ export default function AuraEditor() {
     player.engine.onTick = (time) => setCurrentTime(time);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [player?.engine]);
+
+  // Keep FX applied live to the running engine (including after play/stop and HMR re-init).
+  useEffect(() => {
+    if (!player?.engine) return;
+    player.engine.setReverb?.(reverbWet);
+    player.engine.setDelayWet?.(delayWet);
+    player.engine.setDelayTime?.(delayTime);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [player?.engine, reverbWet, delayWet, delayTime]);
 
   // ----------------------------
   // UNSAVED CHANGES (baseline snapshot)
@@ -130,8 +177,16 @@ export default function AuraEditor() {
   // ----------------------------
   const handlePlay = async () => {
     if (!player) return;
+    await player.playLayers(layers, {
+      title: projectName || "Aura Studio",
+      artist: "AuraLab",
+    });
 
-    // Claim playback immediately so any Mode sticky player hides in Aura Studio.
+    // Apply current Studio FX values immediately after starting.
+    player.engine?.setReverb?.(reverbWet);
+    player.engine?.setDelayWet?.(delayWet);
+    player.engine?.setDelayTime?.(delayTime);
+
     player.updateNowPlaying(
       {
         id: "__studio__",
@@ -144,17 +199,7 @@ export default function AuraEditor() {
         artist: "AuraLab",
       }
     );
-
-    try {
-      const ok = await player.playLayers(layers, {
-        title: projectName || "Aura Studio",
-        artist: "AuraLab",
-      });
-      setIsPlaying(Boolean(ok));
-    } catch (e) {
-      console.warn("[AuraEditor] playLayers failed:", e);
-      setIsPlaying(false);
-    }
+    setIsPlaying(true);
   };
 
   const handlePause = () => {
@@ -227,18 +272,28 @@ export default function AuraEditor() {
       filter: { type: "lowpass", frequency: 20000, Q: 1 },
     };
 
-    setLayers((prev) => [...prev, newLayer]);
+    setLayers((prev) => {
+      const next = [...prev, newLayer];
+      if (isPlaying) scheduleLiveUpdate(next);
+      return next;
+    });
     setSelectedLayerId(newLayer.id);
   };
 
   const updateLayer = (id, updates) => {
-    setLayers((prev) =>
-      prev.map((layer) => (layer.id === id ? { ...layer, ...updates } : layer))
-    );
+    setLayers((prev) => {
+      const next = prev.map((layer) => (layer.id === id ? { ...layer, ...updates } : layer));
+      if (isPlaying) scheduleLiveUpdate(next);
+      return next;
+    });
   };
 
   const deleteLayer = (id) => {
-    setLayers((prev) => prev.filter((l) => l.id !== id));
+    setLayers((prev) => {
+      const next = prev.filter((l) => l.id !== id);
+      if (isPlaying) scheduleLiveUpdate(next);
+      return next;
+    });
     if (selectedLayerId === id) setSelectedLayerId(null);
   };
 
