@@ -4,12 +4,15 @@ import { Button } from "@/components/ui/button";
 import { startCheckout } from "@/lib/billing";
 import { useAuth } from "@/auth/AuthProvider";
 import { getSupabase, getIsSupabaseConfigured } from "@/lib/supabaseClient";
+import { toast } from "sonner";
 
 export default function Account() {
   const { user, loading } = useAuth();
   const [sub, setSub] = useState(null);
   const [subLoading, setSubLoading] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [checkoutError, setCheckoutError] = useState("");
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   const supabase = getSupabase();
   const configured = getIsSupabaseConfigured();
@@ -66,6 +69,7 @@ export default function Account() {
     if (error) {
       console.error("Supabase sign-in error:", error);
       setAuthError(error.message || "Sign-in failed");
+      toast.error(error.message || "Sign-in failed");
     }
   };
 
@@ -73,6 +77,21 @@ export default function Account() {
     setAuthError("");
     if (!supabase) return;
     await supabase.auth.signOut();
+  };
+
+  const handleCheckout = async (plan) => {
+    setCheckoutError("");
+    setCheckoutLoading(true);
+
+    try {
+      await startCheckout(plan, { userId, email });
+    } catch (e) {
+      const msg = e?.message || "Checkout failed";
+      console.error("Checkout error:", e);
+      setCheckoutError(msg);
+      toast.error(msg);
+      setCheckoutLoading(false);
+    }
   };
 
   return (
@@ -94,6 +113,12 @@ export default function Account() {
         {authError && (
           <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-red-200">
             {authError}
+          </div>
+        )}
+
+        {checkoutError && (
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-red-200">
+            {checkoutError}
           </div>
         )}
 
@@ -135,15 +160,17 @@ export default function Account() {
             <div className="flex gap-3 flex-wrap">
               <Button
                 className="bg-emerald-500 hover:bg-emerald-600 text-black font-bold"
-                onClick={() => startCheckout("monthly", { userId, email })}
+                onClick={() => handleCheckout("monthly")}
+                disabled={checkoutLoading}
               >
-                Subscribe Monthly
+                {checkoutLoading ? "Redirecting…" : "Subscribe Monthly"}
               </Button>
 
               <Button
                 variant="outline"
                 className="border-white/10 text-white hover:bg-white/10"
-                onClick={() => startCheckout("yearly", { userId, email })}
+                onClick={() => handleCheckout("yearly")}
+                disabled={checkoutLoading}
               >
                 Subscribe Yearly
               </Button>

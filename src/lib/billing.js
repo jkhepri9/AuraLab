@@ -6,8 +6,15 @@ export async function startCheckout(plan = "monthly", { userId = null, email = n
     body: JSON.stringify({ plan, userId, email }),
   });
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.error || "Checkout failed");
+  const ct = res.headers.get("content-type") || "";
+  const isJson = ct.includes("application/json");
 
-  if (data?.url) window.location.href = data.url;
+  const data = isJson ? await res.json().catch(() => null) : null;
+
+  if (!res.ok) {
+    throw new Error(data?.error || `Checkout failed (HTTP ${res.status})`);
+  }
+
+  if (!data?.url) throw new Error("Checkout failed: missing redirect URL.");
+  window.location.assign(data.url);
 }

@@ -1,45 +1,54 @@
 // api/create-checkout-session.js
 const Stripe = require("stripe");
-const { getBaseUrl, readJson, send } = require("./_utils");
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-06-20",
-});
+function json(res, code, payload) {
+  res.statusCode = code;
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Cache-Control", "no-store");
+  res.end(JSON.stringify(payload));
+}
 
 module.exports = async (req, res) => {
-  if (req.method !== "POST") return send(res, 405, { error: "Method not allowed" });
-
   try {
-    const { plan = "monthly", userId = null, email = null } = await readJson(req);
+    if (req.method !== "POST") return json(res, 405, { error: "Method not allowed" });
 
-    if (!userId) {
-      return send(res, 400, { error: "Missing userId (sign in first)" });
+    const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
+    const PRICE_MONTHLY = process.env.STRIPE_PRICE_ID_MONTHLY || "";
+    const PRICE_YEARLY = process.env.STRIPE_PRICE_ID_YEARLY || "";
+    const APP_BASE_URL = process.env.APP_BASE_URL || `https://${req.headers.host}`;
+
+    if (!STRIPE_SECRET_KEY) return json(res, 500, { error: "Missing STRIPE_SECRET_KEY" });
+    if (!PRICE_MONTHLY) return json(res, 500, { error: "Missing STRIPE_PRICE_ID_MONTHLY" });
+    if (!PRICE_YEARLY) return json(res, 500, { error: "Missing STRIPE_PRICE_ID_YEARLY" });
+
+    let body = req.body;
+    if (typeof body === "string") {
+      try { body = JSON.parse(body); } catch { body = {}; }
     }
+    body = body && typeof body === "object" ? body : {};
 
-    const priceId =
-      plan === "yearly"
-        ? process.env.STRIPE_PRICE_ID_YEARLY
-        : process.env.STRIPE_PRICE_ID_MONTHLY;
+    const { plan, userId, email } = body;
 
-    if (!priceId) return send(res, 500, { error: "Missing STRIPE_PRICE_ID_* env var" });
+    const price =
+      plan === "yearly" ? PRICE_YEARLY :
+      plan === "monthly" ? PRICE_MONTHLY :
+      null;
 
-    const baseUrl = getBaseUrl(req);
+    if (!price) return json(res, 400, { error: "Invalid plan. Use monthly|yearly." });
+
+    const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" });
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${baseUrl}/account?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/account?checkout=cancel`,
-      allow_promotion_codes: true,
-
-      client_reference_id: String(userId),
+      line_items: [{ price, quantity: 1 }],
+      success_url: `${APP_BASE_URL}/account?checkout=success`,
+      cancel_url: `${APP_BASE_URL}/account?checkout=cancel`,
       customer_email: email || undefined,
-      metadata: { userId: String(userId) },
+      metadata: { user_id: userId || "", plan: plan || "" },
     });
 
-    return send(res, 200, { url: session.url });
+    return json(res, 200, { url: session.url });
   } catch (e) {
-    console.error("create-checkout-session error:", e);
-    return send(res, 500, { error: "Failed to create checkout session" });
+    return json(res, 500, { error: e?.message || "Server error creating checkout session" });
   }
 };
