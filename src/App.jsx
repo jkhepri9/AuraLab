@@ -1,6 +1,6 @@
 // src/App.jsx
-import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import React, { useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import Layout from "./Layout";
 
 import Home from "./pages/Home";
@@ -11,9 +11,36 @@ import AuraModes from "./pages/AuraModes";
 import AuraEditor from "./pages/AuraEditor";
 import NowPlaying from "./pages/NowPlaying";
 import Account from "./pages/Account";
+import Start from "./pages/Start";
 
 import { GlobalPlayerProvider, useGlobalPlayer } from "./audio/GlobalPlayerContext";
 import { AuthProvider } from "@/auth/AuthProvider";
+
+const FIRST_RUN_KEY = "auralab_first_run_v1";
+
+function FirstRunGate() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Avoid redirect loops + keep a small allowlist.
+    const allow = new Set(["/Start", "/Install", "/account", "/Account"]);
+    if (allow.has(location.pathname)) return;
+
+    let done = false;
+    try {
+      done = localStorage.getItem(FIRST_RUN_KEY) === "1";
+    } catch {
+      done = false;
+    }
+
+    if (!done) {
+      navigate("/Start", { replace: true });
+    }
+  }, [location.pathname, navigate]);
+
+  return null;
+}
 
 function AppInner() {
   const { currentPlayingPreset, isPlaying, stop, togglePlayPause, restart } =
@@ -21,6 +48,7 @@ function AppInner() {
 
   return (
     <Router>
+      <FirstRunGate />
       <Layout
         currentPlayingPreset={currentPlayingPreset}
         isPlaying={isPlaying}
@@ -29,6 +57,7 @@ function AppInner() {
         onBack={restart}
       >
         <Routes>
+          <Route path="/Start" element={<Start />} />
           <Route path="/" element={<Home />} />
           <Route path="/Install" element={<Install />} />
           <Route path="/AuraGenerator" element={<AuraGenerator />} />

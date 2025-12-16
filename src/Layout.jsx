@@ -5,7 +5,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from './components/ui/button';
 import { RefreshCw, Layers, Pause, Play, RotateCcw, Square } from 'lucide-react';
 import { cn } from './lib/utils';
-import { toast } from 'sonner';
+import { toast, Toaster } from 'sonner';
 
 function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onStop, onTogglePlayPause, onBack }) {
   const navigate = useNavigate();
@@ -134,6 +134,9 @@ export default function Layout({
 }) {
   const location = useLocation();
 
+  // Immersive onboarding/session (first 60 seconds)
+  const isImmersive = location.pathname === "/Start";
+
   // UX RULE:
   // - If user entered Aura Studio while a Mode is playing, keep the sticky player visible.
   // - Once Aura Studio claims playback (__studio__), hide the sticky player while inside Aura Studio.
@@ -141,11 +144,14 @@ export default function Layout({
     location.pathname === "/AuraEditor" &&
     currentPlayingPreset?.id === "__studio__";
 
-  const showStickyPlayer = Boolean(currentPlayingPreset) && !hideStickyInStudio;
+  const showStickyPlayer =
+    !isImmersive && Boolean(currentPlayingPreset) && !hideStickyInStudio;
 
-  const mainPadBottom = showStickyPlayer
-    ? 'pb-[calc(11rem+env(safe-area-inset-bottom))] md:pb-0'
-    : 'pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0';
+  const mainPadBottom = isImmersive
+    ? "pb-0"
+    : showStickyPlayer
+      ? 'pb-[calc(11rem+env(safe-area-inset-bottom))] md:pb-0'
+      : 'pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0';
 
   return (
     <div
@@ -163,7 +169,7 @@ export default function Layout({
         }}
       />
 
-      <Navbar />
+      {!isImmersive && <Navbar />}
 
       <main className={cn('z-20 relative w-screen max-w-[100vw] overflow-x-hidden', mainPadBottom)}>
         {children}
@@ -179,7 +185,10 @@ export default function Layout({
         />
       )}
 
-      <BottomNav />
+      {!isImmersive && <BottomNav />}
+
+      {/* Sonner toast mount (used across the app) */}
+      <Toaster richColors position="top-center" />
     </div>
   );
 }

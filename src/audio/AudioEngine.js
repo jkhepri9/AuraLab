@@ -1,7 +1,20 @@
+// src/editor/audio/AudioEngine.js
+// -----------------------------------------------------------------------------
+// AURA LAB — COMPLETE, STABLE AUDIO ENGINE
+// Supports UI types: frequency, color, synth, ambient
+// Adds: setOutputGain(), setTone({warmth, clarity})
+// -----------------------------------------------------------------------------
+//
+// NOTE:
+// - Output Gain is applied at master.output (post-FX).
+// - Tone EQ is inserted post-reverb and pre-analyser:
+//   reverbSum -> lowShelf (warmth) -> highShelf (clarity) -> analyser -> out
+//
 
 import { createNoiseBuffer } from "./NoiseEngines";
 import { createSynthGraph } from "./SynthEngines";
 import { loadAmbientBuffer } from "./AmbientLoader";
+
 // -----------------------------------------------------------------------------
 // TYPE MAPPING
 // -----------------------------------------------------------------------------
@@ -25,6 +38,13 @@ function clamp(v, min, max) {
   if (Number.isNaN(n)) return min;
   return Math.min(max, Math.max(min, n));
 }
+
+// Map 0..1 -> 0..MAX_DB (neutral at 0)
+function toneDb01(v01, maxDb = 8) {
+  const v = clamp(v01, 0, 1);
+  return v * maxDb;
+}
+
 // -----------------------------------------------------------------------------
 // OFFLINE RENDER HELPERS (WAV EXPORT)
 // -----------------------------------------------------------------------------
@@ -107,6 +127,9 @@ class AudioEngineClass {
     this.delay = null;
     this.reverb = null;
 
+    // NEW: master tone (shelf EQ)
+    this.tone = null;
+
     // Optional MediaElement output
     this.useMediaOutput = false;
     this.mediaDest = null;
@@ -143,6 +166,15 @@ class AudioEngineClass {
       delayFeedback: 0.3,
     };
 
+    // NEW: track desired master output gain even if graph re-inits
+    this._outputGain = 1.0;
+
+    // NEW: track desired tone even if graph re-inits (0..1, neutral at 0)
+    this._tone = {
+      warmth: 0,  // 0..1
+      clarity: 0, // 0..1
+    };
+
     this._unlockedOnce = false;
   }
 
@@ -159,6 +191,7 @@ class AudioEngineClass {
       this.analyser = null;
       this.delay = null;
       this.reverb = null;
+      this.tone = null;
 
       this.mediaDest = null;
       this.mediaEl = null;
@@ -242,6 +275,27 @@ class AudioEngineClass {
     this.reverb = { convolver: conv, dry: rvDry, wet: rvWet, sum: reverbSum };
 
     // -----------------------------------------------------------------------
+    // MASTER TONE (NEW) — two shelves
+    // reverbSum -> lowShelf(warmth) -> highShelf(clarity) -> analyser -> out
+    // -----------------------------------------------------------------------
+    const lowShelf = this.ctx.createBiquadFilter();
+    lowShelf.type = "lowshelf";
+    lowShelf.frequency.value = 220; // warmth center
+    lowShelf.Q.value = 0.7;
+    lowShelf.gain.value = toneDb01(this._tone.warmth, 8);
+
+    const highShelf = this.ctx.createBiquadFilter();
+    highShelf.type = "highshelf";
+    highShelf.frequency.value = 5500; // clarity center
+    highShelf.Q.value = 0.7;
+    highShelf.gain.value = toneDb01(this._tone.clarity, 8);
+
+    reverbSum.connect(lowShelf);
+    lowShelf.connect(highShelf);
+
+    this.tone = { lowShelf, highShelf };
+
+    // -----------------------------------------------------------------------
     // ANALYSER + OUTPUT
     // -----------------------------------------------------------------------
     const analyser = this.ctx.createAnalyser();
@@ -249,9 +303,10 @@ class AudioEngineClass {
     analyser.smoothingTimeConstant = 0.85;
 
     const out = this.ctx.createGain();
-    out.gain.value = 1.0;
+    out.gain.value = clamp(this._outputGain, 0.0, 2.0);
 
-    reverbSum.connect(analyser);
+    // analyser sees post-tone
+    highShelf.connect(analyser);
     analyser.connect(out);
 
     // CRITICAL: always audible output
@@ -299,6 +354,39 @@ class AudioEngineClass {
 
   getAnalyser() {
     return this.analyser || null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // NEW: MASTER OUTPUT + TONE API
+  // ---------------------------------------------------------------------------
+  setOutputGain(value) {
+    const v = clamp(value, 0.0, 2.0); // allow mild boost; UI can cap lower
+    this._outputGain = v;
+
+    if (!this.ctx || !this.master?.output) return;
+    const t = this.ctx.currentTime;
+    try {
+      // smooth, avoids clicks
+      this.master.output.gain.setTargetAtTime(v, t, 0.03);
+    } catch {
+      try { this.master.output.gain.value = v; } catch {}
+    }
+  }
+
+  setTone(next = {}) {
+    const warmth = clamp(next?.warmth ?? this._tone.warmth, 0, 1);
+    const clarity = clamp(next?.clarity ?? this._tone.clarity, 0, 1);
+
+    this._tone = { warmth, clarity };
+
+    if (!this.ctx || !this.tone) return;
+    const t = this.ctx.currentTime;
+
+    const wDb = toneDb01(warmth, 8);
+    const cDb = toneDb01(clarity, 8);
+
+    try { this.tone.lowShelf.gain.setTargetAtTime(wDb, t, 0.05); } catch {}
+    try { this.tone.highShelf.gain.setTargetAtTime(cDb, t, 0.05); } catch {}
   }
 
   // ---------------------------------------------------------------------------
@@ -429,6 +517,10 @@ class AudioEngineClass {
       this.master.input.gain.setValueAtTime(1.0, this.ctx.currentTime);
     } catch {}
 
+    // Ensure master output/tone apply (in case init happened mid-session)
+    this.setOutputGain(this._outputGain);
+    this.setTone(this._tone);
+
     // Replace program cleanly
     this._stopAllLayers();
 
@@ -546,8 +638,6 @@ class AudioEngineClass {
   }
 
   // ---------------------------------------------------------------------------
-  
-  // ---------------------------------------------------------------------------
   // PULSE (LFO) — live tremolo/gating per layer
   // ---------------------------------------------------------------------------
   _syncPulse(group, layer) {
@@ -612,7 +702,8 @@ class AudioEngineClass {
     group.pulse = null;
   }
 
-// GRAPH BUILD (run-safe, non-fatal per layer)
+  // ---------------------------------------------------------------------------
+  // GRAPH BUILD (run-safe, non-fatal per layer)
   // ---------------------------------------------------------------------------
   async _buildGraph(layers, runId) {
     if (!this._isRunActive(runId)) return;
@@ -667,6 +758,7 @@ class AudioEngineClass {
     const mult = engineType === "ambient" ? this.ambientGainBoost : 1.0;
     return base * mult;
   }
+
   _createCommonNodes(layer, engineType) {
     const ctx = this.ctx;
 
@@ -885,7 +977,7 @@ class AudioEngineClass {
   /**
    * Render a layer stack to a downloadable WAV (16-bit PCM) using OfflineAudioContext.
    * The render uses the same source engines (oscillator/noise/synth/ambient) and
-   * applies current Studio FX (delay/reverb) as supplied in options.
+   * applies current Studio FX (delay/reverb) + optional tone/output gain.
    *
    * @param {Array} layers
    * @param {number} seconds
@@ -966,10 +1058,32 @@ class AudioEngineClass {
     rvDry.connect(reverbSum);
     rvWet.connect(reverbSum);
 
+    // -----------------------------------------------------------------------
+    // TONE (offline, matches realtime)
+    // -----------------------------------------------------------------------
+    const lowShelf = ctx.createBiquadFilter();
+    lowShelf.type = "lowshelf";
+    lowShelf.frequency.value = 220;
+    lowShelf.Q.value = 0.7;
+
+    const highShelf = ctx.createBiquadFilter();
+    highShelf.type = "highshelf";
+    highShelf.frequency.value = 5500;
+    highShelf.Q.value = 0.7;
+
+    const warmth01 = clamp(options.warmth ?? options.tone?.warmth ?? this._tone.warmth, 0, 1);
+    const clarity01 = clamp(options.clarity ?? options.tone?.clarity ?? this._tone.clarity, 0, 1);
+    lowShelf.gain.value = toneDb01(warmth01, 8);
+    highShelf.gain.value = toneDb01(clarity01, 8);
+
+    reverbSum.connect(lowShelf);
+    lowShelf.connect(highShelf);
+
     // Output
     const out = ctx.createGain();
-    out.gain.value = 1.0;
-    reverbSum.connect(out);
+    out.gain.value = clamp(options.outputGain ?? this._outputGain, 0.0, 2.0);
+
+    highShelf.connect(out);
     out.connect(ctx.destination);
 
     // -----------------------------------------------------------------------
