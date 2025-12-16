@@ -12,8 +12,8 @@ export const FEATURED_PRESETS = [
       { id: "ds_amb", name: "Ambient: Ocean Deep", type: "ambient", waveform: "ocean_deep", volume: 0.33, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
 
       // Deep sleep bed anchored to 432 with a gentle low-offset (popular approach)
-      { id: "ds_l", name: "Binaural Carrier L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.14, pan: -1, waveform: "sine", enabled: true },
-      { id: "ds_r", name: "Binaural Carrier R (434 Hz)", type: "oscillator", frequency: 434, volume: 0.14, pan: 1, waveform: "sine", enabled: true },
+      { id: "ds_l", name: "Binaural Carrier L (98 Hz)", type: "oscillator", frequency: 98, volume: 0.14, pan: -1, waveform: "sine", enabled: true },
+      { id: "ds_r", name: "Binaural Carrier R (102 Hz)", type: "oscillator", frequency: 102, volume: 0.14, pan: 1, waveform: "sine", enabled: true },
 
       { id: "ds_pink", name: "Pink Noise (Soft Blanket)", type: "noise", frequency: 0, volume: 0.10, pan: 0, waveform: "pink", enabled: true },
 
@@ -34,8 +34,8 @@ export const FEATURED_PRESETS = [
       { id: "tg_amb", name: "Ambient: Wind Forest", type: "ambient", waveform: "wind_forest", volume: 0.30, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
 
       // Theta-ish offset on a 432 anchor
-      { id: "tg_l", name: "Binaural Carrier L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.14, pan: -1, waveform: "sine", enabled: true },
-      { id: "tg_r", name: "Binaural Carrier R (438 Hz)", type: "oscillator", frequency: 438, volume: 0.14, pan: 1, waveform: "sine", enabled: true },
+      { id: "tg_l", name: "Binaural Carrier L (138 Hz)", type: "oscillator", frequency: 138, volume: 0.14, pan: -1, waveform: "sine", enabled: true },
+      { id: "tg_r", name: "Binaural Carrier R (150 Hz)", type: "oscillator", frequency: 150, volume: 0.14, pan: 1, waveform: "sine", enabled: true },
 
       { id: "tg_white", name: "White Noise (Air)", type: "noise", frequency: 0, volume: 0.08, pan: 0, waveform: "white", enabled: true },
 
@@ -56,8 +56,8 @@ export const FEATURED_PRESETS = [
       { id: "ff_amb", name: "Ambient: Campfire", type: "ambient", waveform: "fire_camp", volume: 0.90, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
 
       // Popular focus/clarity anchors: 528 + 741 (use 528 as main bed)
-      { id: "ff_l", name: "Binaural Carrier L (528 Hz)", type: "oscillator", frequency: 528, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
-      { id: "ff_r", name: "Binaural Carrier R (542 Hz)", type: "oscillator", frequency: 542, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
+      { id: "ff_l", name: "Binaural Carrier L (278 Hz)", type: "oscillator", frequency: 278, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
+      { id: "ff_r", name: "Binaural Carrier R (298 Hz)", type: "oscillator", frequency: 298, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
 
       { id: "ff_gray", name: "Gray Noise (Attention Bed)", type: "noise", frequency: 0, volume: 0.12, pan: 0, waveform: "gray", enabled: true },
 
@@ -77,36 +77,16 @@ export const FEATURED_PRESETS = [
       { id: "hc_amb", name: "Ambient: Park Birds", type: "ambient", waveform: "birds_park", volume: 0.23, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 17000, Q: 0.7 } },
 
       // Popular “heart” association in sound-healing culture: 639
-      { id: "hc_l", name: "Binaural Carrier L (639 Hz)", type: "oscillator", frequency: 639, volume: 0.14, pan: -1, waveform: "sine", enabled: true },
-      { id: "hc_r", name: "Binaural Carrier R (647 Hz)", type: "oscillator", frequency: 647, volume: 0.14, pan: 1, waveform: "sine", enabled: true },
+      { id: "hc_l", name: "Binaural Carrier L (520 Hz)", type: "oscillator", frequency: 520, volume: 0.14, pan: -1, waveform: "sine", enabled: true },
+      { id: "hc_r", name: "Binaural Carrier R (536 Hz)", type: "oscillator", frequency: 536, volume: 0.14, pan: 1, waveform: "sine", enabled: true },
 
       { id: "hc_pink", name: "Pink Noise (Warmth)", type: "noise", frequency: 0, volume: 0.14, pan: 0, waveform: "pink", enabled: true },
 
       // Bring in the “144 configuration” as a gentle stabilizing harmonic
       { id: "hc_144", name: "Harmonic (144 Hz)", type: "oscillator", frequency: 144, volume: 0.03, pan: 0, waveform: "sine", enabled: true },
+      { id: "hc_333", name: "Harmonic (333 Hz)", type: "oscillator", frequency: 333, volume: 0.03, pan: 0, waveform: "sine", enabled: true },
     ],
     order: 3,
-  },
-
-  {
-    id: "c_stress_relief",
-    name: "Stress Relief",
-    color: "linear-gradient(135deg, #071a14, #0b3a2a)",
-    imageUrl: "/modeimages/stressrelief.jpg",
-    description: "Helps calm the nervous system and reduce stress for relaxed focus.",
-    layers: [
-      // Popular calming base: 432 with alpha-ish offset
-      { id: "sr_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.13, pan: -1, waveform: "sine", enabled: true },
-      { id: "sr_r", name: "Binaural R (440 Hz)", type: "oscillator", frequency: 440, volume: 0.13, pan: 1, waveform: "sine", enabled: true },
-
-      { id: "sr_brown", name: "Brown Noise", type: "noise", frequency: 0, volume: 0.10, pan: 0, waveform: "brown", enabled: true },
-      { id: "sr_rain", name: "Rain (Light)", type: "ambient", frequency: 0, volume: 0.40, pan: 0, waveform: "rain_light", enabled: true },
-
-      // Popular release/clearing anchors
-      { id: "sr_396", name: "Release Anchor (396 Hz)", type: "oscillator", frequency: 396, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
-      { id: "sr_417", name: "Clear Anchor (417 Hz)", type: "oscillator", frequency: 417, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
-    ],
-    order: 101,
   },
 
   {
@@ -121,8 +101,8 @@ export const FEATURED_PRESETS = [
 
       // Popular “activation” anchor: 741 / 852 / 963
       // Use 741 as main bed with a stronger offset for “ignite”
-      { id: "ei_l", name: "Binaural Carrier L (741 Hz)", type: "oscillator", frequency: 741, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
-      { id: "ei_r", name: "Binaural Carrier R (761 Hz)", type: "oscillator", frequency: 761, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
+      { id: "ei_l", name: "Binaural Carrier L (731 Hz)", type: "oscillator", frequency: 731, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
+      { id: "ei_r", name: "Binaural Carrier R (751 Hz)", type: "oscillator", frequency: 751, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
 
       { id: "ei_white", name: "White Noise (Spark)", type: "noise", frequency: 0, volume: 0.10, pan: 0, waveform: "white", enabled: true },
 
@@ -142,8 +122,8 @@ export const FEATURED_PRESETS = [
       { id: "p2_amb", name: "Ambient: Gentle River", type: "ambient", waveform: "river_soft", volume: 0.33, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
 
       // Replace sub-audible “6 Hz oscillator” with a 432-based binaural theta pattern
-      { id: "zg_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
-      { id: "zg_r", name: "Binaural R (438 Hz)", type: "oscillator", frequency: 438, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
+      { id: "zg_l", name: "Binaural L (220 Hz)", type: "oscillator", frequency: 220, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
+      { id: "zg_r", name: "Binaural R (224 Hz)", type: "oscillator", frequency: 224, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
 
       { id: "l4", name: "Pink Noise Bed", type: "noise", frequency: 0, volume: 0.16, pan: 0, waveform: "pink", enabled: true },
 
@@ -162,8 +142,8 @@ export const FEATURED_PRESETS = [
       { id: "p3_amb", name: "Ambient: Ocean Deep", type: "ambient", waveform: "ocean_deep", volume: 0.30, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
 
       // Replace sub-audible “3 Hz oscillator” with a 432-based low-offset drift
-      { id: "of_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
-      { id: "of_r", name: "Binaural R (435 Hz)", type: "oscillator", frequency: 435, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
+      { id: "of_l", name: "Binaural L (256 Hz)", type: "oscillator", frequency: 256, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
+      { id: "of_r", name: "Binaural R (260 Hz)", type: "oscillator", frequency: 260, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
 
       { id: "l6", name: "Brown Noise Bed", type: "noise", frequency: 0, volume: 0.16, pan: 0, waveform: "brown", enabled: true },
 
@@ -183,8 +163,8 @@ export const FEATURED_PRESETS = [
       { id: "p4_amb", name: "Ambient: Thunder Distant", type: "ambient", waveform: "thunder_distant", volume: 0.50, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
 
       // Protective calm bed: 396 + low offset
-      { id: "ns_l", name: "Binaural L (396 Hz)", type: "oscillator", frequency: 396, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
-      { id: "ns_r", name: "Binaural R (400 Hz)", type: "oscillator", frequency: 400, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
+      { id: "ns_l", name: "Binaural L (394 Hz)", type: "oscillator", frequency: 394, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
+      { id: "ns_r", name: "Binaural R (398 Hz)", type: "oscillator", frequency: 398, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
 
       { id: "l8", name: "Pink Noise Bed", type: "noise", frequency: 0, volume: 0.14, pan: 0, waveform: "pink", enabled: true },
 

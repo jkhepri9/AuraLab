@@ -123,8 +123,8 @@ export const communityPresets = [
       "https://commons.wikimedia.org/wiki/Special:FilePath/Ajna_chakra.svg?width=2400",
     description: "Supports meditative focus and inner visualization with theta-style entrainment.",
     layers: [
-      { id: "te_l", name: "Binaural L (210 Hz)", type: "oscillator", frequency: 210, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
-      { id: "te_r", name: "Binaural R (217 Hz)", type: "oscillator", frequency: 217, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
+      { id: "te_l", name: "Binaural L (430 Hz)", type: "oscillator", frequency: 430, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
+      { id: "te_r", name: "Binaural R (434 Hz)", type: "oscillator", frequency: 434, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
       { id: "te_violet", name: "Violet Noise", type: "noise", frequency: 0, volume: 0.06, pan: 0, waveform: "violet", enabled: true },
       { id: "te_852", name: "Overtone (852 Hz)", type: "oscillator", frequency: 852, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
       { id: "te_thunder", name: "Thunder (Distant)", type: "ambient", frequency: 0, volume: 0.33, pan: 0, waveform: "thunder_distant", enabled: true },
@@ -140,8 +140,8 @@ export const communityPresets = [
     description: "Boosts concentration and task-drive using a crisp beta-style entrainment bed.",
     layers: [
       // Popular “activation” anchors: 528 + 963
-      { id: "gm_l", name: "Binaural L (528 Hz)", type: "oscillator", frequency: 528, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
-      { id: "gm_r", name: "Binaural R (544 Hz)", type: "oscillator", frequency: 544, volume: 0.10, pan: 1, waveform: "sine", enabled: true },
+      { id: "gm_l", name: "Binaural L (524 Hz)", type: "oscillator", frequency: 524, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
+      { id: "gm_r", name: "Binaural R (532 Hz)", type: "oscillator", frequency: 532, volume: 0.10, pan: 1, waveform: "sine", enabled: true },
 
       { id: "gm_gray", name: "Gray Noise", type: "noise", frequency: 0, volume: 0.09, pan: 0, waveform: "gray", enabled: true },
 
@@ -159,8 +159,8 @@ export const communityPresets = [
     description: "Supports musical flow-state, timing, and relaxed precision for practice sessions.",
     layers: [
       // Flow-state bed on 432 with alpha-ish offset
-      { id: "mm_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
-      { id: "mm_r", name: "Binaural R (440 Hz)", type: "oscillator", frequency: 440, volume: 0.10, pan: 1, waveform: "sine", enabled: true },
+      { id: "mm_l", name: "Binaural L (428 Hz)", type: "oscillator", frequency: 428, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
+      { id: "mm_r", name: "Binaural R (436 Hz)", type: "oscillator", frequency: 436, volume: 0.10, pan: 1, waveform: "sine", enabled: true },
 
       { id: "mm_432", name: "Anchor (432 Hz)", type: "oscillator", frequency: 432, volume: 0.04, pan: -0.1, waveform: "sine", enabled: true },
       { id: "mm_528", name: "Anchor (528 Hz)", type: "oscillator", frequency: 528, volume: 0.03, pan: 0.1, waveform: "sine", enabled: true },
@@ -178,7 +178,7 @@ export const communityPresets = [
     description: "Supports calm confidence and long-horizon thinking for disciplined abundance.",
     layers: [
       // Popular abundance stack: 528 + 639, with a calm offset on the main layer
-      { id: "wa_l", name: "Binaural L (528 Hz)", type: "oscillator", frequency: 528, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
+      { id: "wa_l", name: "Binaural L (520 Hz)", type: "oscillator", frequency: 520, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
       { id: "wa_r", name: "Binaural R (536 Hz)", type: "oscillator", frequency: 536, volume: 0.11, pan: 1, waveform: "sine", enabled: true },
 
       { id: "wa_gold", name: "Gold Noise", type: "noise", frequency: 0, volume: 0.08, pan: 0, waveform: "gold", enabled: true },
@@ -186,6 +186,7 @@ export const communityPresets = [
 
       { id: "wa_639", name: "Anchor (639 Hz)", type: "oscillator", frequency: 639, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
       { id: "wa_432", name: "Stabilizer (432 Hz)", type: "oscillator", frequency: 432, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
+      { id: "wa_888", name: "Stabilizer (888 Hz)", type: "oscillator", frequency: 888, volume: 0.08, pan: 0, waveform: "sine", enabled: true },
     ],
     order: 108,
   },
@@ -199,11 +200,13 @@ export const communityPresets = [
       "https://commons.wikimedia.org/wiki/Special:FilePath/Earth_from_Space.jpg?width=2400",
     description: "Promotes grounding and steady calm using a Schumann-style binaural profile.",
     layers: [
-      { id: "ef_l", name: "Binaural L (200 Hz)", type: "oscillator", frequency: 200, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
-      { id: "ef_r", name: "Binaural R (207.83 Hz)", type: "oscillator", frequency: 207.83, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
+      { id: "ef_l", name: "Binaural L (430 Hz)", type: "oscillator", frequency: 430, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
+      { id: "ef_r", name: "Binaural R (434 Hz)", type: "oscillator", frequency: 434, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
       { id: "ef_brown", name: "Brown Noise", type: "noise", frequency: 0, volume: 0.10, pan: 0, waveform: "brown", enabled: true },
       { id: "ef_river", name: "River (Rapids)", type: "ambient", frequency: 0, volume: 0.43, pan: 0, waveform: "river_rapids", enabled: true },
       { id: "ef_55", name: "Sub (55 Hz)", type: "oscillator", frequency: 55, volume: 0.03, pan: 0, waveform: "sine", enabled: true },
+      { id: "ef_33", name: "Sub (33.8 Hz)", type: "oscillator", frequency: 33.8, volume: 0.08, pan: 0, waveform: "sine", enabled: true },
+      { id: "ef_7", name: "Sub (7.83 Hz)", type: "oscillator", frequency: 7.83, volume: 0.08, pan: 0, waveform: "sine", enabled: true },
     ],
     order: 109,
   }

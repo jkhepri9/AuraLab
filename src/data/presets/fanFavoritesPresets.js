@@ -17,12 +17,12 @@ export const fanFavoritesPresets = [
       { id: "fs_amb", name: "Ambient: River (Soft)", type: "ambient", frequency: 0, volume: 0.40, pan: 0, waveform: "river_soft", enabled: true },
 
       // ~10 Hz (alpha) on a 432 base
-      { id: "fs_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
+      { id: "fs_l", name: "Binaural L (422 Hz)", type: "oscillator", frequency: 422, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
       { id: "fs_r", name: "Binaural R (442 Hz)", type: "oscillator", frequency: 442, volume: 0.11, pan: 1, waveform: "sine", enabled: true },
 
       { id: "fs_pink", name: "Pink Noise (Soft Bed)", type: "noise", frequency: 0, volume: 0.05, pan: 0, waveform: "pink", enabled: true },
 
-      { id: "fs_432", name: "Anchor (432 Hz)", type: "oscillator", frequency: 432, volume: 0.015, pan: 0, waveform: "sine", enabled: true },
+      { id: "fs_741", name: "Anchor (741 Hz)", type: "oscillator", frequency: 741, volume: 0.015, pan: 0, waveform: "sine", enabled: true },
       { id: "fs_528", name: "Anchor (528 Hz)", type: "oscillator", frequency: 528, volume: 0.012, pan: 0, waveform: "sine", enabled: true },
     ],
     order: 111,
@@ -40,8 +40,8 @@ export const fanFavoritesPresets = [
       { id: "sr_amb", name: "Ambient: Ocean (Deep)", type: "ambient", frequency: 0, volume: 0.33, pan: 0, waveform: "ocean_deep", enabled: true },
 
       // ~8 Hz on a 432 base (alpha calm)
-      { id: "sr_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
-      { id: "sr_r", name: "Binaural R (440 Hz)", type: "oscillator", frequency: 440, volume: 0.11, pan: 1, waveform: "sine", enabled: true },
+      { id: "sr_l", name: "Binaural L (526.5 Hz)", type: "oscillator", frequency: 526.5, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
+      { id: "sr_r", name: "Binaural R (529.5 Hz)", type: "oscillator", frequency: 529.5, volume: 0.11, pan: 1, waveform: "sine", enabled: true },
 
       { id: "sr_brown", name: "Brown Noise (Ground)", type: "noise", frequency: 0, volume: 0.06, pan: 0, waveform: "brown", enabled: true },
 
@@ -61,8 +61,8 @@ export const fanFavoritesPresets = [
       { id: "cf_amb", name: "Ambient: Fire (Camp)", type: "ambient", frequency: 0, volume: 0.95, pan: 0, waveform: "fire_camp", enabled: true },
 
       // ~12 Hz (creative alpha) on 432
-      { id: "cf_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
-      { id: "cf_r", name: "Binaural R (444 Hz)", type: "oscillator", frequency: 444, volume: 0.11, pan: 1, waveform: "sine", enabled: true },
+      { id: "cf_l", name: "Binaural L (442 Hz)", type: "oscillator", frequency: 442, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
+      { id: "cf_r", name: "Binaural R (446 Hz)", type: "oscillator", frequency: 446, volume: 0.11, pan: 1, waveform: "sine", enabled: true },
 
       { id: "cf_gold", name: "Gold Noise (Warm Bed)", type: "noise", frequency: 0, volume: 0.05, pan: 0, waveform: "gold", enabled: true },
 
@@ -83,13 +83,14 @@ export const fanFavoritesPresets = [
       { id: "sh_amb", name: "Ambient: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.33, pan: 0, waveform: "wind_forest", enabled: true },
 
       // ~7.83 Hz (Schumann) on a 432 base
-      { id: "sh_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
-      { id: "sh_r", name: "Binaural R (439.83 Hz)", type: "oscillator", frequency: 439.83, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
+      { id: "sh_l", name: "Binaural L (422 Hz)", type: "oscillator", frequency: 422, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
+      { id: "sh_r", name: "Binaural R (442 Hz)", type: "oscillator", frequency: 442, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
 
       { id: "sh_brown", name: "Brown Noise (Ground Bed)", type: "noise", frequency: 0, volume: 0.06, pan: 0, waveform: "brown", enabled: true },
 
       // “144 configuration” inclusion
       { id: "sh_144", name: "Anchor (144 Hz)", type: "oscillator", frequency: 144, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
+      { id: "sh_288", name: "Anchor (288 Hz)", type: "oscillator", frequency: 288, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
       { id: "sh_432", name: "Stabilizer (432 Hz)", type: "oscillator", frequency: 432, volume: 0.015, pan: 0, waveform: "sine", enabled: true },
     ],
     order: 115,
@@ -105,8 +106,8 @@ export const fanFavoritesPresets = [
       { id: "grf_amb", name: "Ambient: River (Soft)", type: "ambient", frequency: 0, volume: 0.44, pan: 0, waveform: "river_soft", enabled: true },
 
       // ~13 Hz on 432 (focused, coherent)
-      { id: "grf_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
-      { id: "grf_r", name: "Binaural R (445 Hz)", type: "oscillator", frequency: 445, volume: 0.10, pan: 1, waveform: "sine", enabled: true },
+      { id: "grf_l", name: "Binaural L (428 Hz)", type: "oscillator", frequency: 428, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
+      { id: "grf_r", name: "Binaural R (436 Hz)", type: "oscillator", frequency: 436, volume: 0.10, pan: 1, waveform: "sine", enabled: true },
 
       // Phi/Fibonacci stack
       { id: "grf_161", name: "Phi Center (161.8 Hz)", type: "oscillator", frequency: 161.8, volume: 0.04, pan: 0, waveform: "sine", enabled: true },
@@ -130,8 +131,8 @@ export const fanFavoritesPresets = [
       { id: "sga_amb", name: "Ambient: Crickets (Lake)", type: "ambient", frequency: 0, volume: 0.27, pan: 0, waveform: "crickets_lake", enabled: true },
 
       // Bright bed on 963 (culture), small offset for focus edge
-      { id: "sga_l", name: "Binaural L (963 Hz)", type: "oscillator", frequency: 963, volume: 0.08, pan: -1, waveform: "sine", enabled: true },
-      { id: "sga_r", name: "Binaural R (971 Hz)", type: "oscillator", frequency: 971, volume: 0.08, pan: 1, waveform: "sine", enabled: true },
+      { id: "sga_l", name: "Binaural L (960 Hz)", type: "oscillator", frequency: 960, volume: 0.08, pan: -1, waveform: "sine", enabled: true },
+      { id: "sga_r", name: "Binaural R (966 Hz)", type: "oscillator", frequency: 966, volume: 0.08, pan: 1, waveform: "sine", enabled: true },
 
       { id: "sga_cosmic", name: "Cosmic Noise (Gate Bed)", type: "noise", frequency: 0, volume: 0.08, pan: 0, waveform: "cosmic", enabled: true },
 
@@ -150,11 +151,11 @@ export const fanFavoritesPresets = [
       "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=2400&auto=format&fit=crop",
     description: "Heart-led coherence for calm focus and social intelligence using 528/639 culture anchors.",
     layers: [
-      { id: "ht_amb", name: "Ambient: Birds (Park)", type: "ambient", frequency: 0, volume: 0.23, pan: 0, waveform: "birds_park", enabled: true },
+      { id: "ht_amb", name: "Ambient: Birds (Park)", type: "ambient", frequency: 0, volume: 0.28, pan: 0, waveform: "birds_park", enabled: true },
 
       // ~10 Hz on 528
-      { id: "ht_l", name: "Binaural L (528 Hz)", type: "oscillator", frequency: 528, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
-      { id: "ht_r", name: "Binaural R (538 Hz)", type: "oscillator", frequency: 538, volume: 0.10, pan: 1, waveform: "sine", enabled: true },
+      { id: "ht_l", name: "Binaural L (526 Hz)", type: "oscillator", frequency: 526, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
+      { id: "ht_r", name: "Binaural R (530 Hz)", type: "oscillator", frequency: 530, volume: 0.10, pan: 1, waveform: "sine", enabled: true },
 
       { id: "ht_pink", name: "Pink Noise (Soft Bed)", type: "noise", frequency: 0, volume: 0.04, pan: 0, waveform: "pink", enabled: true },
 
@@ -175,12 +176,12 @@ export const fanFavoritesPresets = [
       { id: "rr_amb", name: "Ambient: Thunder (Distant)", type: "ambient", frequency: 0, volume: 0.45, pan: 0, waveform: "thunder_distant", enabled: true },
 
       // Delta ~2.5 Hz on 432
-      { id: "rr_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
-      { id: "rr_r", name: "Binaural R (434.5 Hz)", type: "oscillator", frequency: 434.5, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
+      { id: "rr_l", name: "Binaural L (393 Hz)", type: "oscillator", frequency: 393, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
+      { id: "rr_r", name: "Binaural R (399 Hz)", type: "oscillator", frequency: 399, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
 
       { id: "rr_brown", name: "Brown Noise (Sleep Bed)", type: "noise", frequency: 0, volume: 0.06, pan: 0, waveform: "brown", enabled: true },
 
-      { id: "rr_396", name: "Release Anchor (396 Hz)", type: "oscillator", frequency: 396, volume: 0.015, pan: 0, waveform: "sine", enabled: true },
+      { id: "rr_936", name: "Release Anchor (936 Hz)", type: "oscillator", frequency: 936, volume: 0.012, pan: 0, waveform: "sine", enabled: true },
       { id: "rr_528", name: "Repair Anchor (528 Hz)", type: "oscillator", frequency: 528, volume: 0.012, pan: 0, waveform: "sine", enabled: true },
     ],
     order: 119,
