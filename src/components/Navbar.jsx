@@ -1,16 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { createPortal } from 'react-dom';
-import { Download, Menu, X } from 'lucide-react';
-import usePWAInstall from '../hooks/usePWAInstall';
+// src/components/Navbar.jsx
+import React, { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
+import { Download, Menu, X } from "lucide-react";
+import usePWAInstall from "../hooks/usePWAInstall";
 
 const navItems = [
-  { name: 'Home', path: '/' },
-  { name: 'AuraGenerator', path: '/AuraGenerator' },
-  { name: 'AuraConverter', path: '/AuraConverter' },
-  { name: 'AuraModes', path: '/AuraModes' },
-  { name: 'AuraStudio', path: '/AuraEditor' },
-  { name: 'Account', path: '/account' },
+  { name: "Home", path: "/" },
+  { name: "AuraGenerator", path: "/AuraGenerator" },
+  { name: "AuraConverter", path: "/AuraConverter" },
+  { name: "AuraModes", path: "/AuraModes" },
+  { name: "AuraStudio", path: "/AuraEditor" },
+  { name: "Account", path: "/account" },
 ];
 
 export default function Navbar() {
@@ -18,17 +19,16 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Key change: use isInstalled, not canShowInstall
   const { isInstalled, isInstallable, promptInstall } = usePWAInstall();
 
-  const isHome = location.pathname === '/';
-  const showInstall = isHome && !isInstalled; // ✅ show for all new/not-installed users on homepage
+  const isHome = location.pathname === "/";
+  const showInstall = isHome && !isInstalled;
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
   const toggleMobileMenu = () => setMobileMenuOpen((v) => !v);
 
   const isActive = (path) => {
-    if (path === '/') return location.pathname === '/';
+    if (path === "/") return location.pathname === "/";
     return location.pathname.startsWith(path);
   };
 
@@ -39,7 +39,7 @@ export default function Navbar() {
   useEffect(() => {
     if (!mobileMenuOpen) return;
     const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prevOverflow;
     };
@@ -48,19 +48,18 @@ export default function Navbar() {
   useEffect(() => {
     if (!mobileMenuOpen) return;
     const onKeyDown = (e) => {
-      if (e.key === 'Escape') closeMobileMenu();
+      if (e.key === "Escape") closeMobileMenu();
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [mobileMenuOpen]);
 
   const handleInstallClick = async () => {
-    // If Chrome gave us a prompt, use it. Otherwise route to manual instructions.
     if (isInstallable) {
       await promptInstall();
       return;
     }
-    navigate('/Install');
+    navigate("/Install");
   };
 
   const mobileDrawer = mobileMenuOpen
@@ -99,7 +98,6 @@ export default function Navbar() {
             </div>
 
             <div className="px-3 py-3 space-y-2">
-              {/* Install CTA at top of hamburger (homepage only, not installed only) */}
               {showInstall && (
                 <button
                   type="button"
@@ -134,8 +132,8 @@ export default function Navbar() {
                         transition-all
                       ` +
                       (active
-                        ? 'bg-emerald-500/20 border border-emerald-500/50 text-white'
-                        : 'bg-white/0 border border-transparent text-gray-200 hover:bg-white/5 hover:text-white')
+                        ? "bg-emerald-500/20 border border-emerald-500/50 text-white"
+                        : "bg-white/0 border border-transparent text-gray-200 hover:bg-white/5 hover:text-white")
                     }
                   >
                     {item.name}
@@ -170,8 +168,8 @@ export default function Navbar() {
                   className={
                     `text-sm font-medium transition-all ` +
                     (active
-                      ? 'text-white border-b-2 border-emerald-400 pb-1'
-                      : 'text-gray-400 hover:text-white')
+                      ? "text-white border-b-2 border-emerald-400 pb-1"
+                      : "text-gray-400 hover:text-white")
                   }
                 >
                   {item.name}
@@ -179,7 +177,6 @@ export default function Navbar() {
               );
             })}
 
-            {/* Desktop install button on homepage for not-installed users */}
             {showInstall && (
               <button
                 type="button"
@@ -200,7 +197,6 @@ export default function Navbar() {
           </nav>
 
           <div className="md:hidden flex items-center gap-2">
-            {/* Mobile install button (homepage only, not installed only) */}
             {showInstall && (
               <button
                 type="button"
@@ -223,7 +219,7 @@ export default function Navbar() {
               type="button"
               onClick={toggleMobileMenu}
               className="text-white hover:text-emerald-400 transition-colors"
-              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
