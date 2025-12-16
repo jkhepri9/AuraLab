@@ -8,7 +8,6 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 import RotatePrompt from "@/components/RotatePrompt";
-
 import { useGlobalPlayer } from "../../audio/GlobalPlayerContext";
 
 // ✅ Optional: show human label for ambient waveform
@@ -23,7 +22,6 @@ function defaultWaveformForType(t) {
   if (type === "noise" || type === "color") return "white";
   if (type === "ambient") return "ocean_soft";
   if (type === "synth") return "analog";
-  // oscillator / frequency
   return "sine";
 }
 
@@ -74,21 +72,17 @@ export default function PresetEditor({
 
   const presetId = initialPreset?.id || "__preview__";
 
-  // Derived (not state) so it always matches the selected preset.
   const name = useMemo(() => initialPreset?.name || "Aura Mode", [initialPreset]);
   const color = useMemo(() => initialPreset?.color || "#10b981", [initialPreset]);
 
   const [layers, setLayers] = useState(() => hydrateLayersFromPreset(initialPreset));
 
-  // CRITICAL FIX:
-  // When the selected preset changes, reset the editor’s internal layers state.
-  // This prevents “stale layers” from the previous preset being replayed.
+  // Reset layers when preset changes
   useEffect(() => {
     const hydrated = hydrateLayersFromPreset(initialPreset);
     setLayers(hydrated);
 
     if (initialPreset && autoPlay) {
-      // Play using the hydrated layers immediately (no stale state).
       player.playPreset({
         ...initialPreset,
         id: presetId,
@@ -121,28 +115,56 @@ export default function PresetEditor({
     });
   };
 
-  // HARD LOCK: only allow volume + pan changes
+  // HARD LOCK: only allow volume changes in this editor
   const updateLayer = (id, field, value) => {
-    if (field !== "volume" && field !== "pan") return;
-    setLayers((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, [field]: value } : l))
-    );
+    if (field !== "volume") return;
+    setLayers((prev) => prev.map((l) => (l.id === id ? { ...l, [field]: value } : l)));
   };
 
   const backgroundUrl = initialPreset?.imageUrl || null;
 
   const layerRightLabel = (layer) => {
+    if (!layer) return "";
     if (layer?.name) return layer.name;
-    if (layer?.type === "ambient") return getAmbientLabel(layer.waveform);
-    return layer?.type || "";
+
+    const type = (layer?.type || "").toLowerCase();
+
+    if (type === "ambient") return getAmbientLabel(layer.waveform) || "Ambient";
+
+    if (type === "oscillator" || type === "frequency") {
+      const hz =
+        typeof layer.frequency === "number" && !Number.isNaN(layer.frequency)
+          ? layer.frequency
+          : null;
+      if (hz == null) return "Frequency";
+      const rounded = Math.round(hz);
+      const display = Math.abs(hz - rounded) < 0.01 ? rounded : hz;
+      return `${display} Hz`;
+    }
+
+    if (type === "noise" || type === "color") return `Noise: ${layer.waveform || "white"}`;
+    if (type === "synth") return `Synth: ${layer.waveform || "analog"}`;
+
+    return type || "Layer";
   };
 
-  // If user adjusts sliders while playing, update mix without restarting.
+  // Live-mix updates while playing
   useEffect(() => {
     if (!isPlaying) return;
     player.updateLayers(layers);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layers, isPlaying]);
+
+  // ✅ Prevent “tap anywhere to jump slider”
+  // Only allow pointer-down to reach Radix Slider if it started on the thumb (role="slider")
+  const requireThumbDrag = (e) => {
+    const el = e?.target;
+    const isThumb = typeof el?.closest === "function" && el.closest('[role="slider"]');
+    if (!isThumb) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
 
   return (
     <div className="relative w-full overflow-hidden rounded-3xl border border-white/10">
@@ -152,6 +174,7 @@ export default function PresetEditor({
         message="For the best experience in Preset Editor on mobile, rotate to landscape."
       />
 
+      {/* Background image (CLEAR) */}
       {backgroundUrl && (
         <div
           className="absolute inset-0 bg-cover bg-center"
@@ -159,53 +182,52 @@ export default function PresetEditor({
         />
       )}
 
-      <div
-        className={cn(
-          "absolute inset-0",
-          backgroundUrl
-            ? isPlaying
-              ? "bg-gradient-to-b from-black/45 via-black/60 to-black/85"
-              : "bg-gradient-to-b from-black/65 via-black/75 to-black/90"
-            : "bg-transparent"
-        )}
-      />
-
+      {/* CONTENT */}
       <div className="relative z-10 space-y-6 pb-32">
-        {/* TOP BAR */}
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
-          <Button
-            variant="ghost"
-            onClick={async () => {
-              onCancel?.();
-            }}
-            className="text-gray-400 hover:text-white shrink-0"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" /> Back
-          </Button>
+        {/* STICKY HEADER (Back button always visible) */}
+        <div className="sticky top-0 z-30 px-4 pt-4">
+          <div className="rounded-2xl border border-white/10 bg-black/25 backdrop-blur-md shadow-xl">
+            <div className="p-3 md:p-4 flex flex-col md:flex-row items-start md:items-center gap-4">
+              <Button
+                variant="secondary"
+                onClick={() => onCancel?.()}
+                className={cn(
+                  "shrink-0",
+                  "bg-black/70 hover:bg-black/80 text-white",
+                  "border border-white/15 shadow-lg",
+                  "backdrop-blur-md"
+                )}
+              >
+                <ArrowLeft className="w-5 h-5 mr-2" /> Back
+              </Button>
 
-          <div className="flex-1 w-full flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <div className="text-2xl font-bold text-white truncate">{name}</div>
-              <div className="text-xs text-gray-500 truncate">
-                Preview mode — only Volume &amp; Pan
+              <div className="flex-1 w-full flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="text-2xl font-bold text-white truncate drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]">
+                    {name}
+                  </div>
+                  <div className="text-xs text-white/80 truncate">
+                    Preview mode — Volume only
+                  </div>
+                </div>
+
+                <Button
+                  onClick={() => {
+                    navigate("/AuraEditor", {
+                      state: { preset: { name, color, layers, id: initialPreset?.id } },
+                    });
+                  }}
+                  className="bg-black/70 hover:bg-black/80 text-white border border-white/15 whitespace-nowrap backdrop-blur-md shadow-lg"
+                >
+                  <Monitor className="w-4 h-4 mr-2" /> Open Studio
+                </Button>
               </div>
             </div>
-
-            <Button
-              onClick={async () => {
-                navigate("/AuraEditor", {
-                  state: { preset: { name, color, layers, id: initialPreset?.id } },
-                });
-              }}
-              className="bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 whitespace-nowrap"
-            >
-              <Monitor className="w-4 h-4 mr-2" /> Open Studio
-            </Button>
           </div>
         </div>
 
         {/* LAYERS */}
-        <div className="grid gap-4">
+        <div className="px-4 grid gap-4">
           <AnimatePresence>
             {layers.map((layer, index) => (
               <motion.div
@@ -213,63 +235,48 @@ export default function PresetEditor({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, height: 0 }}
-                className="bg-white/5 border border-white/10 p-4 rounded-xl"
+                // ✅ TRUE SEE-THROUGH: no blur, no tinted background (no image distortion)
+                className="bg-transparent border border-white/10 p-4 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.25)]"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span className="text-xs font-bold text-gray-500">
+                    <span className="text-xs font-bold text-white/80 drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]">
                       CHANNEL {index + 1}
                     </span>
                   </div>
 
-                  <div className="text-xs text-gray-400 truncate max-w-[60%] text-right">
-                    {layerRightLabel(layer)}
+                  <div className="max-w-[70%] text-right">
+                    <span className="inline-flex items-center rounded-full bg-black/60 px-3 py-1 text-sm font-semibold text-white shadow-sm ring-1 ring-white/20 backdrop-blur-sm truncate">
+                      {layerRightLabel(layer)}
+                    </span>
                   </div>
                 </div>
 
-                {/* ONLY: Volume + Pan */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Volume */}
-                  <div className="bg-black/20 p-4 rounded-xl border border-white/5 flex flex-col justify-center">
-                    <div className="flex items-center gap-2 mb-3 border-b border-white/5 pb-2">
-                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                        Volume
-                      </span>
-                    </div>
-                    <div className="flex gap-2 items-center">
-                      <Slider
-                        value={[safeNum(layer.volume, 0.5)]}
-                        onValueChange={(v) => updateLayer(layer.id, "volume", v[0])}
-                        max={1}
-                        step={0.01}
-                        className="flex-1"
-                      />
-                      <span className="text-[10px] text-gray-400 w-10 text-right font-mono">
-                        {safeNum(layer.volume, 0.5).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
+                {/* ONLY: Volume */}
+                <div className="grid grid-cols-1 gap-4">
+                  {/* ✅ TRUE SEE-THROUGH VOLUME CARD (no blur, no tint) */}
+                  <div className="overflow-hidden rounded-xl border border-white/10 bg-transparent shadow-[0_8px_30px_rgba(0,0,0,0.18)]">
+                    <div className="p-4 flex flex-col justify-center">
+                      <div className="flex items-center justify-between gap-3 mb-3 border-b border-white/10 pb-2">
+                        <span className="text-xs font-bold text-white/90 uppercase tracking-wider">
+                          Volume
+                        </span>
+                        <span className="text-[11px] text-white/80 font-mono tabular-nums">
+                          {safeNum(layer.volume, 0.5).toFixed(2)}
+                        </span>
+                      </div>
 
-                  {/* Pan */}
-                  <div className="bg-black/20 p-4 rounded-xl border border-white/5 flex flex-col justify-center">
-                    <div className="flex items-center gap-2 mb-3 border-b border-white/5 pb-2">
-                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                        Pan
-                      </span>
-                    </div>
-                    <div className="flex gap-2 items-center">
-                      <Slider
-                        value={[safeNum(layer.pan, 0)]}
-                        onValueChange={(v) => updateLayer(layer.id, "pan", v[0])}
-                        min={-1}
-                        max={1}
-                        step={0.01}
-                        className="flex-1"
-                      />
-                      <span className="text-[10px] text-gray-400 w-10 text-right font-mono">
-                        {safeNum(layer.pan, 0).toFixed(2)}
-                      </span>
+                      <div className="flex gap-3 items-center">
+                        <Slider
+                          value={[safeNum(layer.volume, 0.5)]}
+                          onValueChange={(v) => updateLayer(layer.id, "volume", v[0])}
+                          max={1}
+                          step={0.01}
+                          className="flex-1"
+                          onPointerDownCapture={requireThumbDrag}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -278,7 +285,7 @@ export default function PresetEditor({
           </AnimatePresence>
         </div>
 
-        {/* Playback Control (in-flow to avoid overlapping the global sticky player) */}
+        {/* Playback Control */}
         <div className="mt-8 flex justify-center">
           <div className="bg-[#0a0a0a]/90 backdrop-blur-xl border border-white/10 p-2 rounded-full shadow-2xl flex gap-2">
             <Button

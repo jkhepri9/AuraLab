@@ -1,3 +1,4 @@
+// src/pages/AuraModes.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import { db } from "@/lib/db";
 import {
@@ -323,8 +324,19 @@ export default function AuraModes() {
     navigate(location.pathname, { replace: true });
   }, [isLoading, presets, location.search, location.pathname, navigate]);
 
+  // IMPORTANT:
+  // AuraModes uses an internal scroll container (overflow-y-auto). The global Layout
+  // already pads <main> for BottomNav and the sticky player, but that padding does not
+  // help when a page creates its own scroll area.
+  // Therefore, we add bottom padding here so the last mode cards are not hidden behind
+  // the BottomNav / sticky player.
+  const hasStickyPlayer = Boolean(player?.currentPlayingPreset);
+  const pagePadBottom = hasStickyPlayer
+    ? 'pb-[calc(12rem+env(safe-area-inset-bottom))] md:pb-8'
+    : 'pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8';
+
   return (
-    <div className="h-full w-full p-8 overflow-y-auto bg-black/80">
+    <div className={cn('h-full w-full p-8 overflow-y-auto bg-black/80', pagePadBottom)}>
       {view === 'list' ? (
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
