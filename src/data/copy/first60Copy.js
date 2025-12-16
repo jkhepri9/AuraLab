@@ -30,7 +30,7 @@ export const AURALAB_MODES = {
 export const INTENT_PRESET_MAP = {
   sleep: "m_deep_sleep",
   focus: "m_focus_forge",
-  calm: "c_stress_relief",
+  calm: "m_shielded_calm",
   energy: "m_energy_ignition",
   reset: "m_heart_coherence",
 };
