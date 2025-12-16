@@ -19,6 +19,7 @@ export const FEATURED_PRESETS = [
 
       // Popular sleep / grounding tone often used: 174
       { id: "ds_174", name: "Low Drone (174 Hz)", type: "oscillator", frequency: 174, volume: 0.28, pan: 0, waveform: "sine", enabled: true },
+      { id: "m_deep_sleep_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", waveform: "wind_forest", volume: 0.08, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 0,
   },
@@ -41,6 +42,7 @@ export const FEATURED_PRESETS = [
 
       { id: "tg_432", name: "Anchor Tone (432 Hz)", type: "oscillator", frequency: 432, volume: 0.03, pan: 0, waveform: "sine", enabled: true },
       { id: "tg_963", name: "Overtone (963 Hz)", type: "oscillator", frequency: 963, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
+      { id: "m_theta_gate_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", waveform: "wind_forest", volume: 0.08, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 1,
   },
@@ -62,6 +64,7 @@ export const FEATURED_PRESETS = [
       { id: "ff_gray", name: "Gray Noise (Attention Bed)", type: "noise", frequency: 0, volume: 0.08, pan: 0, waveform: "gray", enabled: true },
 
       { id: "ff_741", name: "Clarity Anchor (741 Hz)", type: "oscillator", frequency: 741, volume: 0.03, pan: 0, waveform: "sine", enabled: true },
+      { id: "m_focus_forge_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", waveform: "wind_forest", volume: 0.12, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 2,
   },
@@ -85,6 +88,7 @@ export const FEATURED_PRESETS = [
       // Bring in the “144 configuration” as a gentle stabilizing harmonic
       { id: "hc_144", name: "Harmonic (144 Hz)", type: "oscillator", frequency: 144, volume: 0.03, pan: 0, waveform: "sine", enabled: true },
       { id: "hc_333", name: "Harmonic (333 Hz)", type: "oscillator", frequency: 333, volume: 0.03, pan: 0, waveform: "sine", enabled: true },
+      { id: "m_heart_coherence_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", waveform: "wind_forest", volume: 0.10, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 3,
   },
@@ -108,6 +112,7 @@ export const FEATURED_PRESETS = [
 
       { id: "ei_852", name: "Ignition Anchor (852 Hz)", type: "oscillator", frequency: 852, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
       { id: "ei_963", name: "Crown Anchor (963 Hz)", type: "oscillator", frequency: 963, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
+      { id: "m_energy_ignition_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", waveform: "wind_forest", volume: 0.08, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 5,
   },
@@ -129,6 +134,7 @@ export const FEATURED_PRESETS = [
       { id: "l4", name: "Pink Noise Bed", type: "noise", frequency: 0, volume: 0.16, pan: 0, waveform: "pink", enabled: true },
 
       { id: "zg_528", name: "Harmony Anchor (528 Hz)", type: "oscillator", frequency: 528, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
+      { id: "p2_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", waveform: "wind_forest", volume: 0.10, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 7,
   },
@@ -150,6 +156,7 @@ export const FEATURED_PRESETS = [
 
       // Popular “369” inclusion (light, supportive)
       { id: "of_369", name: "Flow Anchor (369 Hz)", type: "oscillator", frequency: 369, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
+      { id: "p3_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", waveform: "wind_forest", volume: 0.11, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 8,
   },
@@ -171,6 +178,7 @@ export const FEATURED_PRESETS = [
 
       // Shield overtone
       { id: "ns_852", name: "Shield Anchor (852 Hz)", type: "oscillator", frequency: 852, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
+      { id: "p4_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", waveform: "wind_forest", volume: 0.06, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 9,
   },

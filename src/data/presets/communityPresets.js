@@ -20,6 +20,7 @@ export const communityPresets = [
       // Keep a gentle 432 harmonic + add a subtle 963 overtone (popular “higher” tone)
       { id: "ld_432", name: "Harmonic (432 Hz)", type: "oscillator", frequency: 432, volume: 0.03, pan: 0, waveform: "sine", enabled: true },
       { id: "ld_963", name: "Overtone (963 Hz)", type: "oscillator", frequency: 963, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
+      { id: "c_lucid_dreaming_motion_amb", name: "Motion Drift: Wind (Soft)", type: "ambient", frequency: 0, volume: 0.80, pan: 0, waveform: "wind_soft", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 100,
   },
@@ -43,6 +44,7 @@ export const communityPresets = [
       // Protection/grounding anchors (popular): 396 (release/fear) + 417 (clearing)
       { id: "sc_396", name: "Shield Anchor (396 Hz)", type: "oscillator", frequency: 396, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
       { id: "sc_417", name: "Clear Anchor (417 Hz)", type: "oscillator", frequency: 417, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
+      { id: "m_shielded_calm_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.10, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 4,
   },
@@ -64,6 +66,7 @@ export const communityPresets = [
 
       // Add a healing-support anchor commonly used in sound healing culture
       { id: "pr_528", name: "Repair Anchor (528 Hz)", type: "oscillator", frequency: 528, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
+      { id: "c_pain_relief_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.10, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 102,
   },
@@ -88,6 +91,7 @@ export const communityPresets = [
 
       // Gentle stabilizer
       { id: "sg_432", name: "Anchor (432 Hz)", type: "oscillator", frequency: 432, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
+      { id: "c_stargate_motion_amb", name: "Motion Drift: Wind (Soft)", type: "ambient", frequency: 0, volume: 0.90, pan: 0, waveform: "wind_soft", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 103,
   },
@@ -111,6 +115,7 @@ export const communityPresets = [
       { id: "gr_synth", name: "Analog Layer", type: "synth", frequency: 161.8, volume: 0.06, pan: 0, waveform: "analog", enabled: true },
 
       { id: "gr_432", name: "Stabilizer (432 Hz)", type: "oscillator", frequency: 432, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
+      { id: "c_golden_ratio_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.09, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 104,
   },
@@ -130,6 +135,7 @@ export const communityPresets = [
       { id: "te_852", name: "Overtone (852 Hz)", type: "oscillator", frequency: 852, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
       { id: "te_963", name: "Overtone (963 Hz)", type: "oscillator", frequency: 963, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
       { id: "te_thunder", name: "Thunder (Rolling)", type: "ambient", frequency: 0, volume: 0.08, pan: 0, waveform: "thunder_rolling", enabled: true },
+      { id: "c_third_eye_motion_amb", name: "Motion Drift: Wind (Soft)", type: "ambient", frequency: 0, volume: 0.90, pan: 0, waveform: "wind_soft", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 105,
   },
@@ -149,6 +155,7 @@ export const communityPresets = [
 
       { id: "gm_synth", name: "FM Detail Layer (963 Hz)", type: "synth", frequency: 963, volume: 0.04, pan: 0, waveform: "fm", enabled: true },
       { id: "gm_wind", name: "Wind (Soft)", type: "ambient", frequency: 0, volume: 0.75, pan: 0, waveform: "wind_soft", enabled: true },
+      { id: "c_genius_mode_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.08, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 106,
   },
@@ -168,6 +175,7 @@ export const communityPresets = [
       { id: "mm_528", name: "Anchor (528 Hz)", type: "oscillator", frequency: 528, volume: 0.03, pan: 0.1, waveform: "sine", enabled: true },
 
       { id: "mm_birds", name: "Birds (Park)", type: "ambient", frequency: 0, volume: 0.24, pan: 0, waveform: "birds_park", enabled: true },
+      { id: "c_master_musician_motion_amb", name: "Motion Drift: Wind (Soft)", type: "ambient", frequency: 0, volume: 0.80, pan: 0, waveform: "wind_soft", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 107,
   },
@@ -189,6 +197,7 @@ export const communityPresets = [
       { id: "wa_639", name: "Anchor (639 Hz)", type: "oscillator", frequency: 639, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
       { id: "wa_432", name: "Stabilizer (432 Hz)", type: "oscillator", frequency: 432, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
       { id: "wa_888", name: "Stabilizer (888 Hz)", type: "oscillator", frequency: 888, volume: 0.08, pan: 0, waveform: "sine", enabled: true },
+      { id: "c_wealth_abundance_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.08, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 108,
   },
@@ -209,6 +218,7 @@ export const communityPresets = [
       { id: "ef_55", name: "Sub (55 Hz)", type: "oscillator", frequency: 55, volume: 0.03, pan: 0, waveform: "sine", enabled: true },
       { id: "ef_33", name: "Sub (33.8 Hz)", type: "oscillator", frequency: 33.8, volume: 0.08, pan: 0, waveform: "sine", enabled: true },
       { id: "ef_7", name: "Sub (7.83 Hz)", type: "oscillator", frequency: 7.83, volume: 0.08, pan: 0, waveform: "sine", enabled: true },
+      { id: "c_earth_frequency_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.11, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 109,
   }

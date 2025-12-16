@@ -24,6 +24,7 @@ export const fanFavoritesPresets = [
 
       { id: "fs_741", name: "Anchor (741 Hz)", type: "oscillator", frequency: 741, volume: 0.015, pan: 0, waveform: "sine", enabled: true },
       { id: "fs_528", name: "Anchor (528 Hz)", type: "oscillator", frequency: 528, volume: 0.012, pan: 0, waveform: "sine", enabled: true },
+      { id: "c_flowstate_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.08, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 111,
   },
@@ -47,6 +48,7 @@ export const fanFavoritesPresets = [
 
       { id: "sr_396", name: "Release Anchor (396 Hz)", type: "oscillator", frequency: 396, volume: 0.015, pan: 0, waveform: "sine", enabled: true },
       { id: "sr_417", name: "Reset Anchor (417 Hz)", type: "oscillator", frequency: 417, volume: 0.012, pan: 0, waveform: "sine", enabled: true },
+      { id: "c_stress_relief_ff_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.08, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 113,
   },
@@ -68,6 +70,7 @@ export const fanFavoritesPresets = [
 
       { id: "cf_528", name: "Anchor (528 Hz)", type: "oscillator", frequency: 528, volume: 0.015, pan: 0, waveform: "sine", enabled: true },
       { id: "cf_639", name: "Harmony Anchor (639 Hz)", type: "oscillator", frequency: 639, volume: 0.012, pan: 0, waveform: "sine", enabled: true },
+      { id: "c_creative_flow_motion_amb", name: "Motion Drift: Wind (Soft)", type: "ambient", frequency: 0, volume: 0.90, pan: 0, waveform: "wind_soft", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 114,
   },
@@ -92,6 +95,7 @@ export const fanFavoritesPresets = [
       { id: "sh_144", name: "Anchor (144 Hz)", type: "oscillator", frequency: 144, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
       { id: "sh_288", name: "Anchor (288 Hz)", type: "oscillator", frequency: 288, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
       { id: "sh_432", name: "Stabilizer (432 Hz)", type: "oscillator", frequency: 432, volume: 0.015, pan: 0, waveform: "sine", enabled: true },
+      { id: "c_shuman_resonance_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.08, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 115,
   },
@@ -116,6 +120,7 @@ export const fanFavoritesPresets = [
       { id: "grf_233", name: "Fibonacci (233 Hz)", type: "oscillator", frequency: 233, volume: 0.025, pan: 0, waveform: "sine", enabled: true },
 
       { id: "grf_432", name: "Stabilizer (432 Hz)", type: "oscillator", frequency: 432, volume: 0.012, pan: 0, waveform: "sine", enabled: true },
+      { id: "c_golden_ratio_focus_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.08, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 116,
   },
@@ -139,6 +144,7 @@ export const fanFavoritesPresets = [
       // “144 configuration” inclusion
       { id: "sga_synth", name: "Wavetable Layer (144 Hz)", type: "synth", frequency: 144, volume: 0.05, pan: 0, waveform: "wavetable", enabled: true },
       { id: "sga_432", name: "Stabilizer (432 Hz)", type: "oscillator", frequency: 432, volume: 0.012, pan: 0, waveform: "sine", enabled: true },
+      { id: "c_stargate_aura_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.09, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 117,
   },
@@ -161,6 +167,7 @@ export const fanFavoritesPresets = [
 
       { id: "ht_639", name: "Anchor (639 Hz)", type: "oscillator", frequency: 639, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
       { id: "ht_432", name: "Stabilizer (432 Hz)", type: "oscillator", frequency: 432, volume: 0.012, pan: 0, waveform: "sine", enabled: true },
+      { id: "c_heart_motion_amb", name: "Motion Drift: Wind (Soft)", type: "ambient", frequency: 0, volume: 0.95, pan: 0, waveform: "wind_soft", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 118,
   },
@@ -183,6 +190,7 @@ export const fanFavoritesPresets = [
 
       { id: "rr_936", name: "Release Anchor (936 Hz)", type: "oscillator", frequency: 936, volume: 0.012, pan: 0, waveform: "sine", enabled: true },
       { id: "rr_528", name: "Repair Anchor (528 Hz)", type: "oscillator", frequency: 528, volume: 0.012, pan: 0, waveform: "sine", enabled: true },
+      { id: "c_rest_and_restoration_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.15, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 119,
   },

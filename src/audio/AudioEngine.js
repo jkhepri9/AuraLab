@@ -3,6 +3,11 @@
 // AURA LAB — COMPLETE, STABLE AUDIO ENGINE
 // Supports UI types: frequency, color, synth, ambient
 // Adds: setOutputGain(), setTone({warmth, clarity})
+//
+// MOTION ADD-ONS (internal; no preset/UI changes required):
+// - Parameter drift (subtle volume + filter cutoff evolution)
+// - Ambient multi-loop desynchronization (2 layered loops per ambient layer)
+// - Event-based micro-accents (very sparse one-shots)
 // -----------------------------------------------------------------------------
 //
 // NOTE:
@@ -43,6 +48,14 @@ function clamp(v, min, max) {
 function toneDb01(v01, maxDb = 8) {
   const v = clamp(v01, 0, 1);
   return v * maxDb;
+}
+
+function randRange(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
 }
 
 // -----------------------------------------------------------------------------
@@ -173,6 +186,29 @@ class AudioEngineClass {
     this._tone = {
       warmth: 0,  // 0..1
       clarity: 0, // 0..1
+    };
+
+    // -----------------------------------------------------------------------
+    // MOTION (subtle evolution)
+    // - Parameter drift (volume + filter cutoff)
+    // - Ambient multi-loop desynchronization (handled per ambient layer)
+    // - Event-based micro-accents (very sparse one-shots)
+    //
+    // NOTE: This is fully internal—no preset/UI changes required.
+    // -----------------------------------------------------------------------
+    this._motion = {
+      enabled: true,
+
+      // Drift: runs periodically and eases toward new targets (no jumps)
+      driftIntervalMs: 12000,
+      driftTimeConstant: 2.2,
+
+      // Accent events: extremely sparse, never rhythmic
+      accentMinMs: 5 * 60 * 1000,
+      accentMaxMs: 15 * 60 * 1000,
+
+      _driftTimer: null,
+      _accentTimer: null,
     };
 
     this._unlockedOnce = false;
@@ -533,6 +569,7 @@ class AudioEngineClass {
 
     if (!this._isRunActive(runId) || !this.isPlaying) return;
 
+    this._startMotion();
     this._startTick();
   }
 
@@ -553,6 +590,7 @@ class AudioEngineClass {
 
     this._stopAllLayers();
     this._stopTick();
+    this._stopMotion();
 
     // Keep context alive; just silence input.
     try {
@@ -569,6 +607,7 @@ class AudioEngineClass {
 
     this._stopAllLayers();
     this._stopTick();
+    this._stopMotion();
 
     try {
       this.master.input.gain.setValueAtTime(0.0, this.ctx.currentTime);
@@ -703,6 +742,163 @@ class AudioEngineClass {
   }
 
   // ---------------------------------------------------------------------------
+  // MOTION — subtle evolution (internal)
+  // ---------------------------------------------------------------------------
+  _startMotion() {
+    this._stopMotion();
+    if (!this._motion?.enabled) return;
+
+    // Parameter drift tick
+    this._motion._driftTimer = setInterval(() => {
+      if (!this.isPlaying || !this.ctx) return;
+      try { this._applyParameterDrift(); } catch {}
+    }, this._motion.driftIntervalMs);
+
+    // Accent scheduler
+    this._scheduleNextAccent();
+  }
+
+  _stopMotion() {
+    try {
+      if (this._motion?._driftTimer) clearInterval(this._motion._driftTimer);
+      if (this._motion?._accentTimer) clearTimeout(this._motion._accentTimer);
+    } catch {}
+    if (this._motion) {
+      this._motion._driftTimer = null;
+      this._motion._accentTimer = null;
+    }
+  }
+
+  _applyParameterDrift() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+
+    for (const [, group] of this.layers.entries()) {
+      if (!group || !group.engineType) continue;
+
+      // --- volume drift (multiplicative; independent of user volume automation)
+      const type = group.engineType;
+      const depth =
+        type === "ambient" ? 0.06 :
+        type === "noise" ? 0.05 :
+        type === "synth" ? 0.04 :
+        0.035;
+
+      const mult = randRange(1 - depth, 1 + depth);
+
+      try {
+        group.driftGain?.gain?.setTargetAtTime(mult, t, this._motion.driftTimeConstant);
+      } catch {}
+
+      // --- filter cutoff drift (derived from base)
+      const baseEnabled = group._motionBase?.filterEnabled ?? true;
+      if (!baseEnabled) continue;
+
+      const baseFreq = Number(group._motionBase?.filterFreq ?? group.filter?.frequency?.value ?? 20000) || 20000;
+
+      // Keep drift very gentle when filter is basically open
+      const fDepth =
+        baseFreq >= 18000 ? 0.02 :
+        type === "ambient" ? 0.10 :
+        0.07;
+
+      const nextFreq = clamp(baseFreq * randRange(1 - fDepth, 1 + fDepth), 40, 20000);
+
+      try {
+        group.filter?.frequency?.setTargetAtTime(nextFreq, t, this._motion.driftTimeConstant);
+      } catch {}
+    }
+  }
+
+  _scheduleNextAccent() {
+    if (!this._motion?.enabled) return;
+    if (!this.isPlaying) return;
+
+    const ms = Math.floor(randRange(this._motion.accentMinMs, this._motion.accentMaxMs));
+
+    try {
+      this._motion._accentTimer = setTimeout(() => {
+        if (!this.isPlaying) return;
+        try { this._playAccent(); } catch {}
+        this._scheduleNextAccent();
+      }, ms);
+    } catch {}
+  }
+
+  _playAccent() {
+    if (!this.ctx || !this.master?.input) return;
+
+    const ctx = this.ctx;
+
+    // Keep accents extremely subtle; they should feel like "weather", not melody.
+    const t0 = ctx.currentTime + 0.02;
+    const dur = randRange(0.9, 1.7);
+
+    const base = pick([396, 432, 528, 639, 741, 852, 963]);
+    const mul = pick([0.5, 1, 2]);
+    const f = clamp(base * mul, 120, 3200);
+
+    const o1 = ctx.createOscillator();
+    o1.type = "sine";
+    o1.frequency.value = f;
+    o1.detune.value = randRange(-5, 5);
+
+    const o2 = ctx.createOscillator();
+    o2.type = "triangle";
+    o2.frequency.value = clamp(f * 2, 120, 8000);
+    o2.detune.value = randRange(-7, 7);
+
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = clamp(f * 1.1, 120, 8000);
+    bp.Q.value = 1.1;
+
+    const g = ctx.createGain();
+    g.gain.value = 0;
+
+    const pan = ctx.createStereoPanner();
+    pan.pan.value = randRange(-0.35, 0.35);
+
+    o1.connect(bp);
+    o2.connect(bp);
+    bp.connect(g);
+    g.connect(pan);
+    pan.connect(this.master.input);
+
+    // Envelope (quiet and smooth)
+    const peak = 0.018;
+    try {
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(peak, t0 + 0.06);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    } catch {}
+
+    const stopAt = t0 + dur + 0.1;
+
+    const cleanup = () => {
+      try { o1.disconnect(); } catch {}
+      try { o2.disconnect(); } catch {}
+      try { bp.disconnect(); } catch {}
+      try { g.disconnect(); } catch {}
+      try { pan.disconnect(); } catch {}
+    };
+
+    try {
+      o1.onended = cleanup;
+      o2.onended = cleanup;
+    } catch {}
+
+    try { o1.start(t0); } catch {}
+    try { o2.start(t0); } catch {}
+
+    try { o1.stop(stopAt); } catch {}
+    try { o2.stop(stopAt); } catch {}
+
+    // Fallback cleanup in case onended doesn't fire as expected
+    try { setTimeout(cleanup, Math.ceil((dur + 0.5) * 1000)); } catch {}
+  }
+
+  // ---------------------------------------------------------------------------
   // GRAPH BUILD (run-safe, non-fatal per layer)
   // ---------------------------------------------------------------------------
   async _buildGraph(layers, runId) {
@@ -770,6 +966,10 @@ class AudioEngineClass {
     const amp = ctx.createGain();
     amp.gain.value = 1.0;
 
+    // Drift stage (subtle, internal evolution)
+    const driftGain = ctx.createGain();
+    driftGain.gain.value = 1.0;
+
     const pan = ctx.createStereoPanner();
     pan.pan.value = layer.pan ?? 0;
 
@@ -779,20 +979,75 @@ class AudioEngineClass {
     filter.Q.value = layer.filter?.Q || 1;
 
     // Signal path:
-    // source -> filter -> gain(volume) -> amp(pulse) -> pan -> master mix input
+    // source -> filter -> gain(volume) -> amp(pulse) -> driftGain(motion) -> pan -> master mix input
     filter.connect(gain);
     gain.connect(amp);
-    amp.connect(pan);
+    amp.connect(driftGain);
+    driftGain.connect(pan);
     pan.connect(this.master.input);
 
-    return { filter, gain, amp, pan };
+    return { filter, gain, amp, driftGain, pan };
+  }
+
+  // ---------------------------------------------------------------------------
+  // AMBIENT: MULTI-LOOP DESYNCHRONIZATION (internal)
+  // ---------------------------------------------------------------------------
+  _createAmbientDesyncSources(buffer, filter) {
+    const ctx = this.ctx;
+    if (!ctx || !buffer || !filter) return [];
+
+    // Keep it lightweight: 2 layers is enough to break obvious repetition.
+    const count = 2;
+    const sources = [];
+
+    // Use gentle rate offsets to avoid audible pitch shift; combined with random
+    // start offsets, the composite texture avoids obvious looping.
+    for (let i = 0; i < count; i++) {
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.loop = true;
+
+      const preGain = ctx.createGain();
+      preGain.gain.value = 1 / count;
+
+      // Slight divergence (one stays at 1.0, the other slightly off)
+      const rate = i === 0 ? 1.0 : randRange(0.997, 1.003);
+      try { src.playbackRate.value = rate; } catch {}
+
+      // Random phase offset into the buffer (safe for loops)
+      const dur = buffer.duration || 0;
+      const offset = dur > 0.25 ? randRange(0, Math.max(0, dur - 0.05)) : 0;
+
+      src.connect(preGain);
+      preGain.connect(filter);
+
+      try { src.start(0, offset); } catch { try { src.start(); } catch {} }
+
+      sources.push({ src, preGain });
+    }
+
+    return sources;
+  }
+
+  _stopAmbientSources(sources = []) {
+    try {
+      (sources || []).forEach((s) => {
+        const src = s?.src ?? s;
+        const preGain = s?.preGain ?? s?.gain ?? null;
+
+        try { src?.stop?.(); } catch {}
+        try { src?.disconnect?.(); } catch {}
+
+        try { preGain?.disconnect?.(); } catch {}
+      });
+    } catch {}
   }
 
   async _createLayerNodes(layer, engineType, runId) {
     if (!this._isRunActive(runId)) return null;
 
     const ctx = this.ctx;
-    const { filter, gain, amp, pan } = this._createCommonNodes(layer, engineType);
+    const { filter, gain, amp, driftGain, pan } = this._createCommonNodes(layer, engineType);
 
     // Apply filter bypass if disabled
     if (layer.filterEnabled === false) {
@@ -837,12 +1092,8 @@ class AudioEngineClass {
       if (!this._isRunActive(runId)) return null;
 
       if (buffer) {
-        const src = ctx.createBufferSource();
-        src.buffer = buffer;
-        src.loop = true;
-        src.connect(filter);
-        src.start();
-        ambient = { sources: [src], currentName: layer.waveform };
+        const sources = this._createAmbientDesyncSources(buffer, filter);
+        ambient = { sources, currentName: layer.waveform };
       } else {
         // Keep placeholder so other layers continue.
         ambient = { sources: [], currentName: layer.waveform };
@@ -856,12 +1107,19 @@ class AudioEngineClass {
       ambient,
       gain,
       amp,
+      driftGain,
       pan,
       filter,
       engineType,
       _noiseWaveform: engineType === "noise" ? (layer.waveform || "white") : undefined,
       _synthType: engineType === "synth" ? (layer.waveform || "analog") : undefined,
       _synthFreq: engineType === "synth" ? (layer.frequency ?? 432) : undefined,
+
+      // Motion base values (used by parameter drift; updated in _updateLayerNodes)
+      _motionBase: {
+        filterEnabled: layer.filterEnabled !== false,
+        filterFreq: layer.filter?.frequency || 20000,
+      },
     };
 
     // Pulse (LFO) — apply immediately (rate/depth can be updated live)
@@ -891,6 +1149,16 @@ class AudioEngineClass {
       try { group.filter.frequency.setTargetAtTime(layer.filter?.frequency || 20000, t, 0.05); } catch {}
       try { group.filter.Q.setTargetAtTime(layer.filter?.Q || 1, t, 0.05); } catch {}
     }
+
+    // Keep base values for internal motion (parameter drift). Drift should never
+    // overwrite the user’s intended setting; instead we re-derive from this base.
+    try {
+      if (!group._motionBase) group._motionBase = {};
+      group._motionBase.filterEnabled = layer.filterEnabled !== false;
+      group._motionBase.filterFreq = (layer.filterEnabled === false)
+        ? 20000
+        : (layer.filter?.frequency || 20000);
+    } catch {}
 
     // pulse (LFO)
     this._syncPulse(group, layer);
@@ -939,12 +1207,7 @@ class AudioEngineClass {
 
       if (desired && desired !== current) {
         // stop old
-        try {
-          group.ambient?.sources?.forEach((s) => {
-            try { s.stop(); } catch {}
-            try { s.disconnect(); } catch {}
-          });
-        } catch {}
+        this._stopAmbientSources(group.ambient?.sources);
 
         let buffer = null;
         try {
@@ -957,13 +1220,8 @@ class AudioEngineClass {
         if (!this._isRunActive(runId)) return;
 
         if (buffer) {
-          const src = this.ctx.createBufferSource();
-          src.buffer = buffer;
-          src.loop = true;
-          src.connect(group.filter);
-          try { src.start(); } catch {}
-
-          group.ambient = { sources: [src], currentName: desired };
+          const sources = this._createAmbientDesyncSources(buffer, group.filter);
+          group.ambient = { sources, currentName: desired };
         } else {
           group.ambient = { sources: [], currentName: desired };
         }
@@ -1184,11 +1442,27 @@ class AudioEngineClass {
         }
         if (!buffer) continue;
 
-        const src = ctx.createBufferSource();
-        src.buffer = buffer;
-        src.loop = true;
-        src.connect(filter);
-        src.start(0);
+        // Multi-loop desync (offline): 2 layered loops with subtle rate divergence
+        const count = 2;
+        for (let i = 0; i < count; i++) {
+          const src = ctx.createBufferSource();
+          src.buffer = buffer;
+          src.loop = true;
+
+          const pre = ctx.createGain();
+          pre.gain.value = 1 / count;
+
+          const rate = i === 0 ? 1.0 : (0.997 + Math.random() * 0.006); // 0.997..1.003
+          try { src.playbackRate.value = rate; } catch {}
+
+          const dur = buffer.duration || 0;
+          const offset = dur > 0.25 ? Math.random() * Math.max(0, dur - 0.05) : 0;
+
+          src.connect(pre);
+          pre.connect(filter);
+
+          try { src.start(0, offset); } catch { src.start(0); }
+        }
       }
     }
 
@@ -1222,16 +1496,14 @@ class AudioEngineClass {
     try { group.synth?.masterGain?.disconnect?.(); } catch {}
 
     if (group.ambient?.sources?.length) {
-      group.ambient.sources.forEach((s) => {
-        try { s.stop(); } catch {}
-        try { s.disconnect(); } catch {}
-      });
+      this._stopAmbientSources(group.ambient.sources);
     }
 
     // Pulse (LFO)
     try { this._removePulseNodes(group); } catch {}
 
     try { group.pan?.disconnect?.(); } catch {}
+    try { group.driftGain?.disconnect?.(); } catch {}
     try { group.amp?.disconnect?.(); } catch {}
     try { group.gain?.disconnect?.(); } catch {}
     try { group.filter?.disconnect?.(); } catch {}
