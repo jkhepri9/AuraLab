@@ -14,7 +14,7 @@ export const communityPresets = [
       { id: "ld_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.14, pan: -1, waveform: "sine", enabled: true },
       { id: "ld_r", name: "Binaural R (436 Hz)", type: "oscillator", frequency: 436, volume: 0.14, pan: 1, waveform: "sine", enabled: true },
 
-      { id: "ld_pink", name: "Pink Noise", type: "noise", frequency: 0, volume: 0.12, pan: 0, waveform: "pink", enabled: true },
+      { id: "ld_pink", name: "Pink Noise", type: "noise", frequency: 0, volume: 0.08, pan: 0, waveform: "pink", enabled: true },
       { id: "ld_crickets", name: "Crickets (Lake)", type: "ambient", frequency: 0, volume: 0.33, pan: 0, waveform: "crickets_lake", enabled: true },
 
       // Keep a gentle 432 harmonic + add a subtle 963 overtone (popular “higher” tone)
@@ -60,7 +60,7 @@ export const communityPresets = [
       { id: "pr_r", name: "Binaural R (177 Hz)", type: "oscillator", frequency: 177, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
 
       { id: "pr_pink", name: "Pink Noise", type: "noise", frequency: 0, volume: 0.10, pan: 0, waveform: "pink", enabled: true },
-      { id: "pr_ocean", name: "Ocean (Deep)", type: "ambient", frequency: 0, volume: 0.44, pan: 0, waveform: "ocean_deep", enabled: true },
+      { id: "pr_ocean", name: "Ocean (Deep)", type: "ambient", frequency: 0, volume: 0.18, pan: 0, waveform: "ocean_deep", enabled: true },
 
       // Add a healing-support anchor commonly used in sound healing culture
       { id: "pr_528", name: "Repair Anchor (528 Hz)", type: "oscillator", frequency: 528, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
@@ -81,7 +81,7 @@ export const communityPresets = [
       { id: "sg_r", name: "Binaural R (971 Hz)", type: "oscillator", frequency: 971, volume: 0.08, pan: 1, waveform: "sine", enabled: true },
 
       { id: "sg_cosmic", name: "Cosmic Noise", type: "noise", frequency: 0, volume: 0.10, pan: 0, waveform: "cosmic", enabled: true },
-      { id: "sg_wind", name: "Wind (Forest)", type: "ambient", frequency: 0, volume: 0.40, pan: 0, waveform: "wind_forest", enabled: true },
+      { id: "sg_wind", name: "Wind (Forest)", type: "ambient", frequency: 0, volume: 0.10, pan: 0, waveform: "wind_forest", enabled: true },
 
       // “144 configuration” inclusion: keep the synth layer but shift it to 144 Hz
       { id: "sg_synth", name: "Wavetable Layer (144 Hz)", type: "synth", frequency: 144, volume: 0.06, pan: 0, waveform: "wavetable", enabled: true },
@@ -105,7 +105,8 @@ export const communityPresets = [
       { id: "gr_144", name: "Fibonacci (144 Hz)", type: "oscillator", frequency: 144, volume: 0.05, pan: 0.15, waveform: "sine", enabled: true },
       { id: "gr_233", name: "Fibonacci (233 Hz)", type: "oscillator", frequency: 233, volume: 0.04, pan: 0, waveform: "sine", enabled: true },
 
-      { id: "gr_river", name: "River (Soft)", type: "ambient", frequency: 0, volume: 0.44, pan: 0, waveform: "river_soft", enabled: true },
+      { id: "gr_river", name: "River (Soft)", type: "ambient", frequency: 0, volume: 0.80, pan: 0, waveform: "river_soft", enabled: true },
+      { id: "ld_crickets", name: "Crickets (Lake)", type: "ambient", frequency: 0, volume: 0.15, pan: 0, waveform: "crickets_lake", enabled: true },
 
       { id: "gr_synth", name: "Analog Layer", type: "synth", frequency: 161.8, volume: 0.06, pan: 0, waveform: "analog", enabled: true },
 
@@ -127,7 +128,8 @@ export const communityPresets = [
       { id: "te_r", name: "Binaural R (434 Hz)", type: "oscillator", frequency: 434, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
       { id: "te_violet", name: "Violet Noise", type: "noise", frequency: 0, volume: 0.06, pan: 0, waveform: "violet", enabled: true },
       { id: "te_852", name: "Overtone (852 Hz)", type: "oscillator", frequency: 852, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
-      { id: "te_thunder", name: "Thunder (Distant)", type: "ambient", frequency: 0, volume: 0.33, pan: 0, waveform: "thunder_distant", enabled: true },
+      { id: "te_963", name: "Overtone (963 Hz)", type: "oscillator", frequency: 963, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
+      { id: "te_thunder", name: "Thunder (Rolling)", type: "ambient", frequency: 0, volume: 0.08, pan: 0, waveform: "thunder_rolling", enabled: true },
     ],
     order: 105,
   },
@@ -146,7 +148,7 @@ export const communityPresets = [
       { id: "gm_gray", name: "Gray Noise", type: "noise", frequency: 0, volume: 0.09, pan: 0, waveform: "gray", enabled: true },
 
       { id: "gm_synth", name: "FM Detail Layer (963 Hz)", type: "synth", frequency: 963, volume: 0.04, pan: 0, waveform: "fm", enabled: true },
-      { id: "gm_wind", name: "Wind (Soft)", type: "ambient", frequency: 0, volume: 0.30, pan: 0, waveform: "wind_soft", enabled: true },
+      { id: "gm_wind", name: "Wind (Soft)", type: "ambient", frequency: 0, volume: 0.75, pan: 0, waveform: "wind_soft", enabled: true },
     ],
     order: 106,
   },
@@ -181,7 +183,7 @@ export const communityPresets = [
       { id: "wa_l", name: "Binaural L (520 Hz)", type: "oscillator", frequency: 520, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
       { id: "wa_r", name: "Binaural R (536 Hz)", type: "oscillator", frequency: 536, volume: 0.11, pan: 1, waveform: "sine", enabled: true },
 
-      { id: "wa_gold", name: "Gold Noise", type: "noise", frequency: 0, volume: 0.08, pan: 0, waveform: "gold", enabled: true },
+      { id: "wa_gold", name: "Gold Noise", type: "noise", frequency: 0, volume: 0.04, pan: 0, waveform: "gold", enabled: true },
       { id: "wa_fire", name: "Fire (Camp)", type: "ambient", frequency: 0, volume: 0.99, pan: 0, waveform: "fire_camp", enabled: true },
 
       { id: "wa_639", name: "Anchor (639 Hz)", type: "oscillator", frequency: 639, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
@@ -203,7 +205,7 @@ export const communityPresets = [
       { id: "ef_l", name: "Binaural L (430 Hz)", type: "oscillator", frequency: 430, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
       { id: "ef_r", name: "Binaural R (434 Hz)", type: "oscillator", frequency: 434, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
       { id: "ef_brown", name: "Brown Noise", type: "noise", frequency: 0, volume: 0.10, pan: 0, waveform: "brown", enabled: true },
-      { id: "ef_river", name: "River (Rapids)", type: "ambient", frequency: 0, volume: 0.43, pan: 0, waveform: "river_rapids", enabled: true },
+      { id: "ef_river", name: "River (Rapids)", type: "ambient", frequency: 0, volume: 0.30, pan: 0, waveform: "river_rapids", enabled: true },
       { id: "ef_55", name: "Sub (55 Hz)", type: "oscillator", frequency: 55, volume: 0.03, pan: 0, waveform: "sine", enabled: true },
       { id: "ef_33", name: "Sub (33.8 Hz)", type: "oscillator", frequency: 33.8, volume: 0.08, pan: 0, waveform: "sine", enabled: true },
       { id: "ef_7", name: "Sub (7.83 Hz)", type: "oscillator", frequency: 7.83, volume: 0.08, pan: 0, waveform: "sine", enabled: true },

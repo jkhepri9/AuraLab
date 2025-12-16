@@ -37,7 +37,7 @@ export const fanFavoritesPresets = [
       "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=2400&auto=format&fit=crop",
     description: "Calm focus: downshift stress while staying productive and steady.",
     layers: [
-      { id: "sr_amb", name: "Ambient: Ocean (Deep)", type: "ambient", frequency: 0, volume: 0.33, pan: 0, waveform: "ocean_deep", enabled: true },
+      { id: "sr_amb", name: "Ambient: Ocean (Deep)", type: "ambient", frequency: 0, volume: 0.15, pan: 0, waveform: "ocean_deep", enabled: true },
 
       // ~8 Hz on a 432 base (alpha calm)
       { id: "sr_l", name: "Binaural L (526.5 Hz)", type: "oscillator", frequency: 526.5, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
@@ -80,7 +80,7 @@ export const fanFavoritesPresets = [
       "https://commons.wikimedia.org/wiki/Special:FilePath/Earth_from_Space.jpg?width=2400",
     description: "Grounded focus and steady calm using a Schumann-style 7.83 Hz binaural profile.",
     layers: [
-      { id: "sh_amb", name: "Ambient: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.33, pan: 0, waveform: "wind_forest", enabled: true },
+      { id: "sh_amb", name: "Ambient: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.06, pan: 0, waveform: "wind_forest", enabled: true },
 
       // ~7.83 Hz (Schumann) on a 432 base
       { id: "sh_l", name: "Binaural L (422 Hz)", type: "oscillator", frequency: 422, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
@@ -173,7 +173,7 @@ export const fanFavoritesPresets = [
       "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2400&auto=format&fit=crop",
     description: "Deep recovery stack with a delta-style binaural bed and gentle Solfeggio anchors for reset.",
     layers: [
-      { id: "rr_amb", name: "Ambient: Thunder (Distant)", type: "ambient", frequency: 0, volume: 0.45, pan: 0, waveform: "thunder_distant", enabled: true },
+      { id: "rr_amb", name: "Ambient: Thunder (Rolling)", type: "ambient", frequency: 0, volume: 0.30, pan: 0, waveform: "thunder_rolling", enabled: true },
 
       // Delta ~2.5 Hz on 432
       { id: "rr_l", name: "Binaural L (393 Hz)", type: "oscillator", frequency: 393, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
