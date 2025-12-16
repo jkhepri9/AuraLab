@@ -56,11 +56,11 @@ export const communityPresets = [
     description: "Promotes deep relaxation to help reduce tension and discomfort perception.",
     layers: [
       // Popular “pain relief” tone: 174 Hz, with a gentle low-offset beat
-      { id: "pr_l", name: "Binaural L (174 Hz)", type: "oscillator", frequency: 174, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
-      { id: "pr_r", name: "Binaural R (177 Hz)", type: "oscillator", frequency: 177, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
+      { id: "pr_l", name: "Binaural L (170 Hz)", type: "oscillator", frequency: 170, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
+      { id: "pr_r", name: "Binaural R (178 Hz)", type: "oscillator", frequency: 178, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
 
       { id: "pr_pink", name: "Pink Noise", type: "noise", frequency: 0, volume: 0.10, pan: 0, waveform: "pink", enabled: true },
-      { id: "pr_ocean", name: "Ocean (Deep)", type: "ambient", frequency: 0, volume: 0.18, pan: 0, waveform: "ocean_deep", enabled: true },
+      { id: "pr_ocean", name: "Ocean (Deep)", type: "ambient", frequency: 0, volume: 0.11, pan: 0, waveform: "ocean_deep", enabled: true },
 
       // Add a healing-support anchor commonly used in sound healing culture
       { id: "pr_528", name: "Repair Anchor (528 Hz)", type: "oscillator", frequency: 528, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
