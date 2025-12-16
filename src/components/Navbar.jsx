@@ -10,8 +10,6 @@ const navItems = [
   { name: 'AuraConverter', path: '/AuraConverter' },
   { name: 'AuraModes', path: '/AuraModes' },
   { name: 'AuraStudio', path: '/AuraEditor' },
-
-  // ✅ NEW: Account (visible in desktop nav + hamburger)
   { name: 'Account', path: '/account' },
 ];
 
@@ -19,8 +17,12 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { canShowInstall, isInstallable, promptInstall } = usePWAInstall();
+
+  // Key change: use isInstalled, not canShowInstall
+  const { isInstalled, isInstallable, promptInstall } = usePWAInstall();
+
   const isHome = location.pathname === '/';
+  const showInstall = isHome && !isInstalled; // ✅ show for all new/not-installed users on homepage
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
   const toggleMobileMenu = () => setMobileMenuOpen((v) => !v);
@@ -30,12 +32,10 @@ export default function Navbar() {
     return location.pathname.startsWith(path);
   };
 
-  // Close drawer on route change
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
-  // Scroll-lock behind drawer
   useEffect(() => {
     if (!mobileMenuOpen) return;
     const prevOverflow = document.body.style.overflow;
@@ -45,7 +45,6 @@ export default function Navbar() {
     };
   }, [mobileMenuOpen]);
 
-  // ESC closes drawer
   useEffect(() => {
     if (!mobileMenuOpen) return;
     const onKeyDown = (e) => {
@@ -55,10 +54,18 @@ export default function Navbar() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [mobileMenuOpen]);
 
+  const handleInstallClick = async () => {
+    // If Chrome gave us a prompt, use it. Otherwise route to manual instructions.
+    if (isInstallable) {
+      await promptInstall();
+      return;
+    }
+    navigate('/Install');
+  };
+
   const mobileDrawer = mobileMenuOpen
     ? createPortal(
         <div className="fixed inset-0 z-[9999] md:hidden" role="dialog" aria-modal="true">
-          {/* Backdrop */}
           <button
             type="button"
             aria-label="Close menu"
@@ -66,7 +73,6 @@ export default function Navbar() {
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
           />
 
-          {/* Drawer panel */}
           <div
             className="
               fixed right-0 top-0 h-full
@@ -77,7 +83,6 @@ export default function Navbar() {
               overflow-y-auto
             "
           >
-            {/* Top row (brand + close) */}
             <div className="h-16 flex items-center justify-between px-4 border-b border-white/10">
               <span className="text-sm font-extrabold tracking-widest">
                 AURA<span className="text-emerald-400">LAB</span>
@@ -94,18 +99,13 @@ export default function Navbar() {
             </div>
 
             <div className="px-3 py-3 space-y-2">
-              {/* Install CTA at top of hamburger */}
-              {canShowInstall && (
+              {/* Install CTA at top of hamburger (homepage only, not installed only) */}
+              {showInstall && (
                 <button
                   type="button"
                   onClick={async () => {
-                    if (isInstallable) {
-                      await promptInstall();
-                      closeMobileMenu();
-                    } else {
-                      closeMobileMenu();
-                      navigate('/Install');
-                    }
+                    await handleInstallClick();
+                    closeMobileMenu();
                   }}
                   className="
                     w-full rounded-2xl px-4 py-4
@@ -120,7 +120,6 @@ export default function Navbar() {
                 </button>
               )}
 
-              {/* Links */}
               {navItems.map((item) => {
                 const active = isActive(item.path);
                 return (
@@ -161,7 +160,6 @@ export default function Navbar() {
             AURA<span className="text-emerald-400">LAB</span>
           </Link>
 
-          {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-6" aria-label="Primary">
             {navItems.map((item) => {
               const active = isActive(item.path);
@@ -181,17 +179,11 @@ export default function Navbar() {
               );
             })}
 
-            {/* Top-right Install button */}
-            {isHome && canShowInstall && (
+            {/* Desktop install button on homepage for not-installed users */}
+            {showInstall && (
               <button
                 type="button"
-                onClick={async () => {
-                  if (isInstallable) {
-                    await promptInstall();
-                  } else {
-                    navigate('/Install');
-                  }
-                }}
+                onClick={handleInstallClick}
                 className="
                   ml-2 inline-flex items-center gap-2
                   px-3 py-2 rounded-2xl
@@ -207,19 +199,12 @@ export default function Navbar() {
             )}
           </nav>
 
-          {/* Mobile actions */}
           <div className="md:hidden flex items-center gap-2">
-            {/* Mobile install button (visible on Home only) */}
-            {isHome && canShowInstall && (
+            {/* Mobile install button (homepage only, not installed only) */}
+            {showInstall && (
               <button
                 type="button"
-                onClick={async () => {
-                  if (isInstallable) {
-                    await promptInstall();
-                  } else {
-                    navigate('/Install');
-                  }
-                }}
+                onClick={handleInstallClick}
                 aria-label="Install AuraLab"
                 className="
                   inline-flex items-center justify-center
@@ -234,7 +219,6 @@ export default function Navbar() {
               </button>
             )}
 
-            {/* Mobile hamburger */}
             <button
               type="button"
               onClick={toggleMobileMenu}

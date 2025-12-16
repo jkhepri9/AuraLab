@@ -1,30 +1,47 @@
-import React, { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { createPageUrl } from '../components/utils';
+// src/pages/Home.jsx
+import React, { useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { createPageUrl } from "../components/utils";
 import {
-  ArrowRight, Layers, SlidersHorizontal, Activity, Music, Moon, Brain, Shield,
-  HeartPulse, Sparkles, Flame, Download, X,
-} from 'lucide-react';
-import { motion } from 'framer-motion';
-import usePWAInstall from '../hooks/usePWAInstall';
-import FEATURED_PRESETS from '../data/presets/featuredPresets';
-import { fanFavoritesPresets } from '../data/presets/fanFavoritesPresets';
+  ArrowRight,
+  Layers,
+  SlidersHorizontal,
+  Activity,
+  Moon,
+  Brain,
+  Shield,
+  HeartPulse,
+  Sparkles,
+  Flame,
+  Download,
+  X,
+} from "lucide-react";
+import { motion } from "framer-motion";
+import usePWAInstall from "../hooks/usePWAInstall";
+import FEATURED_PRESETS from "../data/presets/featuredPresets";
+import { fanFavoritesPresets } from "../data/presets/fanFavoritesPresets";
 
 const quickModes = [
-  { id: 'm_deep_sleep', title: 'Deep Sleep', subtitle: 'Downshift and shut off mental noise.', icon: Moon },
-  { id: 'm_theta_gate', title: 'Theta Gate', subtitle: 'Meditation depth and inner stillness.', icon: Sparkles },
-  { id: 'm_focus_forge', title: 'Focus Forge', subtitle: 'Clean focus for work and creation.', icon: Brain },
-  { id: 'm_heart_coherence', title: 'Heart Coherence', subtitle: 'Steady the rhythm of your field.', icon: HeartPulse },
-  { id: 'c_stress_relief', title: 'Stress Relief', subtitle: 'Calm the nervous system and ease tension.', icon: Shield },
-  { id: 'm_energy_ignition', title: 'Energy Ignition', subtitle: 'Wake up the system without chaos.', icon: Flame },
+  { id: "m_deep_sleep", title: "Deep Sleep", subtitle: "Downshift and shut off mental noise.", icon: Moon },
+  { id: "m_theta_gate", title: "Theta Gate", subtitle: "Meditation depth and inner stillness.", icon: Sparkles },
+  { id: "m_focus_forge", title: "Focus Forge", subtitle: "Clean focus for work and creation.", icon: Brain },
+  { id: "m_heart_coherence", title: "Heart Coherence", subtitle: "Steady the rhythm of your field.", icon: HeartPulse },
+  { id: "c_stress_relief", title: "Stress Relief", subtitle: "Calm the nervous system and ease tension.", icon: Shield },
+  { id: "m_energy_ignition", title: "Energy Ignition", subtitle: "Wake up the system without chaos.", icon: Flame },
 ];
 
-const DEFAULT_TINT = 'linear-gradient(135deg, rgba(16,185,129,.35), rgba(0,0,0,.85))';
+const DEFAULT_TINT = "linear-gradient(135deg, rgba(16,185,129,.35), rgba(0,0,0,.85))";
 
 const buildMetaMap = (arr) => {
   const m = new Map();
   for (const p of arr || []) {
-    m.set(p.id, { imageUrl: p.imageUrl, color: p.color, name: p.name, description: p.description, order: p.order });
+    m.set(p.id, {
+      imageUrl: p.imageUrl,
+      color: p.color,
+      name: p.name,
+      description: p.description,
+      order: p.order,
+    });
   }
   return m;
 };
@@ -47,9 +64,9 @@ const ModeCard = ({ id, title, subtitle, Icon, meta, modesUrl }) => {
           className="absolute inset-0 opacity-70"
           style={{
             background:
-              typeof tint === 'string' && tint.includes('gradient')
+              typeof tint === "string" && tint.includes("gradient")
                 ? tint
-                : `linear-gradient(135deg, ${tint || '#10b981'}, #000000)`,
+                : `linear-gradient(135deg, ${tint || "#10b981"}, #000000)`,
           }}
         />
         <div className="absolute inset-0 bg-black/55 group-hover:bg-black/45 transition-colors" />
@@ -75,10 +92,12 @@ const ModeCard = ({ id, title, subtitle, Icon, meta, modesUrl }) => {
 };
 
 export default function Home() {
-  const modesUrl = createPageUrl('AuraModes');
-  const studioUrl = createPageUrl('AuraEditor');
+  const modesUrl = createPageUrl("AuraModes");
+  const studioUrl = createPageUrl("AuraEditor");
   const navigate = useNavigate();
-  const { canShowInstall, isInstallable, promptInstall } = usePWAInstall();
+
+  // ✅ Key change: use isInstalled (so it can show in dev even when prompt is unavailable)
+  const { isInstalled, isInstallable, promptInstall } = usePWAInstall();
 
   const featuredMetaById = useMemo(() => buildMetaMap(FEATURED_PRESETS), []);
   const fanMetaById = useMemo(() => buildMetaMap(fanFavoritesPresets), []);
@@ -96,14 +115,14 @@ export default function Home() {
     };
 
     const subtitleById = {
-      c_flowstate: 'Effortless flow and steady attention.',
-      c_stress_relief_ff: 'Downshift stress while staying productive.',
-      c_creative_flow: 'Creative ignition without chaos.',
-      c_shuman_resonance: 'Grounded focus at 7.83 Hz.',
-      c_golden_ratio_focus: 'Phi/Fibonacci coherence for cognition.',
-      c_stargate_aura: 'High-energy portal focus.',
-      c_heart: 'Heart-led calm focus.',
-      c_rest_and_restoration: 'Deep recovery and reset.',
+      c_flowstate: "Effortless flow and steady attention.",
+      c_stress_relief_ff: "Downshift stress while staying productive.",
+      c_creative_flow: "Creative ignition without chaos.",
+      c_shuman_resonance: "Grounded focus at 7.83 Hz.",
+      c_golden_ratio_focus: "Phi/Fibonacci coherence for cognition.",
+      c_stargate_aura: "High-energy portal focus.",
+      c_heart: "Heart-led calm focus.",
+      c_rest_and_restoration: "Deep recovery and reset.",
     };
 
     const list = Array.isArray(fanFavoritesPresets) ? [...fanFavoritesPresets] : [];
@@ -112,40 +131,41 @@ export default function Home() {
     return list.map((p) => ({
       id: p.id,
       title: p.name,
-      subtitle: subtitleById[p.id] || p.description || '',
+      subtitle: subtitleById[p.id] || p.description || "",
       icon: iconById[p.id] || Sparkles,
     }));
   }, []);
 
   const [installBannerDismissed, setInstallBannerDismissed] = useState(() => {
     try {
-      // Session-level dismissal: we want new users to always see the CTA,
-      // but allow hiding it for the current session.
-      return sessionStorage.getItem('auralab_install_banner_dismissed') === '1';
+      // Session-level dismissal only (does not permanently hide)
+      return sessionStorage.getItem("auralab_install_banner_dismissed") === "1";
     } catch {
       return false;
     }
   });
 
+  // ✅ Key change: show whenever NOT installed, regardless of beforeinstallprompt
   const showInstallBanner = useMemo(
-    () => canShowInstall && !installBannerDismissed,
-    [canShowInstall, installBannerDismissed]
+    () => !isInstalled && !installBannerDismissed,
+    [isInstalled, installBannerDismissed]
   );
 
   const dismissInstallBanner = () => {
     setInstallBannerDismissed(true);
     try {
-      sessionStorage.setItem('auralab_install_banner_dismissed', '1');
+      sessionStorage.setItem("auralab_install_banner_dismissed", "1");
     } catch {}
   };
 
   const handleInstallClick = async () => {
+    // If prompt exists (prod / installable), use it. Otherwise show manual instructions page.
     if (isInstallable) {
       await promptInstall();
       dismissInstallBanner();
       return;
     }
-    navigate('/Install');
+    navigate("/Install");
   };
 
   return (
@@ -230,9 +250,7 @@ export default function Home() {
           <div className="flex items-end justify-between gap-4">
             <div>
               <h2 className="text-lg font-bold text-white">Featured Modes</h2>
-              <p className="text-xs text-gray-400">
-                Tap a card to start immediately. Headphones recommended for binaural modes.
-              </p>
+              <p className="text-xs text-gray-400">Tap a card to start immediately. Headphones recommended for binaural modes.</p>
             </div>
             <Link
               to={modesUrl}
@@ -292,9 +310,7 @@ export default function Home() {
           <Link to={modesUrl} className="group md:col-span-1">
             <div className="h-full p-5 rounded-3xl bg-gradient-to-br from-gray-900 to-black border border-white/10 hover:border-amber-500/40 transition-colors">
               <div className="text-white font-bold">Aura Modes</div>
-              <div className="mt-1 text-xs text-gray-400">
-                Curated presets built for states: sleep, focus, calm, energy.
-              </div>
+              <div className="mt-1 text-xs text-gray-400">Curated presets built for states: sleep, focus, calm, energy.</div>
               <div className="mt-3 text-xs font-semibold text-amber-400 group-hover:text-amber-300 transition-colors">
                 Open Modes →
               </div>
