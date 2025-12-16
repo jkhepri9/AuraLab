@@ -14,7 +14,7 @@ export const fanFavoritesPresets = [
       "/modeimages/flowstate.jpg",
     description: "Smooth flow focus: relaxed clarity (alpha-to-low-beta) to stay locked-in without tension.",
     layers: [
-      { id: "fs_amb", name: "Ambient: River (Soft)", type: "ambient", frequency: 0, volume: 0.15, pan: 0, waveform: "river_soft", enabled: true },
+      { id: "fs_amb", name: "Ambient: River (Soft)", type: "ambient", frequency: 0, volume: 0.40, pan: 0, waveform: "river_soft", enabled: true },
 
       // ~10 Hz (alpha) on a 432 base
       { id: "fs_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
@@ -37,7 +37,7 @@ export const fanFavoritesPresets = [
       "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=2400&auto=format&fit=crop",
     description: "Calm focus: downshift stress while staying productive and steady.",
     layers: [
-      { id: "sr_amb", name: "Ambient: Ocean (Deep)", type: "ambient", frequency: 0, volume: 0.16, pan: 0, waveform: "ocean_deep", enabled: true },
+      { id: "sr_amb", name: "Ambient: Ocean (Deep)", type: "ambient", frequency: 0, volume: 0.33, pan: 0, waveform: "ocean_deep", enabled: true },
 
       // ~8 Hz on a 432 base (alpha calm)
       { id: "sr_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
@@ -58,7 +58,7 @@ export const fanFavoritesPresets = [
     imageUrl: "/modeimages/mastermusician.jpg",
     description: "Creative ignition with coherent rhythm—built for ideation, writing, and design flow.",
     layers: [
-      { id: "cf_amb", name: "Ambient: Fire (Camp)", type: "ambient", frequency: 0, volume: 0.14, pan: 0, waveform: "fire_camp", enabled: true },
+      { id: "cf_amb", name: "Ambient: Fire (Camp)", type: "ambient", frequency: 0, volume: 0.95, pan: 0, waveform: "fire_camp", enabled: true },
 
       // ~12 Hz (creative alpha) on 432
       { id: "cf_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
@@ -80,7 +80,7 @@ export const fanFavoritesPresets = [
       "https://commons.wikimedia.org/wiki/Special:FilePath/Earth_from_Space.jpg?width=2400",
     description: "Grounded focus and steady calm using a Schumann-style 7.83 Hz binaural profile.",
     layers: [
-      { id: "sh_amb", name: "Ambient: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.15, pan: 0, waveform: "wind_forest", enabled: true },
+      { id: "sh_amb", name: "Ambient: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.33, pan: 0, waveform: "wind_forest", enabled: true },
 
       // ~7.83 Hz (Schumann) on a 432 base
       { id: "sh_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
@@ -102,7 +102,7 @@ export const fanFavoritesPresets = [
     imageUrl: "/modeimages/goldenratio.png",
     description: "Phi/Fibonacci harmonic stack optimized for focused coherence and steady cognition.",
     layers: [
-      { id: "grf_amb", name: "Ambient: River (Soft)", type: "ambient", frequency: 0, volume: 0.14, pan: 0, waveform: "river_soft", enabled: true },
+      { id: "grf_amb", name: "Ambient: River (Soft)", type: "ambient", frequency: 0, volume: 0.44, pan: 0, waveform: "river_soft", enabled: true },
 
       // ~13 Hz on 432 (focused, coherent)
       { id: "grf_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
@@ -127,7 +127,7 @@ export const fanFavoritesPresets = [
       "/modeimages/stargateaura.jpg",
     description: "High-energy portal focus. Bright upper harmonics with a sharp attention entrainment bed.",
     layers: [
-      { id: "sga_amb", name: "Ambient: Crickets (Lake)", type: "ambient", frequency: 0, volume: 0.14, pan: 0, waveform: "crickets_lake", enabled: true },
+      { id: "sga_amb", name: "Ambient: Crickets (Lake)", type: "ambient", frequency: 0, volume: 0.27, pan: 0, waveform: "crickets_lake", enabled: true },
 
       // Bright bed on 963 (culture), small offset for focus edge
       { id: "sga_l", name: "Binaural L (963 Hz)", type: "oscillator", frequency: 963, volume: 0.08, pan: -1, waveform: "sine", enabled: true },
@@ -150,7 +150,7 @@ export const fanFavoritesPresets = [
       "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=2400&auto=format&fit=crop",
     description: "Heart-led coherence for calm focus and social intelligence using 528/639 culture anchors.",
     layers: [
-      { id: "ht_amb", name: "Ambient: Birds (Park)", type: "ambient", frequency: 0, volume: 0.14, pan: 0, waveform: "birds_park", enabled: true },
+      { id: "ht_amb", name: "Ambient: Birds (Park)", type: "ambient", frequency: 0, volume: 0.23, pan: 0, waveform: "birds_park", enabled: true },
 
       // ~10 Hz on 528
       { id: "ht_l", name: "Binaural L (528 Hz)", type: "oscillator", frequency: 528, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
@@ -172,7 +172,7 @@ export const fanFavoritesPresets = [
       "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2400&auto=format&fit=crop",
     description: "Deep recovery stack with a delta-style binaural bed and gentle Solfeggio anchors for reset.",
     layers: [
-      { id: "rr_amb", name: "Ambient: Thunder (Distant)", type: "ambient", frequency: 0, volume: 0.14, pan: 0, waveform: "thunder_distant", enabled: true },
+      { id: "rr_amb", name: "Ambient: Thunder (Distant)", type: "ambient", frequency: 0, volume: 0.45, pan: 0, waveform: "thunder_distant", enabled: true },
 
       // Delta ~2.5 Hz on 432
       { id: "rr_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.12, pan: -1, waveform: "sine", enabled: true },

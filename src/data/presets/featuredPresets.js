@@ -9,7 +9,7 @@ export const FEATURED_PRESETS = [
     imageUrl: "/modeimages/deepsleep.jpg",
     description: "Slow the mind and soften the body into deep sleep. Built for calm, darkness, and stillness.",
     layers: [
-      { id: "ds_amb", name: "Ambient: Ocean Deep", type: "ambient", waveform: "ocean_deep", volume: 0.18, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
+      { id: "ds_amb", name: "Ambient: Ocean Deep", type: "ambient", waveform: "ocean_deep", volume: 0.33, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
 
       // Deep sleep bed anchored to 432 with a gentle low-offset (popular approach)
       { id: "ds_l", name: "Binaural Carrier L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.14, pan: -1, waveform: "sine", enabled: true },
@@ -31,7 +31,7 @@ export const FEATURED_PRESETS = [
     imageUrl: "https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=2400&auto=format&fit=crop",
     description: "Enter meditative depth and inner stillness. Designed for theta entrainment and quiet awareness.",
     layers: [
-      { id: "tg_amb", name: "Ambient: Wind Forest", type: "ambient", waveform: "wind_forest", volume: 0.14, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
+      { id: "tg_amb", name: "Ambient: Wind Forest", type: "ambient", waveform: "wind_forest", volume: 0.30, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
 
       // Theta-ish offset on a 432 anchor
       { id: "tg_l", name: "Binaural Carrier L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.14, pan: -1, waveform: "sine", enabled: true },
@@ -53,7 +53,7 @@ export const FEATURED_PRESETS = [
     imageUrl: "/modeimages/focusforge.jpg",
     description: "Clean, stable focus for work and creation. Built for alertness without chaos and consistent attention.",
     layers: [
-      { id: "ff_amb", name: "Ambient: Campfire", type: "ambient", waveform: "fire_camp", volume: 0.12, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
+      { id: "ff_amb", name: "Ambient: Campfire", type: "ambient", waveform: "fire_camp", volume: 0.90, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
 
       // Popular focus/clarity anchors: 528 + 741 (use 528 as main bed)
       { id: "ff_l", name: "Binaural Carrier L (528 Hz)", type: "oscillator", frequency: 528, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
@@ -74,7 +74,7 @@ export const FEATURED_PRESETS = [
     imageUrl: "/modeimages/heartcoherence.jpg",
     description: "Calm your nervous system and settle into steady coherence. Ideal for stress relief and emotional reset.",
     layers: [
-      { id: "hc_amb", name: "Ambient: Park Birds", type: "ambient", waveform: "birds_park", volume: 0.14, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 17000, Q: 0.7 } },
+      { id: "hc_amb", name: "Ambient: Park Birds", type: "ambient", waveform: "birds_park", volume: 0.23, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 17000, Q: 0.7 } },
 
       // Popular “heart” association in sound-healing culture: 639
       { id: "hc_l", name: "Binaural Carrier L (639 Hz)", type: "oscillator", frequency: 639, volume: 0.14, pan: -1, waveform: "sine", enabled: true },
@@ -100,7 +100,7 @@ export const FEATURED_PRESETS = [
       { id: "sr_r", name: "Binaural R (440 Hz)", type: "oscillator", frequency: 440, volume: 0.13, pan: 1, waveform: "sine", enabled: true },
 
       { id: "sr_brown", name: "Brown Noise", type: "noise", frequency: 0, volume: 0.10, pan: 0, waveform: "brown", enabled: true },
-      { id: "sr_rain", name: "Rain (Light)", type: "ambient", frequency: 0, volume: 0.20, pan: 0, waveform: "rain_light", enabled: true },
+      { id: "sr_rain", name: "Rain (Light)", type: "ambient", frequency: 0, volume: 0.40, pan: 0, waveform: "rain_light", enabled: true },
 
       // Popular release/clearing anchors
       { id: "sr_396", name: "Release Anchor (396 Hz)", type: "oscillator", frequency: 396, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
@@ -117,7 +117,7 @@ export const FEATURED_PRESETS = [
     imageUrl: "/modeimages/energyignition.jpg",
     description: "Wake up the system without chaos. Built for clean energy, motivation, and morning activation.",
     layers: [
-      { id: "ei_amb", name: "Ambient: Wind Soft", type: "ambient", waveform: "wind_soft", volume: 0.12, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 17000, Q: 0.7 } },
+      { id: "ei_amb", name: "Ambient: Wind Soft", type: "ambient", waveform: "wind_soft", volume: 0.40, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 17000, Q: 0.7 } },
 
       // Popular “activation” anchor: 741 / 852 / 963
       // Use 741 as main bed with a stronger offset for “ignite”
@@ -139,7 +139,7 @@ export const FEATURED_PRESETS = [
     imageUrl: "/modeimages/zengarden.jpg",
     description: "Quiet the mind and soften stress. Best for relaxation, breathwork, and gentle meditation.",
     layers: [
-      { id: "p2_amb", name: "Ambient: Gentle River", type: "ambient", waveform: "river_soft", volume: 0.16, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
+      { id: "p2_amb", name: "Ambient: Gentle River", type: "ambient", waveform: "river_soft", volume: 0.33, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
 
       // Replace sub-audible “6 Hz oscillator” with a 432-based binaural theta pattern
       { id: "zg_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
@@ -159,7 +159,7 @@ export const FEATURED_PRESETS = [
     imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2940&auto=format&fit=crop",
     description: "Ease the body into calm, steady relaxation. Ideal for unwinding, reading, and sleep preparation.",
     layers: [
-      { id: "p3_amb", name: "Ambient: Ocean Deep", type: "ambient", waveform: "ocean_deep", volume: 0.18, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
+      { id: "p3_amb", name: "Ambient: Ocean Deep", type: "ambient", waveform: "ocean_deep", volume: 0.30, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
 
       // Replace sub-audible “3 Hz oscillator” with a 432-based low-offset drift
       { id: "of_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
@@ -180,7 +180,7 @@ export const FEATURED_PRESETS = [
     imageUrl: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=2940&auto=format&fit=crop",
     description: "A smooth protective layer for the mind. Ideal for winding down and restoring internal balance.",
     layers: [
-      { id: "p4_amb", name: "Ambient: Thunder Distant", type: "ambient", waveform: "thunder_distant", volume: 0.16, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
+      { id: "p4_amb", name: "Ambient: Thunder Distant", type: "ambient", waveform: "thunder_distant", volume: 0.50, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
 
       // Protective calm bed: 396 + low offset
       { id: "ns_l", name: "Binaural L (396 Hz)", type: "oscillator", frequency: 396, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
