@@ -15,6 +15,8 @@ import {
   Search,
   ArrowRight,
   ArrowUpDown,
+  Check,
+  ChevronDown,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -23,7 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import PresetEditor from "@/components/presets/PresetEditor";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -129,8 +131,7 @@ function durationToMinutes(d) {
 }
 
 // Discover-style sort for rails:
-// - Prefer higher intent-quality presets: lower duration for energy/focus rails isn’t universal,
-//   so we keep it neutral: intensity desc, then duration asc (if present), then order asc, then name.
+// - Prefer higher intent-quality presets: intensity desc, then duration asc (if present), then order asc, then name.
 function railSort(a, b) {
   const ai = safeNum(a?.intensity, 0);
   const bi = safeNum(b?.intensity, 0);
@@ -179,19 +180,20 @@ function SectionHeader({ title, subtitle, right }) {
   );
 }
 
-function Chip({ active, children, onClick }) {
+function CategoryItem({ active, children, onClick }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "px-3 py-1.5 rounded-full text-sm font-semibold border transition",
+        "w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-sm font-semibold border transition",
         active
-          ? "bg-emerald-600 text-white border-emerald-500/60"
-          : "bg-white/5 text-white/75 border-white/10 hover:bg-white/10"
+          ? "bg-emerald-600 text-white border-emerald-500/60 shadow-[0_0_0_1px_rgba(16,185,129,0.25)]"
+          : "bg-white/5 text-white/80 border-white/10 hover:bg-white/10"
       )}
     >
-      {children}
+      <span className="truncate">{children}</span>
+      {active ? <Check className="w-4 h-4 shrink-0" /> : <span className="w-4 h-4 shrink-0" />}
     </button>
   );
 }
@@ -444,7 +446,6 @@ function ModeCard({
         ) : null}
 
         <div className="mt-4">
-          {/* FIX: this button must actually activate */}
           <Button
             onClick={(e) => handleActivate(e, preset)}
             className="w-full h-10 font-semibold tracking-wide text-base rounded-lg shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -473,6 +474,9 @@ export default function AuraModes() {
   const [activeGoal, setActiveGoal] = useState("all");
   const [activeCollection, setActiveCollection] = useState("all");
   const [sortBy, setSortBy] = useState("custom"); // custom | recent | az
+
+  // Filters UI (collapsible)
+  const [goalsOpen, setGoalsOpen] = useState(true);
 
   const [favoriteIds, setFavoriteIds] = useState(() => readFavs());
 
@@ -655,7 +659,6 @@ export default function AuraModes() {
       if (!map.has(c)) map.set(c, []);
       map.get(c).push(p);
     }
-    // Sort each collection rail
     for (const [k, arr] of map.entries()) map.set(k, dedupeById(arr).sort(railSort));
     return map;
   }, [presets]);
@@ -676,7 +679,6 @@ export default function AuraModes() {
         map.get(g).push(p);
       }
     }
-    // Sort each goal rail
     for (const [k, arr] of map.entries()) map.set(k, dedupeById(arr).sort(railSort));
     return map;
   }, [presets]);
@@ -719,7 +721,6 @@ export default function AuraModes() {
       const recentMap = new Map(recents.map((r) => [r.preset.id, r.t]));
       list = [...list].sort((a, b) => (recentMap.get(b.id) || 0) - (recentMap.get(a.id) || 0));
     } else {
-      // Library order (but still stable with name tie-break)
       list = [...list].sort((a, b) => {
         const ao = safeNum(a?.order, 0);
         const bo = safeNum(b?.order, 0);
@@ -736,7 +737,6 @@ export default function AuraModes() {
 
   const scrollToTop = () => {
     try {
-      // This page is its own scroll container (overflow-y-auto), so ensure we’re at top.
       const el = document?.querySelector("main") || null;
       if (el && typeof el.scrollTo === "function") el.scrollTo({ top: 0, behavior: "smooth" });
       else window?.scrollTo?.({ top: 0, behavior: "smooth" });
@@ -760,6 +760,20 @@ export default function AuraModes() {
     setSortBy("custom");
     scrollToTop();
   };
+
+  const clearAllFilters = () => {
+    setQuery("");
+    setActiveGoal("all");
+    setActiveCollection("all");
+    setSortBy("custom");
+    scrollToTop();
+  };
+
+  const activeGoalLabel = useMemo(() => {
+    if (activeGoal === "all") return "All Goals";
+    const found = GOALS.find((g) => g.key === activeGoal);
+    return found?.label || "Goals";
+  }, [activeGoal]);
 
   // ------------------------------------------------------------
   // Render
@@ -785,7 +799,7 @@ export default function AuraModes() {
             </Button>
           </div>
 
-          {/* Search + Sort */}
+          {/* Search + Sort + Filters */}
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5 mb-4">
             <div className="flex flex-col md:flex-row md:items-center gap-3">
               <div className="relative flex-1">
@@ -831,62 +845,79 @@ export default function AuraModes() {
               </DropdownMenu>
             </div>
 
-            {/* Collections chips */}
-            <div className="flex flex-wrap gap-2 mt-4">
-              {COLLECTIONS.map((c) => (
-                <Chip
-                  key={c.key}
-                  active={activeCollection === c.key}
-                  onClick={() => {
-                    setActiveCollection(c.key);
-                    scrollToTop();
-                  }}
+            {/* GOALS (collapsible, smooth) */}
+            <div className="mt-4 rounded-xl border border-white/10 bg-black/20 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setGoalsOpen((v) => !v)}
+                className="w-full px-3 py-3 flex items-center justify-between gap-3"
+              >
+                <div className="min-w-0 text-left">
+                  <div className="text-xs font-extrabold text-white/70 uppercase tracking-wider">
+                    Goals
+                  </div>
+                  <div className="text-sm font-semibold text-white truncate">{activeGoalLabel}</div>
+                </div>
+
+                <motion.div
+                  animate={{ rotate: goalsOpen ? 180 : 0 }}
+                  transition={{ duration: 0.18 }}
+                  className="shrink-0 text-white/70"
                 >
-                  {c.label}
-                </Chip>
-              ))}
+                  <ChevronDown className="w-5 h-5" />
+                </motion.div>
+              </button>
+
+              <AnimatePresence initial={false}>
+                {goalsOpen ? (
+                  <motion.div
+                    key="goals-panel"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.22, ease: "easeOut" }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-3 pb-3 grid grid-cols-1 gap-2">
+                      <CategoryItem
+                        active={activeGoal === "all"}
+                        onClick={() => {
+                          setActiveGoal("all");
+                          scrollToTop();
+                        }}
+                      >
+                        All Goals
+                      </CategoryItem>
+
+                      {GOALS.map((g) => (
+                        <CategoryItem
+                          key={g.key}
+                          active={activeGoal === g.key}
+                          onClick={() => {
+                            setActiveGoal(g.key);
+                            scrollToTop();
+                          }}
+                        >
+                          {g.label}
+                        </CategoryItem>
+                      ))}
+                    </div>
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
             </div>
 
-            {/* Goals chips */}
-            <div className="flex flex-wrap gap-2 mt-3">
-              <Chip
-                active={activeGoal === "all"}
-                onClick={() => {
-                  setActiveGoal("all");
-                  scrollToTop();
-                }}
-              >
-                All Goals
-              </Chip>
-              {GOALS.map((g) => (
-                <Chip
-                  key={g.key}
-                  active={activeGoal === g.key}
-                  onClick={() => {
-                    setActiveGoal(g.key);
-                    scrollToTop();
-                  }}
-                >
-                  {g.label}
-                </Chip>
-              ))}
-
-              {isFiltered && (
+            {isFiltered ? (
+              <div className="mt-4 flex justify-end">
                 <button
                   type="button"
-                  className="ml-auto text-sm text-emerald-300 hover:text-emerald-200 font-semibold"
-                  onClick={() => {
-                    setQuery("");
-                    setActiveGoal("all");
-                    setActiveCollection("all");
-                    setSortBy("custom");
-                    scrollToTop();
-                  }}
+                  className="text-sm text-emerald-300 hover:text-emerald-200 font-semibold"
+                  onClick={clearAllFilters}
                 >
                   Clear
                 </button>
-              )}
-            </div>
+              </div>
+            ) : null}
           </div>
 
           {isLoading ? (
