@@ -24,6 +24,9 @@ export const fanFavoritesPresets = [
     tags: ["flow", "focus", "alpha", "work", "study"],
 
     layers: [
+      // ✅ Sub Foundation
+      { id: "fs_sub", name: "Sub Foundation (60 Hz)", type: "oscillator", frequency: 60, volume: 0.42, pan: 0, waveform: "sine", enabled: true },
+
       { id: "fs_amb", name: "Ambient: River (Soft)", type: "ambient", frequency: 0, volume: 0.40, pan: 0, waveform: "river_soft", enabled: true },
 
       // ~10 Hz (alpha) on a 432 base
@@ -59,6 +62,9 @@ export const fanFavoritesPresets = [
     tags: ["stress", "calm", "focus", "downshift"],
 
     layers: [
+      // ✅ Sub Foundation
+      { id: "sr_sub", name: "Sub Foundation (65 Hz)", type: "oscillator", frequency: 65, volume: 0.15, pan: 0, waveform: "sine", enabled: true },
+
       { id: "sr_amb", name: "Ambient: Ocean (Deep)", type: "ambient", frequency: 0, volume: 0.15, pan: 0, waveform: "ocean_deep", enabled: true },
 
       // ~8 Hz on a 432 base (alpha calm)
@@ -92,6 +98,9 @@ export const fanFavoritesPresets = [
     tags: ["creative", "flow", "ideas", "design", "writing"],
 
     layers: [
+      // ✅ Sub Foundation
+      { id: "cf_sub", name: "Sub Foundation (75 Hz)", type: "oscillator", frequency: 75, volume: 0.10, pan: 0, waveform: "sine", enabled: true },
+
       { id: "cf_amb", name: "Ambient: Fire (Camp)", type: "ambient", frequency: 0, volume: 0.95, pan: 0, waveform: "fire_camp", enabled: true },
 
       // ~12 Hz (creative alpha) on 432
@@ -126,6 +135,9 @@ export const fanFavoritesPresets = [
     tags: ["schumann", "grounding", "calm", "focus", "7.83"],
 
     layers: [
+      // ✅ Sub Foundation
+      { id: "sh_sub", name: "Sub Foundation (100 Hz)", type: "oscillator", frequency: 100, volume: 0.15, pan: 0, waveform: "sine", enabled: true },
+
       { id: "sh_amb", name: "Ambient: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.06, pan: 0, waveform: "wind_forest", enabled: true },
 
       // ~7.83 Hz (Schumann) on a 432 base
@@ -135,9 +147,9 @@ export const fanFavoritesPresets = [
       { id: "sh_brown", name: "Brown Noise (Ground Bed)", type: "noise", frequency: 0, volume: 0.06, pan: 0, waveform: "brown", enabled: true },
 
       // “144 configuration” inclusion
-      { id: "sh_144", name: "Anchor (144 Hz)", type: "oscillator", frequency: 144, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
-      { id: "sh_288", name: "Anchor (288 Hz)", type: "oscillator", frequency: 288, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
-      { id: "sh_432", name: "Stabilizer (432 Hz)", type: "oscillator", frequency: 432, volume: 0.015, pan: 0, waveform: "sine", enabled: true },
+      { id: "sh_144", name: "Anchor (144 Hz)", type: "oscillator", frequency: 144, volume: 0.06, pan: 0, waveform: "sine", enabled: true },
+      { id: "sh_288", name: "Anchor (288 Hz)", type: "oscillator", frequency: 288, volume: 0.06, pan: 0, waveform: "sine", enabled: true },
+      { id: "sh_576", name: "Stabilizer (576 Hz)", type: "oscillator", frequency: 576, volume: 0.06, pan: 0, waveform: "sine", enabled: true },
       { id: "c_shuman_resonance_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.08, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 115,
@@ -161,6 +173,9 @@ export const fanFavoritesPresets = [
     tags: ["phi", "fibonacci", "focus", "coherence"],
 
     layers: [
+      // ✅ Sub Foundation
+      { id: "grf_sub", name: "Sub Foundation (60 Hz)", type: "oscillator", frequency: 60, volume: 0.11, pan: 0, waveform: "sine", enabled: true },
+
       { id: "grf_amb", name: "Ambient: River (Soft)", type: "ambient", frequency: 0, volume: 0.44, pan: 0, waveform: "river_soft", enabled: true },
 
       // ~13 Hz on 432 (focused, coherent)
@@ -197,16 +212,19 @@ export const fanFavoritesPresets = [
     tags: ["portal", "focus", "energy", "high-intensity"],
 
     layers: [
+      // ✅ Sub Foundation
+      { id: "sga_sub", name: "Sub Foundation (85 Hz)", type: "oscillator", frequency: 85, volume: 0.20, pan: 0, waveform: "sine", enabled: true },
+
       { id: "sga_amb", name: "Ambient: Crickets (Lake)", type: "ambient", frequency: 0, volume: 0.27, pan: 0, waveform: "crickets_lake", enabled: true },
 
       // Bright bed on 963 (culture), small offset for focus edge
       { id: "sga_l", name: "Binaural L (960 Hz)", type: "oscillator", frequency: 960, volume: 0.08, pan: -1, waveform: "sine", enabled: true },
       { id: "sga_r", name: "Binaural R (966 Hz)", type: "oscillator", frequency: 966, volume: 0.08, pan: 1, waveform: "sine", enabled: true },
 
-      { id: "sga_cosmic", name: "Cosmic Noise (Gate Bed)", type: "noise", frequency: 0, volume: 0.08, pan: 0, waveform: "cosmic", enabled: true },
+      { id: "sga_cosmic", name: "Cosmic Noise (Gate Bed)", type: "noise", frequency: 0, volume: 0.15, pan: 0, waveform: "cosmic", enabled: true },
 
       // “144 configuration” inclusion
-      { id: "sga_synth", name: "Wavetable Layer (144 Hz)", type: "synth", frequency: 144, volume: 0.05, pan: 0, waveform: "wavetable", enabled: true },
+      { id: "sga_synth", name: "Wavetable Layer (144 Hz)", type: "synth", frequency: 144, volume: 0.03, pan: 0, waveform: "wavetable", enabled: true },
       { id: "sga_432", name: "Stabilizer (432 Hz)", type: "oscillator", frequency: 432, volume: 0.012, pan: 0, waveform: "sine", enabled: true },
       { id: "c_stargate_aura_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.09, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
@@ -232,6 +250,9 @@ export const fanFavoritesPresets = [
     tags: ["heart", "coherence", "calm", "reset"],
 
     layers: [
+      // ✅ Sub Foundation
+      { id: "ht_sub", name: "Sub Foundation (99 Hz)", type: "oscillator", frequency: 99, volume: 0.10, pan: 0, waveform: "sine", enabled: true },
+
       { id: "ht_amb", name: "Ambient: Birds (Park)", type: "ambient", frequency: 0, volume: 0.28, pan: 0, waveform: "birds_park", enabled: true },
 
       // ~10 Hz on 528
@@ -240,8 +261,8 @@ export const fanFavoritesPresets = [
 
       { id: "ht_pink", name: "Pink Noise (Soft Bed)", type: "noise", frequency: 0, volume: 0.04, pan: 0, waveform: "pink", enabled: true },
 
-      { id: "ht_639", name: "Anchor (639 Hz)", type: "oscillator", frequency: 639, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
-      { id: "ht_432", name: "Stabilizer (432 Hz)", type: "oscillator", frequency: 432, volume: 0.012, pan: 0, waveform: "sine", enabled: true },
+      { id: "ht_639", name: "Anchor (639 Hz)", type: "oscillator", frequency: 639, volume: 0.03, pan: 0, waveform: "sine", enabled: true },
+      { id: "ht_432", name: "Stabilizer (432 Hz)", type: "oscillator", frequency: 432, volume: 0.04, pan: 0, waveform: "sine", enabled: true },
       { id: "c_heart_motion_amb", name: "Motion Drift: Wind (Soft)", type: "ambient", frequency: 0, volume: 0.95, pan: 0, waveform: "wind_soft", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 118,
@@ -252,7 +273,7 @@ export const fanFavoritesPresets = [
     name: "Rest and Restoration",
     color: "linear-gradient(135deg, #0b1220, #1b2a4a)",
     imageUrl:
-      "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2400&auto=format&fit=crop",
+      "/modeimages/restandrestoration.jpg",
     description: "Deep recovery stack with a delta-style binaural bed and gentle Solfeggio anchors for reset.",
 
     // ✅ Discover metadata
@@ -266,6 +287,9 @@ export const fanFavoritesPresets = [
     tags: ["sleep", "recovery", "delta", "rest"],
 
     layers: [
+      // ✅ Sub Foundation
+      { id: "rr_sub", name: "Sub Foundation (90 Hz)", type: "oscillator", frequency: 90, volume: 0.15, pan: 0, waveform: "sine", enabled: true },
+
       { id: "rr_amb", name: "Ambient: Thunder (Rolling)", type: "ambient", frequency: 0, volume: 0.30, pan: 0, waveform: "thunder_rolling", enabled: true },
 
       // Delta ~2.5 Hz on 432
@@ -276,7 +300,7 @@ export const fanFavoritesPresets = [
 
       { id: "rr_936", name: "Release Anchor (936 Hz)", type: "oscillator", frequency: 936, volume: 0.012, pan: 0, waveform: "sine", enabled: true },
       { id: "rr_528", name: "Repair Anchor (528 Hz)", type: "oscillator", frequency: 528, volume: 0.012, pan: 0, waveform: "sine", enabled: true },
-      { id: "c_rest_and_restoration_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.15, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
+      { id: "c_rest_and_restoration_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.08, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 119,
   },

@@ -21,16 +21,19 @@ export const communityPresets = [
     tags: ["lucid", "dreams", "theta", "sleep", "night"],
 
     layers: [
+      // ✅ Sub Foundation (comfort / low-end safety bed)
+      { id: "ld_sub", name: "Sub Foundation (72 Hz)", type: "oscillator", frequency: 72, volume: 0.12, pan: 0, waveform: "sine", enabled: true },
+
       // Theta-style binaural using a 432 Hz anchor (popular sound healing)
-      { id: "ld_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.14, pan: -1, waveform: "sine", enabled: true },
-      { id: "ld_r", name: "Binaural R (436 Hz)", type: "oscillator", frequency: 436, volume: 0.14, pan: 1, waveform: "sine", enabled: true },
+      { id: "ld_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
+      { id: "ld_r", name: "Binaural R (436 Hz)", type: "oscillator", frequency: 436, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
 
       { id: "ld_pink", name: "Pink Noise", type: "noise", frequency: 0, volume: 0.08, pan: 0, waveform: "pink", enabled: true },
       { id: "ld_crickets", name: "Crickets (Lake)", type: "ambient", frequency: 0, volume: 0.33, pan: 0, waveform: "crickets_lake", enabled: true },
 
       // Keep a gentle 432 harmonic + add a subtle 963 overtone (popular “higher” tone)
       { id: "ld_432", name: "Harmonic (432 Hz)", type: "oscillator", frequency: 432, volume: 0.03, pan: 0, waveform: "sine", enabled: true },
-      { id: "ld_963", name: "Overtone (963 Hz)", type: "oscillator", frequency: 963, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
+      { id: "ld_963", name: "Overtone (963 Hz)", type: "oscillator", frequency: 963, volume: 0.03, pan: 0, waveform: "sine", enabled: true },
       { id: "c_lucid_dreaming_motion_amb", name: "Motion Drift: Wind (Soft)", type: "ambient", frequency: 0, volume: 0.80, pan: 0, waveform: "wind_soft", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 100,
@@ -55,6 +58,9 @@ export const communityPresets = [
     tags: ["calm", "stress", "regulation", "rain", "grounding"],
 
     layers: [
+      // ✅ Sub Foundation (comfort / grounding)
+      { id: "sc_sub", name: "Sub Foundation (80 Hz)", type: "oscillator", frequency: 80, volume: 0.12, pan: 0, waveform: "sine", enabled: true },
+
       { id: "sc_amb", name: "Ambient: Rain Light", type: "ambient", waveform: "rain_light", volume: 0.40, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
 
       // Calm/alpha feel using 432 as base with an 8 Hz offset (popular approach)
@@ -90,16 +96,19 @@ export const communityPresets = [
     tags: ["relax", "tension", "recovery", "ocean"],
 
     layers: [
-      // Popular “pain relief” tone: 174 Hz, with a gentle low-offset beat
-      { id: "pr_l", name: "Binaural L (170 Hz)", type: "oscillator", frequency: 170, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
-      { id: "pr_r", name: "Binaural R (178 Hz)", type: "oscillator", frequency: 178, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
+      // ✅ Sub Foundation (comfort)
+      { id: "pr_sub", name: "Sub Foundation (70 Hz)", type: "oscillator", frequency: 70, volume: 0.30, pan: 0, waveform: "sine", enabled: true },
 
-      { id: "pr_pink", name: "Pink Noise", type: "noise", frequency: 0, volume: 0.10, pan: 0, waveform: "pink", enabled: true },
+      // Popular “pain relief” tone: 174 Hz, with a gentle low-offset beat
+      { id: "pr_l", name: "Binaural L (170 Hz)", type: "oscillator", frequency: 170, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
+      { id: "pr_r", name: "Binaural R (178 Hz)", type: "oscillator", frequency: 178, volume: 0.11, pan: 1, waveform: "sine", enabled: true },
+
+      { id: "pr_pink", name: "Pink Noise", type: "noise", frequency: 0, volume: 0.08, pan: 0, waveform: "pink", enabled: true },
       { id: "pr_ocean", name: "Ocean (Deep)", type: "ambient", frequency: 0, volume: 0.11, pan: 0, waveform: "ocean_deep", enabled: true },
 
       // Add a healing-support anchor commonly used in sound healing culture
       { id: "pr_528", name: "Repair Anchor (528 Hz)", type: "oscillator", frequency: 528, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
-      { id: "c_pain_relief_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.10, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
+      { id: "c_pain_relief_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.08, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 102,
   },
@@ -123,6 +132,9 @@ export const communityPresets = [
     tags: ["focus", "energy", "clarity", "cosmic", "portal"],
 
     layers: [
+      // ✅ Sub Foundation (stability under high harmonics)
+      { id: "sg_sub", name: "Sub Foundation (80 Hz)", type: "oscillator", frequency: 80, volume: 0.15, pan: 0, waveform: "sine", enabled: true },
+
       // Bright “portal” bed: 963 anchor with a subtle offset, plus an audible 432 stabilizer
       { id: "sg_l", name: "Binaural L (963 Hz)", type: "oscillator", frequency: 963, volume: 0.08, pan: -1, waveform: "sine", enabled: true },
       { id: "sg_r", name: "Binaural R (971 Hz)", type: "oscillator", frequency: 971, volume: 0.08, pan: 1, waveform: "sine", enabled: true },
@@ -131,11 +143,11 @@ export const communityPresets = [
       { id: "sg_wind", name: "Wind (Forest)", type: "ambient", frequency: 0, volume: 0.10, pan: 0, waveform: "wind_forest", enabled: true },
 
       // “144 configuration” inclusion: keep the synth layer but shift it to 144 Hz
-      { id: "sg_synth", name: "Wavetable Layer (144 Hz)", type: "synth", frequency: 144, volume: 0.06, pan: 0, waveform: "wavetable", enabled: true },
+      { id: "sg_synth", name: "Wavetable Layer (144 Hz)", type: "synth", frequency: 144, volume: 0.04, pan: 0, waveform: "wavetable", enabled: true },
 
       // Gentle stabilizer
       { id: "sg_432", name: "Anchor (432 Hz)", type: "oscillator", frequency: 432, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
-      { id: "c_stargate_motion_amb", name: "Motion Drift: Wind (Soft)", type: "ambient", frequency: 0, volume: 0.90, pan: 0, waveform: "wind_soft", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
+      { id: "c_stargate_motion_amb", name: "Motion Drift: Wind (Soft)", type: "ambient", frequency: 0, volume: 0.40, pan: 0, waveform: "wind_soft", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 103,
   },
@@ -158,24 +170,26 @@ export const communityPresets = [
     tags: ["phi", "fibonacci", "coherence", "creative"],
 
     layers: [
+      // ✅ Sub Foundation (coherence bed)
+      { id: "gr_sub", name: "Sub Foundation (65 Hz)", type: "oscillator", frequency: 65, volume: 0.11, pan: 0, waveform: "sine", enabled: true },
+
       // Already aligned with popular “sacred math” patterns; keep core structure and add a subtle 432 stabilizer
-      { id: "gr_161", name: "Phi Center (161.8 Hz)", type: "oscillator", frequency: 161.8, volume: 0.08, pan: 0, waveform: "sine", enabled: true },
-      { id: "gr_89", name: "Fibonacci (89 Hz)", type: "oscillator", frequency: 89, volume: 0.05, pan: -0.15, waveform: "sine", enabled: true },
-      { id: "gr_144", name: "Fibonacci (144 Hz)", type: "oscillator", frequency: 144, volume: 0.05, pan: 0.15, waveform: "sine", enabled: true },
-      { id: "gr_233", name: "Fibonacci (233 Hz)", type: "oscillator", frequency: 233, volume: 0.04, pan: 0, waveform: "sine", enabled: true },
+      { id: "gr_161", name: "Phi Center (161.8 Hz)", type: "oscillator", frequency: 161.8, volume: 0.24, pan: 0, waveform: "sine", enabled: true },
+      { id: "gr_89", name: "Fibonacci (89 Hz)", type: "oscillator", frequency: 89, volume: 0.30, pan: -0.15, waveform: "sine", enabled: true },
+      { id: "gr_144", name: "Fibonacci (144 Hz)", type: "oscillator", frequency: 144, volume: 0.22, pan: 0.15, waveform: "sine", enabled: true },
+      { id: "gr_233", name: "Fibonacci (233 Hz)", type: "oscillator", frequency: 233, volume: 0.40, pan: 0, waveform: "sine", enabled: true },
 
       { id: "gr_river", name: "River (Soft)", type: "ambient", frequency: 0, volume: 0.80, pan: 0, waveform: "river_soft", enabled: true },
-      { id: "ld_crickets", name: "Crickets (Lake)", type: "ambient", frequency: 0, volume: 0.15, pan: 0, waveform: "crickets_lake", enabled: true },
+      { id: "ld_crickets", name: "Crickets (Lake)", type: "ambient", frequency: 0, volume: 0.30, pan: 0, waveform: "crickets_lake", enabled: true },
 
-      { id: "gr_synth", name: "Analog Layer", type: "synth", frequency: 161.8, volume: 0.06, pan: 0, waveform: "analog", enabled: true },
+      { id: "gr_synth", name: "Analog Layer", type: "synth", frequency: 161.8, volume: 0.11, pan: 0, waveform: "analog", enabled: true },
 
-      { id: "gr_432", name: "Stabilizer (432 Hz)", type: "oscillator", frequency: 432, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
+      { id: "gr_432", name: "Stabilizer (432 Hz)", type: "oscillator", frequency: 432, volume: 0.05, pan: 0, waveform: "sine", enabled: true },
       { id: "c_golden_ratio_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.09, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 104,
   },
 
-  // ✅ YOU SAID DO NOT CHANGE THIS ONE
   {
     id: "c_third_eye",
     name: "Third Eye",
@@ -184,6 +198,11 @@ export const communityPresets = [
       "https://commons.wikimedia.org/wiki/Special:FilePath/Ajna_chakra.svg?width=2400",
     description: "Supports meditative focus and inner visualization with theta-style entrainment.",
     layers: [
+
+      // ✅ Sub Foundation (coherence bed)
+      { id: "gr_sub", name: "Sub Foundation (55 Hz)", type: "oscillator", frequency: 55, volume: 0.025, pan: 0, waveform: "sine", enabled: true },
+
+
       { id: "te_l", name: "Binaural L (430 Hz)", type: "oscillator", frequency: 430, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
       { id: "te_r", name: "Binaural R (434 Hz)", type: "oscillator", frequency: 434, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
       { id: "te_violet", name: "Violet Noise", type: "noise", frequency: 0, volume: 0.06, pan: 0, waveform: "violet", enabled: true },
@@ -213,14 +232,17 @@ export const communityPresets = [
     tags: ["focus", "beta", "clarity", "execution"],
 
     layers: [
+      // ✅ Sub Foundation (stability + drive)
+      { id: "gm_sub", name: "Sub Foundation (80 Hz)", type: "oscillator", frequency: 80, volume: 0.25, pan: 0, waveform: "sine", enabled: true },
+
       // Popular “activation” anchors: 528 + 963
       { id: "gm_l", name: "Binaural L (524 Hz)", type: "oscillator", frequency: 524, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
       { id: "gm_r", name: "Binaural R (532 Hz)", type: "oscillator", frequency: 532, volume: 0.10, pan: 1, waveform: "sine", enabled: true },
 
-      { id: "gm_gray", name: "Gray Noise", type: "noise", frequency: 0, volume: 0.09, pan: 0, waveform: "gray", enabled: true },
+      { id: "gm_gray", name: "Gray Noise", type: "noise", frequency: 0, volume: 0.06, pan: 0, waveform: "gray", enabled: true },
 
       { id: "gm_synth", name: "FM Detail Layer (963 Hz)", type: "synth", frequency: 963, volume: 0.04, pan: 0, waveform: "fm", enabled: true },
-      { id: "gm_wind", name: "Wind (Soft)", type: "ambient", frequency: 0, volume: 0.75, pan: 0, waveform: "wind_soft", enabled: true },
+      { id: "gm_wind", name: "Wind (Soft)", type: "ambient", frequency: 0, volume: 0.70, pan: 0, waveform: "wind_soft", enabled: true },
       { id: "c_genius_mode_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.08, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 106,
@@ -244,6 +266,9 @@ export const communityPresets = [
     tags: ["music", "practice", "flow", "creative"],
 
     layers: [
+      // ✅ Sub Foundation (warmth / body)
+      { id: "mm_sub", name: "Sub Foundation (60 Hz)", type: "oscillator", frequency: 60, volume: 0.025, pan: 0, waveform: "sine", enabled: true },
+
       // Flow-state bed on 432 with alpha-ish offset
       { id: "mm_l", name: "Binaural L (428 Hz)", type: "oscillator", frequency: 428, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
       { id: "mm_r", name: "Binaural R (436 Hz)", type: "oscillator", frequency: 436, volume: 0.10, pan: 1, waveform: "sine", enabled: true },
@@ -275,6 +300,9 @@ export const communityPresets = [
     tags: ["abundance", "planning", "confidence", "focus"],
 
     layers: [
+      // ✅ Sub Foundation (grounded confidence)
+      { id: "wa_sub", name: "Sub Foundation (55 Hz)", type: "oscillator", frequency: 55, volume: 0.025, pan: 0, waveform: "sine", enabled: true },
+
       // Popular abundance stack: 528 + 639, with a calm offset on the main layer
       { id: "wa_l", name: "Binaural L (520 Hz)", type: "oscillator", frequency: 520, volume: 0.08, pan: -1, waveform: "sine", enabled: true },
       { id: "wa_r", name: "Binaural R (536 Hz)", type: "oscillator", frequency: 536, volume: 0.08, pan: 1, waveform: "sine", enabled: true },
@@ -284,7 +312,7 @@ export const communityPresets = [
 
       { id: "wa_639", name: "Anchor (639 Hz)", type: "oscillator", frequency: 639, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
       { id: "wa_432", name: "Stabilizer (432 Hz)", type: "oscillator", frequency: 432, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
-      { id: "wa_888", name: "Stabilizer (888 Hz)", type: "oscillator", frequency: 888, volume: 0.08, pan: 0, waveform: "sine", enabled: true },
+      { id: "wa_888", name: "Stabilizer (888 Hz)", type: "oscillator", frequency: 888, volume: 0.06, pan: 0, waveform: "sine", enabled: true },
       { id: "c_wealth_abundance_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.08, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 108,
