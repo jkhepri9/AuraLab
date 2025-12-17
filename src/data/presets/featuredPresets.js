@@ -231,7 +231,7 @@ export const FEATURED_PRESETS = [
     description: "Ease the body into calm, steady relaxation. Ideal for unwinding, reading, and sleep preparation.",
 
     // ✅ Discover metadata
-    goals: ["calm", "sleep"],
+    goals: ["calm", "meditate"],
     scenarios: ["wind-down", "reading", "night"],
     styles: ["binaural", "nature", "noise"],
     intensity: 1,
@@ -267,7 +267,7 @@ export const FEATURED_PRESETS = [
     description: "A smooth protective layer for the mind. Ideal for winding down and restoring internal balance.",
 
     // ✅ Discover metadata
-    goals: ["sleep", "calm"],
+    goals: ["sleep"],
     scenarios: ["night", "wind-down", "stress"],
     styles: ["binaural", "nature", "noise"],
     intensity: 2,

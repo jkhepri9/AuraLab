@@ -20,6 +20,7 @@ import { useGlobalPlayer } from "../audio/GlobalPlayerContext";
 
 import FEATURED_PRESETS from "../data/presets/featuredPresets";
 import { fanFavoritesPresets } from "../data/presets/fanFavoritesPresets";
+import zodiacPresets from "../data/presets/zodiacPresets";
 
 // ------------------------------------------------------------
 // Storage keys (shared with AuraModes.jsx)
@@ -246,6 +247,7 @@ export default function Home() {
 
   const featuredMetaById = useMemo(() => buildMetaMap(FEATURED_PRESETS), []);
   const fanMetaById = useMemo(() => buildMetaMap(fanFavoritesPresets), []);
+  const zodiacMetaById = useMemo(() => buildMetaMap(zodiacPresets), []);
 
   // Pull full library so Home can resolve Recents/Favorites accurately (includes custom modes)
   const { data: presets = [] } = useQuery({
@@ -359,6 +361,21 @@ export default function Home() {
       };
     });
   }, [featuredMetaById]);
+
+  const zodiacRail = useMemo(() => {
+    const list = Array.isArray(zodiacPresets) ? [...zodiacPresets] : [];
+    list.sort((a, b) => (a?.order ?? 9999) - (b?.order ?? 9999));
+    return list.map((p) => {
+      const meta = zodiacMetaById.get(p.id);
+      return {
+        id: p.id,
+        name: meta?.name || p.name,
+        description: meta?.description || p.description || "",
+        imageUrl: meta?.imageUrl || p.imageUrl || null,
+        color: meta?.color || p.color || DEFAULT_TINT,
+      };
+    });
+  }, [zodiacMetaById]);
 
   const fanRail = useMemo(() => {
     const list = Array.isArray(fanFavoritesPresets) ? [...fanFavoritesPresets] : [];
@@ -620,6 +637,27 @@ export default function Home() {
           />
           <Rail>
             {featuredRail.map((p) => (
+              <CompactCard key={p.id} preset={p} href={activateHref(p.id)} />
+            ))}
+          </Rail>
+        </section>
+
+        {/* ZODIAC MODES (HORIZONTAL RAIL) */}
+        <section className="space-y-3">
+          <SectionHeader
+            title="Zodiac Modes"
+            subtitle="Twelve signature fields—one for each sign. Tap a card to play."
+            right={
+              <Link
+                to={modesUrl}
+                className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors whitespace-nowrap"
+              >
+                View all →
+              </Link>
+            }
+          />
+          <Rail>
+            {zodiacRail.map((p) => (
               <CompactCard key={p.id} preset={p} href={activateHref(p.id)} />
             ))}
           </Rail>

@@ -32,6 +32,9 @@ import { Input } from "@/components/ui/input";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useGlobalPlayer } from "../audio/GlobalPlayerContext";
 
+// ✅ ZODIAC PRESETS (built-in library)
+import zodiacPresets from "@/data/presets/zodiacPresets";
+
 // ------------------------------------------------------------
 // Local UX persistence (no DB changes required)
 // ------------------------------------------------------------
@@ -97,6 +100,7 @@ const COLLECTIONS = [
   { key: "Featured", label: "Featured" },
   { key: "Community", label: "Community" },
   { key: "Fan Favorites", label: "Fan Favorites" },
+  { key: "Zodiac", label: "Zodiac" }, // ✅ NEW
   { key: "Custom", label: "Custom" },
 ];
 
@@ -114,6 +118,13 @@ function getGoals(preset) {
   }
   if (preset?.goal) return [String(preset.goal).toLowerCase()];
   return [];
+}
+
+// ✅ Treat Zodiac as built-in (non-DB) content so we never try to rename/reorder/delete/update it in db.
+function isZodiacPreset(preset) {
+  const id = String(preset?.id || "");
+  const col = String(preset?.collection || "");
+  return col === "Zodiac" || id.startsWith("z_");
 }
 
 function safeNum(v, fallback) {
@@ -293,6 +304,7 @@ function ModeCard({
   finishRename,
   isFavorite,
   onToggleFavorite,
+  isLocked,
 }) {
   const [newName, setNewName] = useState(preset.name);
 
@@ -302,6 +314,11 @@ function ModeCard({
 
   const handleRenameSubmit = (e) => {
     e.stopPropagation();
+    if (isLocked) {
+      finishRename();
+      toast.info("This is a built-in preset. Save a copy to customize.");
+      return;
+    }
     if (newName.trim() && newName !== preset.name) {
       renamePreset.mutate({ id: preset.id, newName });
     }
@@ -345,9 +362,13 @@ function ModeCard({
                 className="text-2xl font-extrabold text-white drop-shadow mb-1 truncate"
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (isLocked) {
+                    handleEditRequest(preset);
+                    return;
+                  }
                   startRename(preset.id);
                 }}
-                title="Click to rename"
+                title={isLocked ? "Built-in preset (view details)" : "Click to rename"}
               >
                 {preset.name}
               </h3>
@@ -399,9 +420,10 @@ function ModeCard({
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (isLocked) return;
                   handleReorder(preset.id, "up");
                 }}
-                disabled={index === 0}
+                disabled={isLocked || index === 0}
                 className="cursor-pointer hover:bg-zinc-700"
               >
                 Move Up
@@ -410,9 +432,10 @@ function ModeCard({
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (isLocked) return;
                   handleReorder(preset.id, "down");
                 }}
-                disabled={index === totalPresets - 1}
+                disabled={isLocked || index === totalPresets - 1}
                 className="cursor-pointer hover:bg-zinc-700"
               >
                 Move Down
@@ -421,8 +444,13 @@ function ModeCard({
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (isLocked) {
+                    toast.info("This is a built-in preset. Save a copy to customize.");
+                    return;
+                  }
                   startRename(preset.id);
                 }}
+                disabled={isLocked}
                 className="cursor-pointer hover:bg-zinc-700"
               >
                 <Edit3 className="w-4 h-4 mr-2" /> Rename
@@ -431,9 +459,17 @@ function ModeCard({
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (isLocked) {
+                    toast.info("This is a built-in preset and can’t be deleted.");
+                    return;
+                  }
                   handleDelete(preset.id);
                 }}
-                className="cursor-pointer text-red-400 hover:bg-red-900/50"
+                disabled={isLocked}
+                className={cn(
+                  "cursor-pointer hover:bg-red-900/50",
+                  isLocked ? "text-white/30" : "text-red-400"
+                )}
               >
                 <Trash2 className="w-4 h-4 mr-2" /> Delete Mode
               </DropdownMenuItem>
@@ -490,6 +526,11 @@ export default function AuraModes() {
     queryFn: () => db.presets.list(),
   });
 
+  // ✅ Combined library: Zodiac (built-in) + DB presets
+  const allPresets = useMemo(() => {
+    return dedupeById([...(zodiacPresets || []), ...(presets || [])]);
+  }, [presets]);
+
   const createPreset = useMutation({
     mutationFn: (data) => db.presets.create(data),
     onSuccess: () => {
@@ -531,7 +572,38 @@ export default function AuraModes() {
     onError: () => toast.error("Failed to rename mode."),
   });
 
+  const sanitizeCreatePayload = (data) => {
+    const out = { ...(data || {}) };
+    // Prevent accidental overwriting of built-ins / fixed ids
+    if ("id" in out) delete out.id;
+    // Copies should live as user content
+    if (out.collection === "Zodiac") out.collection = "Custom";
+    return out;
+  };
+
   const handleSave = (data) => {
+    // ✅ If the user is viewing a Zodiac preset in the editor and hits Save,
+    // we save a *copy* into the DB instead of trying to update the built-in.
+    if (editingPreset && isZodiacPreset(editingPreset)) {
+      const payload = sanitizeCreatePayload({
+        ...data,
+        name: data?.name ? data.name : `${editingPreset.name} (Copy)`,
+        collection: "Custom",
+      });
+
+      createPreset.mutate(payload, {
+        onSuccess: () => {
+          queryClient.invalidateQueries(["presets"]);
+          toast.success("Saved as a new Custom copy.");
+          setView("list");
+          setEditingPreset(null);
+          setAutoPlay(false);
+        },
+        onError: () => toast.error("Failed to save copy."),
+      });
+      return;
+    }
+
     if (editingPreset) updatePreset.mutate({ id: editingPreset.id, data });
     else createPreset.mutate(data);
   };
@@ -543,8 +615,24 @@ export default function AuraModes() {
     setView("edit");
   };
 
-  const handleDelete = (id) => deletePreset.mutate(id);
-  const handleReorder = (id, direction) => reorderPreset.mutate({ id, direction });
+  const handleDelete = (id) => {
+    const p = allPresets.find((x) => x?.id === id);
+    if (isZodiacPreset(p)) {
+      toast.info("This is a built-in preset and can’t be deleted.");
+      return;
+    }
+    deletePreset.mutate(id);
+  };
+
+  const handleReorder = (id, direction) => {
+    const p = allPresets.find((x) => x?.id === id);
+    if (isZodiacPreset(p)) {
+      toast.info("This is a built-in preset and can’t be reordered.");
+      return;
+    }
+    reorderPreset.mutate({ id, direction });
+  };
+
   const handleCreateNew = () => {
     player.stop();
     setEditingPreset(null);
@@ -552,7 +640,14 @@ export default function AuraModes() {
     setView("create");
   };
 
-  const startRename = (id) => setIsRenaming(id);
+  const startRename = (id) => {
+    const p = allPresets.find((x) => x?.id === id);
+    if (isZodiacPreset(p)) {
+      toast.info("This is a built-in preset. Save a copy to customize.");
+      return;
+    }
+    setIsRenaming(id);
+  };
   const finishRename = () => setIsRenaming(null);
 
   const handleActivate = (e, preset) => {
@@ -597,15 +692,13 @@ export default function AuraModes() {
 
   // AUTO-ACTIVATE from Home: /AuraModes?activate=<presetId>
   useEffect(() => {
-    if (isLoading) return;
-    if (!presets || presets.length === 0) return;
     if (hasAutoActivatedRef.current) return;
 
     const params = new URLSearchParams(location.search);
     const activateId = params.get("activate");
     if (!activateId) return;
 
-    const preset = presets.find((p) => p.id === activateId);
+    const preset = allPresets.find((p) => p.id === activateId);
     if (!preset) return;
 
     hasAutoActivatedRef.current = true;
@@ -615,7 +708,7 @@ export default function AuraModes() {
     setView("edit");
 
     navigate(location.pathname, { replace: true });
-  }, [isLoading, presets, location.search, location.pathname, navigate]);
+  }, [allPresets, location.search, location.pathname, navigate]);
 
   // Sticky-player-aware padding
   const hasStickyPlayer = Boolean(player?.currentPlayingPreset);
@@ -628,9 +721,9 @@ export default function AuraModes() {
   // ------------------------------------------------------------
   const presetById = useMemo(() => {
     const map = new Map();
-    for (const p of presets) map.set(p.id, p);
+    for (const p of allPresets) map.set(p.id, p);
     return map;
-  }, [presets]);
+  }, [allPresets]);
 
   const recents = useMemo(() => {
     const list = readJSON(RECENTS_KEY, []);
@@ -645,30 +738,30 @@ export default function AuraModes() {
   const continuePreset = recents[0]?.preset || null;
 
   const favorites = useMemo(() => {
-    const list = presets.filter((p) => favoriteIds.has(p.id));
+    const list = allPresets.filter((p) => favoriteIds.has(p.id));
     return dedupeById(list).sort(railSort);
-  }, [presets, favoriteIds]);
+  }, [allPresets, favoriteIds]);
 
   const byCollection = useMemo(() => {
     const map = new Map();
     for (const c of COLLECTIONS) {
       if (c.key !== "all") map.set(c.key, []);
     }
-    for (const p of presets) {
+    for (const p of allPresets) {
       const c = getCollection(p);
       if (!map.has(c)) map.set(c, []);
       map.get(c).push(p);
     }
     for (const [k, arr] of map.entries()) map.set(k, dedupeById(arr).sort(railSort));
     return map;
-  }, [presets]);
+  }, [allPresets]);
 
   const byGoal = useMemo(() => {
     const map = new Map();
     for (const g of GOALS) map.set(g.key, []);
     map.set("uncategorized", []);
 
-    for (const p of presets) {
+    for (const p of allPresets) {
       const goals = getGoals(p);
       if (!goals.length) {
         map.get("uncategorized").push(p);
@@ -681,11 +774,11 @@ export default function AuraModes() {
     }
     for (const [k, arr] of map.entries()) map.set(k, dedupeById(arr).sort(railSort));
     return map;
-  }, [presets]);
+  }, [allPresets]);
 
   const filtered = useMemo(() => {
     const q = normalizeText(query).trim();
-    let list = presets;
+    let list = allPresets;
 
     if (activeCollection !== "all") {
       list = list.filter((p) => getCollection(p) === activeCollection);
@@ -730,7 +823,7 @@ export default function AuraModes() {
     }
 
     return dedupeById(list);
-  }, [presets, query, activeGoal, activeCollection, sortBy, byGoal, recents]);
+  }, [allPresets, query, activeGoal, activeCollection, sortBy, byGoal, recents]);
 
   const isFiltered =
     Boolean(normalizeText(query).trim()) || activeGoal !== "all" || activeCollection !== "all";
@@ -920,12 +1013,12 @@ export default function AuraModes() {
             ) : null}
           </div>
 
-          {isLoading ? (
+          {isLoading && allPresets.length === 0 ? (
             <div className="text-center py-20 text-gray-400 flex flex-col items-center">
               <Loader2 className="w-8 h-8 animate-spin mb-4" />
               Loading Aura Modes...
             </div>
-          ) : presets.length === 0 ? (
+          ) : allPresets.length === 0 ? (
             <div className="text-center py-20 border-2 border-dashed border-white/10 rounded-xl">
               <h3 className="text-2xl text-white mb-4">No Modes Yet</h3>
               <p className="text-gray-400 mb-6">
@@ -940,7 +1033,10 @@ export default function AuraModes() {
             </div>
           ) : isFiltered ? (
             <div>
-              <SectionHeader title={`Results (${filtered.length})`} subtitle="Filtered by your selections." />
+              <SectionHeader
+                title={`Results (${filtered.length})`}
+                subtitle="Filtered by your selections."
+              />
               {filtered.length === 0 ? (
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-white/70">
                   No modes found. Try a different search term.
@@ -963,6 +1059,7 @@ export default function AuraModes() {
                       finishRename={finishRename}
                       isFavorite={favoriteIds.has(preset.id)}
                       onToggleFavorite={toggleFavorite}
+                      isLocked={isZodiacPreset(preset)}
                     />
                   ))}
                 </div>
@@ -978,9 +1075,13 @@ export default function AuraModes() {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                       <div className="min-w-0">
                         <div className="text-white/60 text-sm font-semibold">Last played</div>
-                        <div className="text-2xl font-extrabold text-white truncate">{continuePreset.name}</div>
+                        <div className="text-2xl font-extrabold text-white truncate">
+                          {continuePreset.name}
+                        </div>
                         {continuePreset.description ? (
-                          <div className="text-white/70 mt-1 line-clamp-2">{continuePreset.description}</div>
+                          <div className="text-white/70 mt-1 line-clamp-2">
+                            {continuePreset.description}
+                          </div>
                         ) : null}
                       </div>
                       <div className="flex items-center gap-2">
@@ -1027,7 +1128,8 @@ export default function AuraModes() {
                 <SectionHeader title="Favorites" subtitle="Your go-to modes." />
                 {favorites.length === 0 ? (
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-white/70">
-                    Tap the <Heart className="inline w-4 h-4 mx-1 text-white/70" /> on any mode to save it here.
+                    Tap the <Heart className="inline w-4 h-4 mx-1 text-white/70" /> on any mode to
+                    save it here.
                   </div>
                 ) : (
                   <Rail>
@@ -1046,7 +1148,7 @@ export default function AuraModes() {
               </div>
 
               {/* Collection rails */}
-              {["Featured", "Community", "Fan Favorites"].map((c) => {
+              {["Featured", "Community", "Fan Favorites", "Zodiac"].map((c) => {
                 const list = byCollection.get(c) || [];
                 if (!list.length) return null;
                 return (
@@ -1117,9 +1219,12 @@ export default function AuraModes() {
                 })}
               </div>
 
-              {/* All Modes management grid */}
+              {/* All Modes management grid (DB-managed only) */}
               <div>
-                <SectionHeader title="All Aura Modes" subtitle="Your full library (edit, reorder, manage)." />
+                <SectionHeader
+                  title="Custom Modes"
+                  subtitle="Your editable library (edit, reorder, manage)."
+                />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {presets.map((preset, index) => (
                     <ModeCard
@@ -1137,6 +1242,7 @@ export default function AuraModes() {
                       finishRename={finishRename}
                       isFavorite={favoriteIds.has(preset.id)}
                       onToggleFavorite={toggleFavorite}
+                      isLocked={false}
                     />
                   ))}
                 </div>
