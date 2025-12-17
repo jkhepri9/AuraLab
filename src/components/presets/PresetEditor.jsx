@@ -1,8 +1,8 @@
 // src/components/presets/PresetEditor.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Play, Square, ArrowLeft, Monitor, Save } from "lucide-react";
+import { Play, Square, ArrowLeft, Monitor, Save, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -73,14 +73,34 @@ const GOAL_OPTIONS = [
   { key: "recovery", label: "Recovery" },
 ];
 
-const COLLECTION_OPTIONS = [
-  { key: "Featured", label: "Featured" },
-  { key: "Community", label: "Community" },
-  { key: "Fan Favorites", label: "Fan Favorites" },
-  { key: "Custom", label: "Custom" },
-];
+// Session timer (free editor)
+const SESSION_TIMER_KEY = "auralab_session_timer_minutes_v1";
+const SESSION_TIMER_OPTIONS = [0, 2, 5, 10, 15, 30, 45, 60, 90]; // 0 = Off
 
-const DURATION_OPTIONS = ["10m", "15m", "30m", "60m", "90m"];
+function readSessionTimerMinutes() {
+  try {
+    const raw = localStorage.getItem(SESSION_TIMER_KEY);
+    if (!raw) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionTimerMinutes(n) {
+  try {
+    localStorage.setItem(SESSION_TIMER_KEY, String(n));
+  } catch {}
+}
+
+function formatMMSS(totalSeconds) {
+  const s = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+  const mm = Math.floor(s / 60);
+  const ss = s % 60;
+  const pad = (x) => String(x).padStart(2, "0");
+  return `${pad(mm)}:${pad(ss)}`;
+}
 
 function uniq(arr) {
   const out = [];
@@ -101,7 +121,11 @@ function detectBinaural(layers) {
   // - opposite pan
   // - small frequency difference (0.5–40 Hz)
   const oscs = (layers || [])
-    .filter((l) => (l?.type === "oscillator" || l?.type === "frequency") && (l?.enabled ?? true))
+    .filter(
+      (l) =>
+        (l?.type === "oscillator" || l?.type === "frequency") &&
+        (l?.enabled ?? true)
+    )
     .map((l) => ({
       pan: Number(l?.pan ?? 0),
       frequency: Number(l?.frequency ?? 0),
@@ -161,8 +185,6 @@ export default function PresetEditor({
     Array.isArray(initialPreset?.goals) ? uniq(initialPreset.goals) : []
   );
 
-  const [collection, setCollection] = useState(() => initialPreset?.collection || "Custom");
-
   const [intensity, setIntensity] = useState(() => {
     const v = Number(initialPreset?.intensity);
     return Number.isFinite(v) ? Math.max(1, Math.min(5, Math.round(v))) : 3;
@@ -170,23 +192,89 @@ export default function PresetEditor({
 
   const binauralAuto = useMemo(() => detectBinaural(layers), [layers]);
 
-  // If the preset already has an explicit headphones flag, treat that as “override”.
-  const [headphonesOverride, setHeadphonesOverride] = useState(() =>
-    typeof initialPreset?.headphonesRecommended === "boolean"
+  // Keep existing metadata values (UI sections removed, but we preserve data on save)
+  const collection = useMemo(
+    () => initialPreset?.collection || "Custom",
+    [initialPreset]
   );
 
-  const [headphonesRecommended, setHeadphonesRecommended] = useState(() => {
+  const headphonesRecommended = useMemo(() => {
     if (typeof initialPreset?.headphonesRecommended === "boolean") {
       return initialPreset.headphonesRecommended;
     }
     return binauralAuto;
+  }, [initialPreset, binauralAuto]);
+
+  const durationHint = useMemo(() => {
+    const d = String(initialPreset?.durationHint || "").trim();
+    return d || defaultDurationForGoals(goals);
+  }, [initialPreset, goals]);
+
+  // -----------------------------
+  // SESSION TIMER (stops audio)
+  // -----------------------------
+  const [sessionTimerMinutes, setSessionTimerMinutes] = useState(() => {
+    const saved = readSessionTimerMinutes();
+    if (saved != null) return saved;
+    return 0; // default Off
   });
 
-  const [durationHint, setDurationHint] = useState(() => {
-    const d = String(initialPreset?.durationHint || "").trim();
-    if (d) return d;
-    return defaultDurationForGoals(goals);
-  });
+  const [timerEndsAt, setTimerEndsAt] = useState(null); // ms timestamp
+  const [timeLeftSec, setTimeLeftSec] = useState(null);
+
+  const timerTimeoutRef = useRef(null);
+  const timerIntervalRef = useRef(null);
+
+  const clearSessionTimer = () => {
+    if (timerTimeoutRef.current) {
+      clearTimeout(timerTimeoutRef.current);
+      timerTimeoutRef.current = null;
+    }
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+    setTimerEndsAt(null);
+    setTimeLeftSec(null);
+  };
+
+  const startSessionTimer = (minutes) => {
+    const mins = Number(minutes || 0);
+    if (!Number.isFinite(mins) || mins <= 0) {
+      clearSessionTimer();
+      return;
+    }
+
+    clearSessionTimer();
+
+    const endTs = Date.now() + mins * 60 * 1000;
+    setTimerEndsAt(endTs);
+
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((endTs - Date.now()) / 1000));
+      setTimeLeftSec(left);
+      if (left <= 0) setTimeLeftSec(0);
+    };
+
+    tick();
+    timerIntervalRef.current = setInterval(tick, 1000);
+
+    timerTimeoutRef.current = setTimeout(() => {
+      try {
+        player.stop();
+      } catch {
+        // ignore
+      } finally {
+        clearSessionTimer();
+      }
+    }, mins * 60 * 1000);
+  };
+
+  // Persist timer choice
+  useEffect(() => {
+    if (!SESSION_TIMER_OPTIONS.includes(sessionTimerMinutes)) return;
+    writeSessionTimerMinutes(sessionTimerMinutes);
+  }, [sessionTimerMinutes]);
 
   // Reset state when preset changes
   useEffect(() => {
@@ -194,20 +282,12 @@ export default function PresetEditor({
     setLayers(hydrated);
 
     setGoals(Array.isArray(initialPreset?.goals) ? uniq(initialPreset.goals) : []);
-    setCollection(initialPreset?.collection || "Custom");
 
     const v = Number(initialPreset?.intensity);
     setIntensity(Number.isFinite(v) ? Math.max(1, Math.min(5, Math.round(v))) : 3);
 
-    setHeadphonesOverride(typeof initialPreset?.headphonesRecommended === "boolean");
-    setHeadphonesRecommended(
-      typeof initialPreset?.headphonesRecommended === "boolean"
-        ? initialPreset.headphonesRecommended
-        : detectBinaural(hydrated)
-    );
-
-    const d = String(initialPreset?.durationHint || "").trim();
-    setDurationHint(d || defaultDurationForGoals(Array.isArray(initialPreset?.goals) ? initialPreset.goals : []));
+    // Clear any timer when switching presets (prevents “carryover” across different preview sessions)
+    clearSessionTimer();
 
     if (initialPreset && autoPlay) {
       player.playPreset({
@@ -221,24 +301,33 @@ export default function PresetEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [presetId]);
 
-  // Keep headphonesRecommended synced to auto-detection unless overridden.
-  useEffect(() => {
-    if (headphonesOverride) return;
-    setHeadphonesRecommended(binauralAuto);
-  }, [binauralAuto, headphonesOverride]);
-
-  // Keep duration default reasonable if user has not touched it.
-  useEffect(() => {
-    // Only auto-set duration when it's empty or one of the defaults that might have been auto-filled.
-    // If user picks a duration explicitly, we keep it.
-    setDurationHint((prev) => (prev ? prev : defaultDurationForGoals(goals)));
-  }, [goals]);
-
   const isActivePreset =
     Boolean(player.currentPlayingPreset?.id) &&
     player.currentPlayingPreset?.id === presetId;
 
   const isPlaying = player.isPlaying && isActivePreset;
+
+  // Start/stop the session timer based on playback state + user setting.
+  useEffect(() => {
+    if (!isPlaying) {
+      clearSessionTimer();
+      return;
+    }
+    if (sessionTimerMinutes > 0) {
+      startSessionTimer(sessionTimerMinutes);
+    } else {
+      clearSessionTimer();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, sessionTimerMinutes]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      clearSessionTimer();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const togglePlay = async () => {
     if (isPlaying) {
@@ -331,15 +420,10 @@ export default function PresetEditor({
     if (typeof onSave !== "function") return;
 
     const data = {
-      // Keep existing fields (safe for update path)
       ...(initialPreset || {}),
-
-      // Ensure core preview data stays aligned
       name,
       color,
       layers,
-
-      // Discover metadata
       collection: collection || "Custom",
       goals: uniq(goals),
       intensity: Math.max(1, Math.min(5, Math.round(Number(intensity) || 3))),
@@ -350,15 +434,35 @@ export default function PresetEditor({
     onSave(data);
   };
 
+  // ------------------------------------------------------------
+  // FIX: Push the entire editor down so it clears the global nav.
+  // ------------------------------------------------------------
+  const TOP_NAV_OFFSET_PX = 72; // adjust if needed
+
+  // ------------------------------------------------------------
+  // UX POLISH:
+  // - At top: only the header back button is visible.
+  // - After scroll: show the sticky back button.
+  // ------------------------------------------------------------
+  const [showStickyBack, setShowStickyBack] = useState(false);
+  const showStickyBackRef = useRef(false);
+
+  const handleScroll = (e) => {
+    const y = e?.currentTarget?.scrollTop ?? 0;
+    const next = y > 8; // small threshold so it doesn't flicker at 1px
+    if (next !== showStickyBackRef.current) {
+      showStickyBackRef.current = next;
+      setShowStickyBack(next);
+    }
+  };
+
   return (
-    <div className="relative w-full overflow-hidden rounded-3xl border border-white/10">
-      {/* MOBILE: rotate prompt for Preset Editor */}
+    <div className="fixed inset-0 z-[120] w-screen h-screen overflow-hidden bg-black">
       <RotatePrompt
         title="Rotate your device"
         message="For the best experience in Preset Editor on mobile, rotate to landscape."
       />
 
-      {/* Background image (CLEAR) */}
       {backgroundUrl && (
         <div
           className="absolute inset-0 bg-cover bg-center"
@@ -366,24 +470,50 @@ export default function PresetEditor({
         />
       )}
 
-      {/* CONTENT */}
-      <div className="relative z-10 space-y-6 pb-32">
-        {/* STICKY HEADER */}
-        <div className="sticky top-0 z-30 px-4 pt-4">
+      {/* STICKY BACK BUTTON (appears only after user scrolls down) */}
+      <AnimatePresence>
+        {showStickyBack ? (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18 }}
+            className="fixed left-4 z-[200]"
+            style={{
+              top: `calc(${TOP_NAV_OFFSET_PX}px + 1rem + env(safe-area-inset-top))`,
+            }}
+          >
+            <Button
+              onClick={() => onCancel?.()}
+              className="bg-black/70 hover:bg-black/80 text-white border border-white/15 whitespace-nowrap backdrop-blur-md shadow-lg"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" /> Back
+            </Button>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      {/* CONTENT (entire page pushed down; header is NOT sticky) */}
+      <div
+        onScroll={handleScroll}
+        className="relative z-10 h-full overflow-y-auto space-y-6 pb-[calc(12rem+env(safe-area-inset-bottom))]"
+        style={{
+          paddingTop: `calc(${TOP_NAV_OFFSET_PX}px + env(safe-area-inset-top))`,
+        }}
+      >
+        {/* NORMAL HEADER (not sticky) */}
+        <div className="px-4">
           <div className="rounded-2xl border border-white/10 bg-black/25 backdrop-blur-md shadow-xl">
             <div className="p-3 md:p-4 flex flex-col md:flex-row items-start md:items-center gap-4">
-              <Button
-                variant="secondary"
-                onClick={() => onCancel?.()}
-                className={cn(
-                  "shrink-0",
-                  "bg-black/70 hover:bg-black/80 text-white",
-                  "border border-white/15 shadow-lg",
-                  "backdrop-blur-md"
-                )}
-              >
-                <ArrowLeft className="w-5 h-5 mr-2" /> Back
-              </Button>
+              {/* HEADER BACK BUTTON (works at top of page) */}
+              <div className="shrink-0 w-full md:w-[110px] flex items-center">
+                <Button
+                  onClick={() => onCancel?.()}
+                  className="bg-black/70 hover:bg-black/80 text-white border border-white/15 whitespace-nowrap backdrop-blur-md shadow-lg"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                </Button>
+              </div>
 
               <div className="flex-1 w-full flex items-center justify-between gap-4">
                 <div className="min-w-0">
@@ -409,7 +539,15 @@ export default function PresetEditor({
                   <Button
                     onClick={() => {
                       navigate("/AuraEditor", {
-                        state: { preset: { ...(initialPreset || {}), name, color, layers, id: initialPreset?.id } },
+                        state: {
+                          preset: {
+                            ...(initialPreset || {}),
+                            name,
+                            color,
+                            layers,
+                            id: initialPreset?.id,
+                          },
+                        },
                       });
                     }}
                     className="bg-black/70 hover:bg-black/80 text-white border border-white/15 whitespace-nowrap backdrop-blur-md shadow-lg"
@@ -422,7 +560,7 @@ export default function PresetEditor({
           </div>
         </div>
 
-        {/* DISCOVER SETTINGS (Calm-like “Discover” metadata) */}
+        {/* DISCOVER SETTINGS */}
         <div className="px-4">
           <div className="rounded-2xl border border-white/10 bg-black/35 backdrop-blur-md shadow-xl p-4">
             <div className="flex items-start justify-between gap-4">
@@ -459,54 +597,8 @@ export default function PresetEditor({
               </div>
             </div>
 
-            {/* Controls grid */}
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-              {/* Headphones */}
-              <div className="rounded-xl border border-white/10 bg-black/40 p-3">
-                <div className="text-xs font-bold text-white/80">Headphones</div>
-                <div className="text-sm font-semibold text-white mt-1">
-                  {headphonesRecommended ? "Recommended" : "Not required"}
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setHeadphonesOverride(false);
-                      setHeadphonesRecommended(binauralAuto);
-                    }}
-                    className={pill(!headphonesOverride)}
-                    title="Use auto-detection"
-                  >
-                    Auto
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setHeadphonesOverride(true);
-                      setHeadphonesRecommended(true);
-                    }}
-                    className={pill(headphonesOverride && headphonesRecommended)}
-                    title="Force on"
-                  >
-                    On
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setHeadphonesOverride(true);
-                      setHeadphonesRecommended(false);
-                    }}
-                    className={pill(headphonesOverride && !headphonesRecommended)}
-                    title="Force off"
-                  >
-                    Off
-                  </button>
-                </div>
-              </div>
-
+            {/* Controls */}
+            <div className="mt-4 grid grid-cols-1 gap-3">
               {/* Intensity */}
               <div className="rounded-xl border border-white/10 bg-black/40 p-3">
                 <div className="flex items-center justify-between">
@@ -531,49 +623,50 @@ export default function PresetEditor({
                   Higher intensity = more “forward” mix / stronger feel (for sorting).
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
 
-              {/* Duration */}
-              <div className="rounded-xl border border-white/10 bg-black/40 p-3">
-                <div className="text-xs font-bold text-white/80">Suggested Duration</div>
-                <div className="text-sm font-semibold text-white mt-1">
-                  {durationHint || defaultDurationForGoals(goals)}
+        {/* Session Timer */}
+        <div className="px-4">
+          <div className="rounded-2xl border border-white/10 bg-black/35 backdrop-blur-md shadow-xl p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-sm font-extrabold text-white tracking-wide flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-white/80" />
+                  Session Timer
                 </div>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {DURATION_OPTIONS.map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => setDurationHint(d)}
-                      className={pill((durationHint || "").trim() === d)}
-                    >
-                      {d}
-                    </button>
-                  ))}
+                <div className="text-xs text-white/70">
+                  Stops playback automatically when the timer ends.
                 </div>
               </div>
+
+              {isPlaying && timerEndsAt && typeof timeLeftSec === "number" ? (
+                <div className="shrink-0 text-right">
+                  <div className="text-[11px] text-white/60">Ends in</div>
+                  <div className="text-sm font-extrabold text-white font-mono tabular-nums">
+                    {formatMMSS(timeLeftSec)}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
-            {/* Collection */}
-            <div className="mt-4">
-              <div className="text-xs font-bold text-white/80 mb-2">Collection</div>
-              <div className="flex flex-wrap gap-2">
-                {COLLECTION_OPTIONS.map((c) => (
-                  <button
-                    key={c.key}
-                    type="button"
-                    onClick={() => setCollection(c.key)}
-                    className={pill(collection === c.key)}
-                    title="Used for grouping on Aura Modes"
-                  >
-                    {c.label}
-                  </button>
-                ))}
-              </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {SESSION_TIMER_OPTIONS.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setSessionTimerMinutes(m)}
+                  className={pill(sessionTimerMinutes === m)}
+                  title={m === 0 ? "No auto-stop" : `Stop after ${m} minutes`}
+                >
+                  {m === 0 ? "Off" : `${m}m`}
+                </button>
+              ))}
+            </div>
 
-              <div className="mt-2 text-[11px] text-white/60">
-                For user-made modes, keep this on <span className="text-white/80 font-semibold">Custom</span>.
-              </div>
+            <div className="mt-2 text-[11px] text-white/60">
+              Your choice is remembered on this device.
             </div>
           </div>
         </div>
