@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import Layout from "./Layout";
@@ -23,7 +22,6 @@ function FirstRunGate() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Avoid redirect loops + keep a small allowlist.
     const allow = new Set(["/Start", "/Install", "/account", "/Account"]);
     if (allow.has(location.pathname)) return;
 
@@ -43,7 +41,8 @@ function FirstRunGate() {
 }
 
 function AppInner() {
-  const { currentPlayingPreset, isPlaying, togglePlayPause, isStickyPlayerHidden } = useGlobalPlayer();
+  const { currentPlayingPreset, isPlaying, togglePlayPause, isStickyPlayerHidden, hideStickyPlayerOnce } =
+    useGlobalPlayer();
 
   return (
     <Router>
@@ -53,6 +52,7 @@ function AppInner() {
         isPlaying={isPlaying}
         hideStickyPlayer={isStickyPlayerHidden}
         onTogglePlayPause={togglePlayPause}
+        onCloseStickyPlayer={hideStickyPlayerOnce}
       >
         <Routes>
           <Route path="/Start" element={<Start />} />
@@ -63,12 +63,8 @@ function AppInner() {
           <Route path="/AuraModes" element={<AuraModes />} />
           <Route path="/AuraEditor" element={<AuraEditor />} />
           <Route path="/NowPlaying" element={<NowPlaying />} />
-
-          {/* Account */}
           <Route path="/account" element={<Account />} />
           <Route path="/Account" element={<Account />} />
-
-          {/* Fallback */}
           <Route path="*" element={<Home />} />
         </Routes>
       </Layout>
