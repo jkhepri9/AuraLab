@@ -1,22 +1,9 @@
 // src/hooks/usePWAInstall.js
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-const INSTALLED_KEY = "auralab_pwa_installed";
-
-function readInstalledFlag() {
-  try {
-    return localStorage.getItem(INSTALLED_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function writeInstalledFlag() {
-  try {
-    localStorage.setItem(INSTALLED_KEY, "1");
-  } catch {}
-}
-
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
 function detectIOS() {
   if (typeof window === "undefined") return false;
   const ua = window.navigator.userAgent || "";
@@ -31,78 +18,179 @@ function detectStandalone() {
   return Boolean(mql?.matches || iosStandalone);
 }
 
-function getPromptEvent() {
-  if (typeof window === "undefined") return null;
-  return window.__AURALAB_BIP_EVENT__ || window.deferredPrompt || null;
+// -----------------------------------------------------------------------------
+// Global singleton store (prevents missing beforeinstallprompt + keeps in sync)
+// -----------------------------------------------------------------------------
+const STORE_KEY = "__AURALAB_PWA_STORE__";
+const BIP_KEY = "__AURALAB_BIP_EVENT__";
+
+function getStore() {
+  if (typeof window === "undefined") {
+    return {
+      isInstalled: false,
+      isInstallable: false,
+      promptEvent: null,
+      listeners: new Set(),
+      initialized: false,
+    };
+  }
+
+  if (!window[STORE_KEY]) {
+    window[STORE_KEY] = {
+      isInstalled: detectStandalone(),
+      isInstallable: false,
+      promptEvent: window[BIP_KEY] || window.deferredPrompt || null,
+      listeners: new Set(),
+      initialized: false,
+    };
+
+    // If we already have a cached prompt event from some earlier code path
+    if (window[STORE_KEY].promptEvent) window[STORE_KEY].isInstallable = true;
+  }
+
+  return window[STORE_KEY];
+}
+
+function emit() {
+  const store = getStore();
+  store.listeners.forEach((fn) => {
+    try {
+      fn();
+    } catch {
+      // ignore subscriber errors
+    }
+  });
+}
+
+function setStore(partial) {
+  const store = getStore();
+  Object.assign(store, partial);
+  emit();
 }
 
 function clearPromptEvent() {
   if (typeof window === "undefined") return;
-  window.__AURALAB_BIP_EVENT__ = null;
+  window[BIP_KEY] = null;
   window.deferredPrompt = null;
+  const store = getStore();
+  store.promptEvent = null;
 }
 
+function ensureGlobalListeners() {
+  if (typeof window === "undefined") return;
+  const store = getStore();
+  if (store.initialized) return;
+  store.initialized = true;
+
+  const onBeforeInstallPrompt = (e) => {
+    // REQUIRED: stop Chrome from auto-showing mini-infobar and allow deferred prompt
+    e.preventDefault();
+
+    // Cache globally so any page/component can trigger it later
+    window[BIP_KEY] = e;
+    window.deferredPrompt = e;
+
+    setStore({
+      promptEvent: e,
+      isInstallable: true,
+      // If this event fired, browser considers it not installed (or at least installable)
+      isInstalled: false,
+    });
+  };
+
+  const onAppInstalled = () => {
+    clearPromptEvent();
+    setStore({
+      isInstallable: false,
+      isInstalled: true,
+      promptEvent: null,
+    });
+  };
+
+  const onVisibility = () => {
+    // Keep installed status accurate when user returns to tab / changes modes
+    setStore({
+      isInstalled: detectStandalone(),
+      isInstallable: Boolean(getStore().promptEvent),
+    });
+  };
+
+  window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+  window.addEventListener("appinstalled", onAppInstalled);
+  document.addEventListener("visibilitychange", onVisibility);
+
+  // Track display-mode changes (best-effort)
+  const mql = window.matchMedia?.("(display-mode: standalone)");
+  const onMqlChange = () => {
+    setStore({ isInstalled: detectStandalone() });
+  };
+  if (mql?.addEventListener) mql.addEventListener("change", onMqlChange);
+  else if (mql?.addListener) mql.addListener(onMqlChange);
+}
+
+// Initialize listeners immediately (so you don’t miss the event)
+ensureGlobalListeners();
+
+// -----------------------------------------------------------------------------
+// Hook
+// -----------------------------------------------------------------------------
 export default function usePWAInstall() {
-  const [isInstalled, setIsInstalled] = useState(() => detectStandalone() || readInstalledFlag());
-  const [isInstallable, setIsInstallable] = useState(() => Boolean(getPromptEvent()));
   const isIOS = useMemo(() => detectIOS(), []);
 
-  useEffect(() => {
-    const onVisibility = () => {
-      setIsInstalled(detectStandalone() || readInstalledFlag());
-      setIsInstallable(Boolean(getPromptEvent()));
+  const [snapshot, setSnapshot] = useState(() => {
+    const store = getStore();
+    return {
+      isInstalled: store.isInstalled,
+      isInstallable: store.isInstallable,
+      promptEvent: store.promptEvent,
     };
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, []);
+  });
 
   useEffect(() => {
-    const onBeforeInstallPrompt = (e) => {
-      // If main.jsx already captured it, this will just keep it consistent
-      e.preventDefault();
-      window.__AURALAB_BIP_EVENT__ = e;
-      window.deferredPrompt = e;
-      setIsInstallable(true);
+    const store = getStore();
+    const onUpdate = () => {
+      const s = getStore();
+      setSnapshot({
+        isInstalled: s.isInstalled,
+        isInstallable: s.isInstallable,
+        promptEvent: s.promptEvent,
+      });
     };
 
-    const onAppInstalled = () => {
-      clearPromptEvent();
-      setIsInstallable(false);
-      setIsInstalled(true);
-      writeInstalledFlag();
-    };
+    store.listeners.add(onUpdate);
+    // sync once on mount
+    onUpdate();
 
-    window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
-    window.addEventListener("appinstalled", onAppInstalled);
     return () => {
-      window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
-      window.removeEventListener("appinstalled", onAppInstalled);
+      store.listeners.delete(onUpdate);
     };
   }, []);
 
   const promptInstall = useCallback(async () => {
-    const prompt = getPromptEvent();
+    const store = getStore();
+    const prompt = store.promptEvent || window[BIP_KEY] || window.deferredPrompt || null;
+
     if (!prompt) return { outcome: "unavailable" };
 
-    // Must be called in direct response to the user click
+    // Must be called directly from a user gesture
     prompt.prompt();
 
     const choiceResult = await prompt.userChoice;
 
     clearPromptEvent();
-    setIsInstallable(false);
+    setStore({ promptEvent: null, isInstallable: false });
 
+    // appinstalled event is the real source of truth, but we can optimistically update
     if (choiceResult?.outcome === "accepted") {
-      setIsInstalled(true);
-      writeInstalledFlag();
+      setStore({ isInstalled: true });
     }
 
     return choiceResult;
   }, []);
 
   return {
-    isInstalled,
-    isInstallable,
+    isInstalled: snapshot.isInstalled,
+    isInstallable: snapshot.isInstallable,
     isIOS,
     promptInstall,
   };
