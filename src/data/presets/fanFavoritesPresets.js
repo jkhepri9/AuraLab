@@ -10,9 +10,19 @@ export const fanFavoritesPresets = [
     id: "c_flowstate",
     name: "FlowState",
     color: "linear-gradient(135deg, #0b1026, #1c2e5c)",
-    imageUrl:
-      "/modeimages/flowstate.jpg",
+    imageUrl: "/modeimages/flowstate.jpg",
     description: "Smooth flow focus: relaxed clarity (alpha-to-low-beta) to stay locked-in without tension.",
+
+    // ✅ Discover metadata
+    goals: ["focus"],
+    scenarios: ["deep-work", "study", "flow"],
+    styles: ["binaural", "nature", "noise"],
+    intensity: 3,
+    headphonesRecommended: true,
+    durationHint: "30m",
+    collection: "Fan Favorites",
+    tags: ["flow", "focus", "alpha", "work", "study"],
+
     layers: [
       { id: "fs_amb", name: "Ambient: River (Soft)", type: "ambient", frequency: 0, volume: 0.40, pan: 0, waveform: "river_soft", enabled: true },
 
@@ -37,6 +47,17 @@ export const fanFavoritesPresets = [
     imageUrl:
       "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=2400&auto=format&fit=crop",
     description: "Calm focus: downshift stress while staying productive and steady.",
+
+    // ✅ Discover metadata
+    goals: ["calm", "focus"],
+    scenarios: ["stress", "anxiety", "work"],
+    styles: ["binaural", "nature", "noise"],
+    intensity: 2,
+    headphonesRecommended: true,
+    durationHint: "30m",
+    collection: "Fan Favorites",
+    tags: ["stress", "calm", "focus", "downshift"],
+
     layers: [
       { id: "sr_amb", name: "Ambient: Ocean (Deep)", type: "ambient", frequency: 0, volume: 0.15, pan: 0, waveform: "ocean_deep", enabled: true },
 
@@ -59,6 +80,17 @@ export const fanFavoritesPresets = [
     color: "linear-gradient(135deg, #1a0a00, #5a1a00)",
     imageUrl: "/modeimages/mastermusician.jpg",
     description: "Creative ignition with coherent rhythm—built for ideation, writing, and design flow.",
+
+    // ✅ Discover metadata
+    goals: ["focus", "energy"],
+    scenarios: ["creative", "writing", "design"],
+    styles: ["binaural", "nature", "noise"],
+    intensity: 4,
+    headphonesRecommended: true,
+    durationHint: "30m",
+    collection: "Fan Favorites",
+    tags: ["creative", "flow", "ideas", "design", "writing"],
+
     layers: [
       { id: "cf_amb", name: "Ambient: Fire (Camp)", type: "ambient", frequency: 0, volume: 0.95, pan: 0, waveform: "fire_camp", enabled: true },
 
@@ -82,6 +114,17 @@ export const fanFavoritesPresets = [
     imageUrl:
       "https://commons.wikimedia.org/wiki/Special:FilePath/Earth_from_Space.jpg?width=2400",
     description: "Grounded focus and steady calm using a Schumann-style 7.83 Hz binaural profile.",
+
+    // ✅ Discover metadata
+    goals: ["calm", "focus"],
+    scenarios: ["grounding", "stress", "work"],
+    styles: ["binaural", "noise", "nature"],
+    intensity: 2,
+    headphonesRecommended: true,
+    durationHint: "30m",
+    collection: "Fan Favorites",
+    tags: ["schumann", "grounding", "calm", "focus", "7.83"],
+
     layers: [
       { id: "sh_amb", name: "Ambient: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.06, pan: 0, waveform: "wind_forest", enabled: true },
 
@@ -106,6 +149,17 @@ export const fanFavoritesPresets = [
     color: "linear-gradient(135deg, #0b1a12, #2a5a3a)",
     imageUrl: "/modeimages/goldenratio.png",
     description: "Phi/Fibonacci harmonic stack optimized for focused coherence and steady cognition.",
+
+    // ✅ Discover metadata
+    goals: ["focus"],
+    scenarios: ["deep-work", "study", "coherence"],
+    styles: ["sacred-geometry", "binaural", "nature"],
+    intensity: 3,
+    headphonesRecommended: true,
+    durationHint: "30m",
+    collection: "Fan Favorites",
+    tags: ["phi", "fibonacci", "focus", "coherence"],
+
     layers: [
       { id: "grf_amb", name: "Ambient: River (Soft)", type: "ambient", frequency: 0, volume: 0.44, pan: 0, waveform: "river_soft", enabled: true },
 
@@ -129,9 +183,19 @@ export const fanFavoritesPresets = [
     id: "c_stargate_aura",
     name: "StargateAura",
     color: "linear-gradient(135deg, #06071a, #2b0b3a)",
-    imageUrl:
-      "/modeimages/stargateaura.jpg",
+    imageUrl: "/modeimages/stargateaura.jpg",
     description: "High-energy portal focus. Bright upper harmonics with a sharp attention entrainment bed.",
+
+    // ✅ Discover metadata
+    goals: ["focus", "energy"],
+    scenarios: ["deep-work", "study", "execution"],
+    styles: ["binaural", "noise", "cosmic", "synth"],
+    intensity: 5,
+    headphonesRecommended: true,
+    durationHint: "15m",
+    collection: "Fan Favorites",
+    tags: ["portal", "focus", "energy", "high-intensity"],
+
     layers: [
       { id: "sga_amb", name: "Ambient: Crickets (Lake)", type: "ambient", frequency: 0, volume: 0.27, pan: 0, waveform: "crickets_lake", enabled: true },
 
@@ -156,6 +220,17 @@ export const fanFavoritesPresets = [
     imageUrl:
       "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=2400&auto=format&fit=crop",
     description: "Heart-led coherence for calm focus and social intelligence using 528/639 culture anchors.",
+
+    // ✅ Discover metadata
+    goals: ["calm", "meditate"],
+    scenarios: ["stress", "reset", "social"],
+    styles: ["binaural", "nature", "noise"],
+    intensity: 2,
+    headphonesRecommended: true,
+    durationHint: "30m",
+    collection: "Fan Favorites",
+    tags: ["heart", "coherence", "calm", "reset"],
+
     layers: [
       { id: "ht_amb", name: "Ambient: Birds (Park)", type: "ambient", frequency: 0, volume: 0.28, pan: 0, waveform: "birds_park", enabled: true },
 
@@ -179,6 +254,17 @@ export const fanFavoritesPresets = [
     imageUrl:
       "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2400&auto=format&fit=crop",
     description: "Deep recovery stack with a delta-style binaural bed and gentle Solfeggio anchors for reset.",
+
+    // ✅ Discover metadata
+    goals: ["sleep", "recovery"],
+    scenarios: ["night", "reset", "recovery"],
+    styles: ["binaural", "nature", "noise"],
+    intensity: 1,
+    headphonesRecommended: true,
+    durationHint: "60m",
+    collection: "Fan Favorites",
+    tags: ["sleep", "recovery", "delta", "rest"],
+
     layers: [
       { id: "rr_amb", name: "Ambient: Thunder (Rolling)", type: "ambient", frequency: 0, volume: 0.30, pan: 0, waveform: "thunder_rolling", enabled: true },
 

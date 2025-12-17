@@ -9,6 +9,17 @@ export const communityPresets = [
     imageUrl:
       "https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=2400&auto=format&fit=crop",
     description: "Supports vivid dreams and lucidity using gentle theta-style entrainment.",
+
+    // ✅ Discover metadata
+    goals: ["sleep", "meditate"],
+    scenarios: ["night", "dreaming", "lucid"],
+    styles: ["binaural", "nature", "noise"],
+    intensity: 1,
+    headphonesRecommended: true,
+    durationHint: "60m",
+    collection: "Community",
+    tags: ["lucid", "dreams", "theta", "sleep", "night"],
+
     layers: [
       // Theta-style binaural using a 432 Hz anchor (popular sound healing)
       { id: "ld_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.14, pan: -1, waveform: "sine", enabled: true },
@@ -32,6 +43,17 @@ export const communityPresets = [
     color: "linear-gradient(135deg, #101a24, #1b2a3a)",
     imageUrl: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=2400&auto=format&fit=crop",
     description: "Smooth the edges and stabilize your field. Built for emotional regulation and steady calm.",
+
+    // ✅ Discover metadata
+    goals: ["calm"],
+    scenarios: ["anxiety", "stress", "downshift"],
+    styles: ["binaural", "nature", "noise"],
+    intensity: 2,
+    headphonesRecommended: true,
+    durationHint: "30m",
+    collection: "Community",
+    tags: ["calm", "stress", "regulation", "rain", "grounding"],
+
     layers: [
       { id: "sc_amb", name: "Ambient: Rain Light", type: "ambient", waveform: "rain_light", volume: 0.40, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
 
@@ -56,6 +78,17 @@ export const communityPresets = [
     imageUrl:
       "/modeimages/painrelief.jpg",
     description: "Promotes deep relaxation to help reduce tension and discomfort perception.",
+
+    // ✅ Discover metadata
+    goals: ["recovery", "calm"],
+    scenarios: ["tension", "recovery", "downshift"],
+    styles: ["binaural", "nature", "noise"],
+    intensity: 1,
+    headphonesRecommended: true,
+    durationHint: "30m",
+    collection: "Community",
+    tags: ["relax", "tension", "recovery", "ocean"],
+
     layers: [
       // Popular “pain relief” tone: 174 Hz, with a gentle low-offset beat
       { id: "pr_l", name: "Binaural L (170 Hz)", type: "oscillator", frequency: 170, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
@@ -78,6 +111,17 @@ export const communityPresets = [
     imageUrl:
       "/modeimages/stargate.jpg",
     description: "Energizes attention and clarity with a bright, high-focus entrainment profile.",
+
+    // ✅ Discover metadata
+    goals: ["focus", "energy"],
+    scenarios: ["deep-work", "study", "clarity"],
+    styles: ["binaural", "noise", "cosmic", "synth"],
+    intensity: 4,
+    headphonesRecommended: true,
+    durationHint: "30m",
+    collection: "Community",
+    tags: ["focus", "energy", "clarity", "cosmic", "portal"],
+
     layers: [
       // Bright “portal” bed: 963 anchor with a subtle offset, plus an audible 432 stabilizer
       { id: "sg_l", name: "Binaural L (963 Hz)", type: "oscillator", frequency: 963, volume: 0.08, pan: -1, waveform: "sine", enabled: true },
@@ -102,6 +146,17 @@ export const communityPresets = [
     color: "linear-gradient(135deg, #0b1a12, #2a5a3a)",
     imageUrl: "/modeimages/goldenratio.png",
     description: "Supports calm coherence and creative flow using phi/Fibonacci-inspired harmonics.",
+
+    // ✅ Discover metadata
+    goals: ["focus", "calm"],
+    scenarios: ["creative", "deep-work", "coherence"],
+    styles: ["sacred-geometry", "binaural", "nature", "synth"],
+    intensity: 3,
+    headphonesRecommended: true,
+    durationHint: "30m",
+    collection: "Community",
+    tags: ["phi", "fibonacci", "coherence", "creative"],
+
     layers: [
       // Already aligned with popular “sacred math” patterns; keep core structure and add a subtle 432 stabilizer
       { id: "gr_161", name: "Phi Center (161.8 Hz)", type: "oscillator", frequency: 161.8, volume: 0.08, pan: 0, waveform: "sine", enabled: true },
@@ -146,6 +201,17 @@ export const communityPresets = [
     color: "linear-gradient(135deg, #041329, #0a3a5a)",
     imageUrl: "/modeimages/geniusmode.jpg",
     description: "Boosts concentration and task-drive using a crisp beta-style entrainment bed.",
+
+    // ✅ Discover metadata
+    goals: ["focus", "energy"],
+    scenarios: ["deep-work", "study", "execution"],
+    styles: ["binaural", "noise", "synth"],
+    intensity: 4,
+    headphonesRecommended: true,
+    durationHint: "30m",
+    collection: "Community",
+    tags: ["focus", "beta", "clarity", "execution"],
+
     layers: [
       // Popular “activation” anchors: 528 + 963
       { id: "gm_l", name: "Binaural L (524 Hz)", type: "oscillator", frequency: 524, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
@@ -166,6 +232,17 @@ export const communityPresets = [
     color: "linear-gradient(135deg, #1a0a00, #5a1a00)",
     imageUrl: "/modeimages/mastermusician.jpg",
     description: "Supports musical flow-state, timing, and relaxed precision for practice sessions.",
+
+    // ✅ Discover metadata
+    goals: ["focus"],
+    scenarios: ["creative", "practice", "flow"],
+    styles: ["binaural", "nature"],
+    intensity: 3,
+    headphonesRecommended: true,
+    durationHint: "30m",
+    collection: "Community",
+    tags: ["music", "practice", "flow", "creative"],
+
     layers: [
       // Flow-state bed on 432 with alpha-ish offset
       { id: "mm_l", name: "Binaural L (428 Hz)", type: "oscillator", frequency: 428, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
@@ -186,6 +263,17 @@ export const communityPresets = [
     color: "linear-gradient(135deg, #1a1200, #5a4a00)",
     imageUrl: "/modeimages/wealthabundance.jpg",
     description: "Supports calm confidence and long-horizon thinking for disciplined abundance.",
+
+    // ✅ Discover metadata
+    goals: ["focus", "calm"],
+    scenarios: ["planning", "confidence", "deep-work"],
+    styles: ["binaural", "nature", "noise"],
+    intensity: 3,
+    headphonesRecommended: true,
+    durationHint: "30m",
+    collection: "Community",
+    tags: ["abundance", "planning", "confidence", "focus"],
+
     layers: [
       // Popular abundance stack: 528 + 639, with a calm offset on the main layer
       { id: "wa_l", name: "Binaural L (520 Hz)", type: "oscillator", frequency: 520, volume: 0.08, pan: -1, waveform: "sine", enabled: true },
@@ -202,7 +290,6 @@ export const communityPresets = [
     order: 108,
   },
 
-  // ✅ YOU SAID DO NOT CHANGE THIS ONE
   {
     id: "c_earth_frequency",
     name: "Earth Frequency",
@@ -221,7 +308,7 @@ export const communityPresets = [
       { id: "c_earth_frequency_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.11, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
     ],
     order: 109,
-  }
-]
-  
+  },
+];
+
 export default communityPresets;

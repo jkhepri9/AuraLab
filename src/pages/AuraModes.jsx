@@ -65,8 +65,7 @@ function writeFavs(set) {
 }
 
 // ------------------------------------------------------------
-// Lightweight goal inference (backward compatible)
-// If you later add preset.goal/tags, this will automatically use it.
+// Canonical goals + collections
 // ------------------------------------------------------------
 const GOALS = [
   { key: "sleep", label: "Sleep" },
@@ -77,37 +76,30 @@ const GOALS = [
   { key: "recovery", label: "Recovery" },
 ];
 
+const COLLECTIONS = [
+  { key: "all", label: "All" },
+  { key: "Featured", label: "Featured" },
+  { key: "Community", label: "Community" },
+  { key: "Fan Favorites", label: "Fan Favorites" },
+  { key: "Custom", label: "Custom" },
+];
+
 function normalizeText(s) {
   return String(s || "").toLowerCase();
 }
 
-function inferGoals(preset) {
-  // Prefer explicit metadata if present
-  if (preset?.goal) return [String(preset.goal).toLowerCase()];
+function getCollection(preset) {
+  return preset?.collection || "Custom";
+}
+
+function getGoals(preset) {
+  // Canonical metadata-driven path
   if (Array.isArray(preset?.goals) && preset.goals.length) {
     return preset.goals.map((g) => String(g).toLowerCase());
   }
-  if (Array.isArray(preset?.tags) && preset.tags.length) {
-    const tags = preset.tags.map((t) => String(t).toLowerCase());
-    const hits = [];
-    for (const g of GOALS) {
-      if (tags.includes(g.key) || tags.includes(g.label.toLowerCase())) hits.push(g.key);
-    }
-    if (hits.length) return hits;
-  }
-
-  // Fallback heuristic from name/description
-  const blob = `${preset?.name || ""} ${preset?.description || ""}`.toLowerCase();
-  const hits = new Set();
-  if (/\bsleep|dream|night|nap|insomnia|rest\b/.test(blob)) hits.add("sleep");
-  if (/\bfocus|study|work|flow|productiv|deep work\b/.test(blob)) hits.add("focus");
-  if (/\bcalm|relax|anxiety|stress|ease|peace\b/.test(blob)) hits.add("calm");
-  if (/\benergy|ignite|motivat|boost|morning\b/.test(blob)) hits.add("energy");
-  if (/\bmeditat|zen|mindful|breath\b/.test(blob)) hits.add("meditate");
-  if (/\brecover|reset|restore|heal|downshift\b/.test(blob)) hits.add("recovery");
-
-  // If nothing hits, keep it uncategorized (falls into “All Modes”)
-  return Array.from(hits);
+  // Backward-compat (older presets / user-created)
+  if (preset?.goal) return [String(preset.goal).toLowerCase()];
+  return [];
 }
 
 // ------------------------------------------------------------
@@ -144,6 +136,10 @@ function Chip({ active, children, onClick }) {
   );
 }
 
+function Rail({ children }) {
+  return <div className="flex gap-3 overflow-x-auto pb-2 pr-2">{children}</div>;
+}
+
 function CompactCard({ preset, isFavorite, onToggleFavorite, onActivate, onOpen }) {
   return (
     <div
@@ -163,13 +159,9 @@ function CompactCard({ preset, isFavorite, onToggleFavorite, onActivate, onOpen 
       <div className="relative h-full p-3 flex flex-col justify-between">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-white font-extrabold leading-tight truncate">
-              {preset.name}
-            </div>
+            <div className="text-white font-extrabold leading-tight truncate">{preset.name}</div>
             {preset.description ? (
-              <div className="text-xs text-white/70 mt-1 line-clamp-2">
-                {preset.description}
-              </div>
+              <div className="text-xs text-white/70 mt-1 line-clamp-2">{preset.description}</div>
             ) : null}
           </div>
 
@@ -186,7 +178,10 @@ function CompactCard({ preset, isFavorite, onToggleFavorite, onActivate, onOpen 
             title={isFavorite ? "Unfavorite" : "Favorite"}
           >
             <Heart
-              className={cn("w-4 h-4", isFavorite ? "fill-emerald-400 text-emerald-400" : "text-white/70")}
+              className={cn(
+                "w-4 h-4",
+                isFavorite ? "fill-emerald-400 text-emerald-400" : "text-white/70"
+              )}
             />
           </button>
         </div>
@@ -219,32 +214,8 @@ function CompactCard({ preset, isFavorite, onToggleFavorite, onActivate, onOpen 
   );
 }
 
-function Rail({ children }) {
-  return (
-    <div className="flex gap-3 overflow-x-auto pb-2 pr-2">
-      {children}
-    </div>
-  );
-}
-
-function GoalTile({ label, onClick, count }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "rounded-2xl p-4 md:p-5 text-left border border-white/10 bg-white/5 hover:bg-white/10 transition",
-        "min-h-[90px] flex flex-col justify-between"
-      )}
-    >
-      <div className="text-white font-extrabold text-lg">{label}</div>
-      <div className="text-sm text-white/60">{count} modes</div>
-    </button>
-  );
-}
-
 // ------------------------------------------------------------
-// Existing full card (kept for All Modes grid + menu actions)
+// Full grid card (with menu + rename + reorder)
 // ------------------------------------------------------------
 function ModeCard({
   preset,
@@ -293,7 +264,6 @@ function ModeCard({
       <div className="absolute inset-0 bg-black/60 group-hover:bg-black/40 transition-colors" />
 
       <div className="relative p-5 flex flex-col justify-between h-full">
-        {/* Top row: name + fav + menu */}
         <div className="flex justify-between items-start mb-3 gap-2">
           <div className="flex-1 min-w-0">
             {isRenaming === preset.id ? (
@@ -335,7 +305,10 @@ function ModeCard({
             title={isFavorite ? "Unfavorite" : "Favorite"}
           >
             <Heart
-              className={cn("w-4 h-4", isFavorite ? "fill-emerald-400 text-emerald-400" : "text-white/70")}
+              className={cn(
+                "w-4 h-4",
+                isFavorite ? "fill-emerald-400 text-emerald-400" : "text-white/70"
+              )}
             />
           </button>
 
@@ -407,16 +380,11 @@ function ModeCard({
         </div>
 
         {preset.description ? (
-          <p className="mt-1 text-sm text-white/80 line-clamp-2">
-            {preset.description}
-          </p>
+          <p className="mt-1 text-sm text-white/80 line-clamp-2">{preset.description}</p>
         ) : null}
 
         <div className="mt-4">
-          <Button
-            onClick={(e) => handleActivate(e, preset)}
-            className="w-full h-10 font-semibold tracking-wide text-base rounded-lg shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white"
-          >
+          <Button className="w-full h-10 font-semibold tracking-wide text-base rounded-lg shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white">
             <Play className="w-5 h-5 mr-2 fill-white" />
             Activate Aura Mode
           </Button>
@@ -436,12 +404,12 @@ export default function AuraModes() {
   const [isRenaming, setIsRenaming] = useState(null);
   const [autoPlay, setAutoPlay] = useState(false);
 
-  // Discover UX state
+  // Discover state
   const [query, setQuery] = useState("");
-  const [activeGoal, setActiveGoal] = useState("all"); // all | sleep | focus...
+  const [activeGoal, setActiveGoal] = useState("all");
+  const [activeCollection, setActiveCollection] = useState("all");
   const [sortBy, setSortBy] = useState("custom"); // custom | recent | az
 
-  // Local favorites (persisted)
   const [favoriteIds, setFavoriteIds] = useState(() => readFavs());
 
   const queryClient = useQueryClient();
@@ -483,9 +451,7 @@ export default function AuraModes() {
 
   const reorderPreset = useMutation({
     mutationFn: ({ id, direction }) => db.presets.reorder(id, direction),
-    onSuccess: () => {
-      queryClient.invalidateQueries(["presets"]);
-    },
+    onSuccess: () => queryClient.invalidateQueries(["presets"]),
   });
 
   const renamePreset = useMutation({
@@ -494,17 +460,12 @@ export default function AuraModes() {
       queryClient.invalidateQueries(["presets"]);
       toast.success("Mode renamed.");
     },
-    onError: () => {
-      toast.error("Failed to rename mode.");
-    },
+    onError: () => toast.error("Failed to rename mode."),
   });
 
   const handleSave = (data) => {
-    if (editingPreset) {
-      updatePreset.mutate({ id: editingPreset.id, data });
-    } else {
-      createPreset.mutate(data);
-    }
+    if (editingPreset) updatePreset.mutate({ id: editingPreset.id, data });
+    else createPreset.mutate(data);
   };
 
   const handleEditRequest = (preset) => {
@@ -516,7 +477,6 @@ export default function AuraModes() {
 
   const handleDelete = (id) => deletePreset.mutate(id);
   const handleReorder = (id, direction) => reorderPreset.mutate({ id, direction });
-
   const handleCreateNew = () => {
     player.stop();
     setEditingPreset(null);
@@ -589,14 +549,14 @@ export default function AuraModes() {
     navigate(location.pathname, { replace: true });
   }, [isLoading, presets, location.search, location.pathname, navigate]);
 
-  // Sticky-player-aware padding (internal scroll container)
+  // Sticky-player-aware padding
   const hasStickyPlayer = Boolean(player?.currentPlayingPreset);
   const pagePadBottom = hasStickyPlayer
     ? "pb-[calc(12rem+env(safe-area-inset-bottom))] md:pb-8"
     : "pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8";
 
   // ------------------------------------------------------------
-  // Derived: Goals, Favorites, Recents, Filtering, Sorting
+  // Derived: maps, recents, favorites, filters, indices
   // ------------------------------------------------------------
   const presetById = useMemo(() => {
     const map = new Map();
@@ -616,18 +576,28 @@ export default function AuraModes() {
 
   const continuePreset = recents[0]?.preset || null;
 
-  const favorites = useMemo(() => {
-    const favList = presets.filter((p) => favoriteIds.has(p.id));
-    return favList;
-  }, [presets, favoriteIds]);
+  const favorites = useMemo(() => presets.filter((p) => favoriteIds.has(p.id)), [presets, favoriteIds]);
 
-  const goalIndex = useMemo(() => {
-    const map = new Map(); // goal -> [presets]
+  const byCollection = useMemo(() => {
+    const map = new Map();
+    for (const c of COLLECTIONS) {
+      if (c.key !== "all") map.set(c.key, []);
+    }
+    for (const p of presets) {
+      const c = getCollection(p);
+      if (!map.has(c)) map.set(c, []);
+      map.get(c).push(p);
+    }
+    return map;
+  }, [presets]);
+
+  const byGoal = useMemo(() => {
+    const map = new Map();
     for (const g of GOALS) map.set(g.key, []);
     map.set("uncategorized", []);
 
     for (const p of presets) {
-      const goals = inferGoals(p);
+      const goals = getGoals(p);
       if (!goals.length) {
         map.get("uncategorized").push(p);
         continue;
@@ -642,20 +612,34 @@ export default function AuraModes() {
 
   const filtered = useMemo(() => {
     const q = normalizeText(query).trim();
-    const goal = activeGoal;
 
     let list = presets;
 
-    if (goal !== "all") {
-      const inGoal = goalIndex.get(goal) || [];
-      const set = new Set(inGoal.map((p) => p.id));
+    if (activeCollection !== "all") {
+      list = list.filter((p) => getCollection(p) === activeCollection);
+    }
+
+    if (activeGoal !== "all") {
+      const set = new Set((byGoal.get(activeGoal) || []).map((p) => p.id));
       list = list.filter((p) => set.has(p.id));
     }
 
     if (q) {
       list = list.filter((p) => {
-        const blob = `${p.name || ""} ${p.description || ""}`.toLowerCase();
-        return blob.includes(q);
+        const meta = [
+          p.name,
+          p.description,
+          getCollection(p),
+          ...(Array.isArray(p.tags) ? p.tags : []),
+          ...(Array.isArray(p.scenarios) ? p.scenarios : []),
+          ...(Array.isArray(p.styles) ? p.styles : []),
+          ...(Array.isArray(p.goals) ? p.goals : []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return meta.includes(q);
       });
     }
 
@@ -664,12 +648,12 @@ export default function AuraModes() {
     } else if (sortBy === "recent") {
       const recentMap = new Map(recents.map((r) => [r.preset.id, r.t]));
       list = [...list].sort((a, b) => (recentMap.get(b.id) || 0) - (recentMap.get(a.id) || 0));
-    } // custom = keep DB order
+    }
 
     return list;
-  }, [presets, query, activeGoal, sortBy, goalIndex, recents]);
+  }, [presets, query, activeGoal, activeCollection, sortBy, byGoal, recents]);
 
-  const isDiscoverFiltered = Boolean(normalizeText(query).trim()) || activeGoal !== "all";
+  const isFiltered = Boolean(normalizeText(query).trim()) || activeGoal !== "all" || activeCollection !== "all";
 
   // ------------------------------------------------------------
   // Render
@@ -684,9 +668,7 @@ export default function AuraModes() {
               <h1 className="text-4xl font-extrabold text-white tracking-tight">
                 Aura Modes <span className="text-emerald-400">| Discover</span>
               </h1>
-              <p className="text-white/60 mt-2">
-                Find a mode fast. Or build your own.
-              </p>
+              <p className="text-white/60 mt-2">Find a mode fast. Or build your own.</p>
             </div>
 
             <Button
@@ -697,15 +679,15 @@ export default function AuraModes() {
             </Button>
           </div>
 
-          {/* Search + Filters */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5 mb-6">
+          {/* Search + Sort */}
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5 mb-4">
             <div className="flex flex-col md:flex-row md:items-center gap-3">
               <div className="relative flex-1">
                 <Search className="w-4 h-4 text-white/50 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search modes (sleep, focus, calm, ocean...)"
+                  placeholder="Search modes (sleep, focus, ocean, theta...)"
                   className="pl-9 bg-black/40 border-white/10 text-white placeholder:text-white/40"
                 />
               </div>
@@ -731,9 +713,23 @@ export default function AuraModes() {
               </DropdownMenu>
             </div>
 
+            {/* Collections chips */}
             <div className="flex flex-wrap gap-2 mt-4">
+              {COLLECTIONS.map((c) => (
+                <Chip
+                  key={c.key}
+                  active={activeCollection === c.key}
+                  onClick={() => setActiveCollection(c.key)}
+                >
+                  {c.label}
+                </Chip>
+              ))}
+            </div>
+
+            {/* Goals chips */}
+            <div className="flex flex-wrap gap-2 mt-3">
               <Chip active={activeGoal === "all"} onClick={() => setActiveGoal("all")}>
-                All
+                All Goals
               </Chip>
               {GOALS.map((g) => (
                 <Chip key={g.key} active={activeGoal === g.key} onClick={() => setActiveGoal(g.key)}>
@@ -741,13 +737,15 @@ export default function AuraModes() {
                 </Chip>
               ))}
 
-              {(query || activeGoal !== "all") && (
+              {isFiltered && (
                 <button
                   type="button"
                   className="ml-auto text-sm text-emerald-300 hover:text-emerald-200 font-semibold"
                   onClick={() => {
                     setQuery("");
                     setActiveGoal("all");
+                    setActiveCollection("all");
+                    setSortBy("custom");
                   }}
                 >
                   Clear
@@ -767,20 +765,13 @@ export default function AuraModes() {
               <p className="text-gray-400 mb-6">
                 Create your first Aura Mode to begin crafting custom sonic environments.
               </p>
-              <Button
-                onClick={handleCreateNew}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-              >
+              <Button onClick={handleCreateNew} className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
                 <Plus className="w-5 h-5 mr-2" /> Create Your First Mode
               </Button>
             </div>
-          ) : isDiscoverFiltered ? (
-            // Filtered results = clean grid
+          ) : isFiltered ? (
             <div>
-              <SectionHeader
-                title={`Results (${filtered.length})`}
-                subtitle={activeGoal === "all" ? "Matching your search" : `Filtered by ${GOALS.find((g) => g.key === activeGoal)?.label || "Goal"}`}
-              />
+              <SectionHeader title={`Results (${filtered.length})`} subtitle="Filtered by your selections." />
               {filtered.length === 0 ? (
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-white/70">
                   No modes found. Try a different search term.
@@ -809,85 +800,55 @@ export default function AuraModes() {
               )}
             </div>
           ) : (
-            // Discover layout (Calm-style)
             <div className="space-y-8">
-              {/* Continue */}
+              {/* Continue + Recent */}
               {continuePreset ? (
                 <div>
                   <SectionHeader title="Continue" subtitle="Pick up where you left off." />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                          <div className="min-w-0">
-                            <div className="text-white/60 text-sm font-semibold">Last played</div>
-                            <div className="text-2xl font-extrabold text-white truncate">
-                              {continuePreset.name}
-                            </div>
-                            {continuePreset.description ? (
-                              <div className="text-white/70 mt-1 line-clamp-2">
-                                {continuePreset.description}
-                              </div>
-                            ) : null}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-                              onClick={() => handleCompactActivate(continuePreset)}
-                            >
-                              <Play className="w-4 h-4 mr-2 fill-white" />
-                              Play
-                            </Button>
-                            <Button
-                              variant="outline"
-                              className="bg-black/30 border-white/10 text-white hover:bg-black/40"
-                              onClick={() => handleCompactOpen(continuePreset)}
-                            >
-                              Details <ArrowRight className="w-4 h-4 ml-2" />
-                            </Button>
-                          </div>
-                        </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="text-white/60 text-sm font-semibold">Last played</div>
+                        <div className="text-2xl font-extrabold text-white truncate">{continuePreset.name}</div>
+                        {continuePreset.description ? (
+                          <div className="text-white/70 mt-1 line-clamp-2">{continuePreset.description}</div>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold" onClick={() => handleCompactActivate(continuePreset)}>
+                          <Play className="w-4 h-4 mr-2 fill-white" />
+                          Play
+                        </Button>
+                        <Button variant="outline" className="bg-black/30 border-white/10 text-white hover:bg-black/40" onClick={() => handleCompactOpen(continuePreset)}>
+                          Details <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
                       </div>
                     </div>
-
-                    {recents.length > 1 ? (
-                      <div className="md:col-span-2">
-                        <SectionHeader title="Recent" subtitle="Fast re-entry." />
-                        <Rail>
-                          {recents.slice(0, 12).map(({ preset }) => (
-                            <CompactCard
-                              key={preset.id}
-                              preset={preset}
-                              isFavorite={favoriteIds.has(preset.id)}
-                              onToggleFavorite={toggleFavorite}
-                              onActivate={handleCompactActivate}
-                              onOpen={handleCompactOpen}
-                            />
-                          ))}
-                        </Rail>
-                      </div>
-                    ) : null}
                   </div>
+
+                  {recents.length > 1 ? (
+                    <div className="mt-5">
+                      <SectionHeader title="Recent" subtitle="Fast re-entry." />
+                      <Rail>
+                        {recents.slice(0, 12).map(({ preset }) => (
+                          <CompactCard
+                            key={preset.id}
+                            preset={preset}
+                            isFavorite={favoriteIds.has(preset.id)}
+                            onToggleFavorite={toggleFavorite}
+                            onActivate={handleCompactActivate}
+                            onOpen={handleCompactOpen}
+                          />
+                        ))}
+                      </Rail>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
               {/* Favorites */}
               <div>
-                <SectionHeader
-                  title="Favorites"
-                  subtitle="Your go-to modes."
-                  right={
-                    favorites.length ? (
-                      <Button
-                        variant="ghost"
-                        className="text-emerald-300 hover:bg-white/5"
-                        onClick={() => setQuery(" ")} // tiny trick to jump user into “Results” mode without a modal
-                      >
-                        View all
-                      </Button>
-                    ) : null
-                  }
-                />
+                <SectionHeader title="Favorites" subtitle="Your go-to modes." />
                 {favorites.length === 0 ? (
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-white/70">
                     Tap the <Heart className="inline w-4 h-4 mx-1 text-white/70" /> on any mode to save it here.
@@ -908,32 +869,51 @@ export default function AuraModes() {
                 )}
               </div>
 
-              {/* Goals */}
-              <div>
-                <SectionHeader title="Browse by Goal" subtitle="Choose what you want to feel." />
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {GOALS.map((g) => (
-                    <GoalTile
-                      key={g.key}
-                      label={g.label}
-                      count={(goalIndex.get(g.key) || []).length}
-                      onClick={() => setActiveGoal(g.key)}
+              {/* Collection rails */}
+              {["Featured", "Community", "Fan Favorites"].map((c) => {
+                const list = byCollection.get(c) || [];
+                if (!list.length) return null;
+                return (
+                  <div key={c}>
+                    <SectionHeader
+                      title={c}
+                      subtitle={`Curated from ${c}.`}
+                      right={
+                        <Button
+                          variant="ghost"
+                          className="text-emerald-300 hover:bg-white/5"
+                          onClick={() => setActiveCollection(c)}
+                        >
+                          View all <ArrowRight className="w-4 h-4 ml-1" />
+                        </Button>
+                      }
                     />
-                  ))}
-                </div>
-              </div>
+                    <Rail>
+                      {list.slice(0, 12).map((preset) => (
+                        <CompactCard
+                          key={preset.id}
+                          preset={preset}
+                          isFavorite={favoriteIds.has(preset.id)}
+                          onToggleFavorite={toggleFavorite}
+                          onActivate={handleCompactActivate}
+                          onOpen={handleCompactOpen}
+                        />
+                      ))}
+                    </Rail>
+                  </div>
+                );
+              })}
 
-              {/* Collections rails (goal-based) */}
+              {/* Goal rails */}
               <div className="space-y-6">
                 {GOALS.map((g) => {
-                  const list = goalIndex.get(g.key) || [];
+                  const list = byGoal.get(g.key) || [];
                   if (!list.length) return null;
-
                   return (
                     <div key={g.key}>
                       <SectionHeader
                         title={g.label}
-                        subtitle={`Curated ${g.label.toLowerCase()} modes.`}
+                        subtitle={`Modes for ${g.label.toLowerCase()}.`}
                         right={
                           <Button
                             variant="ghost"
@@ -961,7 +941,7 @@ export default function AuraModes() {
                 })}
               </div>
 
-              {/* All Modes */}
+              {/* All Modes management grid */}
               <div>
                 <SectionHeader title="All Aura Modes" subtitle="Your full library (edit, reorder, manage)." />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

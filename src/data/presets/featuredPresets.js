@@ -8,6 +8,17 @@ export const FEATURED_PRESETS = [
     color: "linear-gradient(135deg, #0b1220, #1b2a4a)",
     imageUrl: "/modeimages/deepsleep.jpg",
     description: "Slow the mind and soften the body into deep sleep. Built for calm, darkness, and stillness.",
+
+    // ✅ Discover metadata
+    goals: ["sleep"],
+    scenarios: ["night", "insomnia", "downshift"],
+    styles: ["binaural", "nature", "noise"],
+    intensity: 1,
+    headphonesRecommended: true,
+    durationHint: "60m",
+    collection: "Featured",
+    tags: ["sleep", "deep", "delta", "night"],
+
     layers: [
       { id: "ds_amb", name: "Ambient: Ocean Deep", type: "ambient", waveform: "ocean_deep", volume: 0.08, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
 
@@ -31,6 +42,17 @@ export const FEATURED_PRESETS = [
     color: "linear-gradient(135deg, #1a0b2a, #2a1b4a)",
     imageUrl: "https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=2400&auto=format&fit=crop",
     description: "Enter meditative depth and inner stillness. Designed for theta entrainment and quiet awareness.",
+
+    // ✅ Discover metadata
+    goals: ["meditate", "calm"],
+    scenarios: ["stillness", "breath", "reset"],
+    styles: ["binaural", "nature", "noise"],
+    intensity: 2,
+    headphonesRecommended: true,
+    durationHint: "30m",
+    collection: "Featured",
+    tags: ["theta", "meditation", "calm", "stillness"],
+
     layers: [
       { id: "tg_amb", name: "Ambient: Wind Forest", type: "ambient", waveform: "wind_forest", volume: 0.10, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
 
@@ -54,6 +76,17 @@ export const FEATURED_PRESETS = [
     color: "linear-gradient(135deg, #052225, #0b3b3a)",
     imageUrl: "/modeimages/focusforge.jpg",
     description: "Clean, stable focus for work and creation. Built for alertness without chaos and consistent attention.",
+
+    // ✅ Discover metadata
+    goals: ["focus"],
+    scenarios: ["deep-work", "study", "execution"],
+    styles: ["binaural", "noise", "nature"],
+    intensity: 4,
+    headphonesRecommended: true,
+    durationHint: "30m",
+    collection: "Featured",
+    tags: ["focus", "work", "study", "clarity"],
+
     layers: [
       { id: "ff_amb", name: "Ambient: Campfire", type: "ambient", waveform: "fire_camp", volume: 0.90, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
 
@@ -76,6 +109,17 @@ export const FEATURED_PRESETS = [
     color: "linear-gradient(135deg, #2a0b12, #3a1b4a)",
     imageUrl: "/modeimages/heartcoherence.jpg",
     description: "Calm your nervous system and settle into steady coherence. Ideal for stress relief and emotional reset.",
+
+    // ✅ Discover metadata
+    goals: ["calm", "meditate"],
+    scenarios: ["stress", "reset", "regulation"],
+    styles: ["binaural", "nature", "noise"],
+    intensity: 2,
+    headphonesRecommended: true,
+    durationHint: "30m",
+    collection: "Featured",
+    tags: ["heart", "coherence", "calm", "stress"],
+
     layers: [
       { id: "hc_amb", name: "Ambient: Park Birds", type: "ambient", waveform: "birds_park", volume: 0.23, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 17000, Q: 0.7 } },
 
@@ -100,6 +144,17 @@ export const FEATURED_PRESETS = [
     color: "linear-gradient(135deg, #1a0f00, #5a1a00)",
     imageUrl: "/modeimages/energyignition.jpg",
     description: "Wake up the system without chaos. Built for clean energy, motivation, and morning activation.",
+
+    // ✅ Discover metadata
+    goals: ["energy", "focus"],
+    scenarios: ["morning", "motivation", "execution"],
+    styles: ["binaural", "noise", "nature"],
+    intensity: 5,
+    headphonesRecommended: true,
+    durationHint: "15m",
+    collection: "Featured",
+    tags: ["energy", "morning", "ignite", "motivation"],
+
     layers: [
       { id: "ei_amb", name: "Ambient: Wind Soft", type: "ambient", waveform: "wind_soft", volume: 0.40, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 17000, Q: 0.7 } },
 
@@ -123,6 +178,17 @@ export const FEATURED_PRESETS = [
     color: "linear-gradient(135deg, #059669, #065f46)",
     imageUrl: "/modeimages/zengarden.jpg",
     description: "Quiet the mind and soften stress. Best for relaxation, breathwork, and gentle meditation.",
+
+    // ✅ Discover metadata
+    goals: ["calm", "meditate"],
+    scenarios: ["breath", "relax", "stress"],
+    styles: ["binaural", "nature", "noise"],
+    intensity: 2,
+    headphonesRecommended: true,
+    durationHint: "30m",
+    collection: "Featured",
+    tags: ["zen", "calm", "meditation", "breathwork"],
+
     layers: [
       { id: "p2_amb", name: "Ambient: Gentle River", type: "ambient", waveform: "river_soft", volume: 0.33, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
       { id: "hc_amb", name: "Ambient: Park Birds", type: "ambient", waveform: "birds_park", volume: 0.23, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 17000, Q: 0.7 } },
@@ -145,6 +211,17 @@ export const FEATURED_PRESETS = [
     color: "linear-gradient(135deg, #0ea5e9, #0f766e)",
     imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2940&auto=format&fit=crop",
     description: "Ease the body into calm, steady relaxation. Ideal for unwinding, reading, and sleep preparation.",
+
+    // ✅ Discover metadata
+    goals: ["calm", "sleep"],
+    scenarios: ["wind-down", "reading", "night"],
+    styles: ["binaural", "nature", "noise"],
+    intensity: 1,
+    headphonesRecommended: true,
+    durationHint: "60m",
+    collection: "Featured",
+    tags: ["ocean", "calm", "wind-down", "sleep"],
+
     layers: [
       { id: "p3_amb", name: "Ambient: Ocean Deep", type: "ambient", waveform: "ocean_deep", volume: 0.30, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
 
@@ -167,6 +244,17 @@ export const FEATURED_PRESETS = [
     color: "linear-gradient(135deg, #111827, #0b1220)",
     imageUrl: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=2940&auto=format&fit=crop",
     description: "A smooth protective layer for the mind. Ideal for winding down and restoring internal balance.",
+
+    // ✅ Discover metadata
+    goals: ["sleep", "calm"],
+    scenarios: ["night", "wind-down", "stress"],
+    styles: ["binaural", "nature", "noise"],
+    intensity: 2,
+    headphonesRecommended: true,
+    durationHint: "60m",
+    collection: "Featured",
+    tags: ["night", "sleep", "wind-down", "shield"],
+
     layers: [
       { id: "p4_amb", name: "Ambient: Thunder Rolling", type: "ambient", waveform: "thunder_rolling", volume: 0.20, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
 
