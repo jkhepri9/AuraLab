@@ -3,6 +3,7 @@
 // AuraLab local "DB" (async facade)
 // - Ships with built-in presets (featured/community/fan favorites)
 // - Persists user edits to localStorage so modes survive refresh/reload
+// - ✅ Adds Discover metadata defaults for user-created / legacy stored presets
 // -----------------------------------------------------------------------------
 
 import { allPresets, initialPresets } from "@/data/presets";
@@ -57,6 +58,162 @@ function writeStoredPresets(nextPresets) {
   }
 }
 
+// -----------------------------------------------------------------------------
+// DISCOVER METADATA DEFAULTS (metadata-first; heuristics only when missing)
+// -----------------------------------------------------------------------------
+const CANONICAL_GOALS = new Set([
+  "sleep",
+  "focus",
+  "calm",
+  "energy",
+  "meditate",
+  "recovery",
+]);
+
+function uniq(arr) {
+  const out = [];
+  const seen = new Set();
+  for (const v of arr || []) {
+    const s = String(v || "").trim();
+    if (!s) continue;
+    if (seen.has(s)) continue;
+    seen.add(s);
+    out.push(s);
+  }
+  return out;
+}
+
+function toLowerUniq(arr) {
+  return uniq((arr || []).map((x) => String(x || "").trim().toLowerCase()));
+}
+
+function normalizeGoals(goals, fallbackText = "") {
+  // If caller gave goals, trust it (but normalize/canonicalize).
+  if (Array.isArray(goals) && goals.length) {
+    const normalized = toLowerUniq(goals).filter((g) => CANONICAL_GOALS.has(g));
+    if (normalized.length) return normalized;
+  }
+
+  // If caller gave a legacy single "goal" field
+  if (typeof goals === "string") {
+    const g = goals.trim().toLowerCase();
+    if (CANONICAL_GOALS.has(g)) return [g];
+  }
+
+  // Minimal heuristic ONLY when no explicit goal(s) exist:
+  // (This is just to avoid "Custom" modes becoming uncategorized forever.)
+  const t = String(fallbackText || "").toLowerCase();
+
+  const hits = [];
+  if (/\bsleep|insomnia|nap|dream|delta\b/.test(t)) hits.push("sleep");
+  if (/\bfocus|study|work|flow|productiv|adhd\b/.test(t)) hits.push("focus");
+  if (/\bcalm|relax|anxiety|stress|soothe|downshift\b/.test(t)) hits.push("calm");
+  if (/\benergy|ignite|morning|motivation|boost\b/.test(t)) hits.push("energy");
+  if (/\bmeditat|theta|breath|mindful|stillness\b/.test(t)) hits.push("meditate");
+  if (/\brecover|restor|healing|reset|recovery\b/.test(t)) hits.push("recovery");
+
+  const canonicalHits = uniq(hits.filter((g) => CANONICAL_GOALS.has(g)));
+  if (canonicalHits.length) return canonicalHits.slice(0, 2);
+
+  // Safe default: focus (neutral, non-controversial).
+  return ["focus"];
+}
+
+function detectBinaural(layers) {
+  // Heuristic based on typical binaural construction:
+  // - two oscillators
+  // - opposite pan
+  // - small frequency difference (0.5–40 Hz)
+  const oscs = (layers || [])
+    .filter((l) => (l?.type === "oscillator" || l?.type === "frequency") && (l?.enabled ?? true))
+    .map((l) => ({
+      pan: Number(l?.pan ?? 0),
+      frequency: Number(l?.frequency ?? 0),
+    }))
+    .filter((x) => Number.isFinite(x.frequency));
+
+  for (let i = 0; i < oscs.length; i++) {
+    for (let j = i + 1; j < oscs.length; j++) {
+      const a = oscs[i];
+      const b = oscs[j];
+
+      // opposite-ish pans
+      if (!((a.pan < -0.25 && b.pan > 0.25) || (b.pan < -0.25 && a.pan > 0.25))) continue;
+
+      const diff = Math.abs(a.frequency - b.frequency);
+      if (diff >= 0.5 && diff <= 40) return true;
+    }
+  }
+  return false;
+}
+
+function inferStyles(layers) {
+  const styles = [];
+  const hasAmbient = (layers || []).some((l) => l?.type === "ambient");
+  const hasNoise = (layers || []).some((l) => l?.type === "noise" || l?.type === "color");
+  const hasSynth = (layers || []).some((l) => l?.type === "synth");
+
+  if (detectBinaural(layers)) styles.push("binaural");
+  if (hasAmbient) styles.push("nature");
+  if (hasNoise) styles.push("noise");
+  if (hasSynth) styles.push("synth");
+
+  return uniq(styles);
+}
+
+function ensureDiscoverDefaults(preset) {
+  const name = String(preset?.name || "");
+  const description = String(preset?.description || "");
+  const fallbackText = `${name} ${description}`;
+
+  const layers = Array.isArray(preset?.layers) ? preset.layers : [];
+
+  const collection = preset?.collection || "Custom";
+
+  const goals = normalizeGoals(preset?.goals ?? preset?.goal, fallbackText);
+
+  const styles = Array.isArray(preset?.styles) && preset.styles.length
+    ? uniq(preset.styles.map((s) => String(s || "").trim()))
+    : inferStyles(layers);
+
+  const headphonesRecommended =
+    typeof preset?.headphonesRecommended === "boolean"
+      ? preset.headphonesRecommended
+      : detectBinaural(layers);
+
+  const intensity =
+    typeof preset?.intensity === "number" && Number.isFinite(preset.intensity)
+      ? Math.max(1, Math.min(5, Math.round(preset.intensity)))
+      : 3;
+
+  const durationHint =
+    typeof preset?.durationHint === "string" && preset.durationHint.trim()
+      ? preset.durationHint.trim()
+      : goals.includes("sleep") || goals.includes("recovery")
+        ? "60m"
+        : goals.includes("energy")
+          ? "15m"
+          : "30m";
+
+  const scenarios = Array.isArray(preset?.scenarios) ? uniq(preset.scenarios) : [];
+  const tags = Array.isArray(preset?.tags) ? uniq(preset.tags) : [];
+
+  return {
+    ...preset,
+    collection,
+    goals,
+    scenarios,
+    styles,
+    intensity,
+    headphonesRecommended,
+    durationHint,
+    tags,
+  };
+}
+
+// -----------------------------------------------------------------------------
+// LAYER SAFETY
+// -----------------------------------------------------------------------------
 function ensureLayerDefaults(layer, i, seed) {
   const id = layer?.id || `${seed}_${i}`;
 
@@ -89,7 +246,7 @@ function ensureLayerDefaults(layer, i, seed) {
 function normalizePreset(preset, index = 0) {
   const seed = Date.now();
 
-  return {
+  const base = {
     ...preset,
     id: preset?.id || `p${seed}_${index}`,
     name: preset?.name || `Aura Mode ${index + 1}`,
@@ -106,6 +263,9 @@ function normalizePreset(preset, index = 0) {
       : [],
     order: typeof preset?.order === "number" ? preset.order : index,
   };
+
+  // ✅ Add Discover metadata defaults (without breaking built-ins)
+  return ensureDiscoverDefaults(base);
 }
 
 function mergeBaseWithStored(base, stored) {
@@ -198,10 +358,12 @@ export const db = {
           ...data,
           id: data?.id || getNextId(),
           order: typeof data?.order === "number" ? data.order : presets.length,
+
           // Ensure layers exist with defaults
-          layers: (data?.layers || []).map((l, i) =>
-            ensureLayerDefaults(l, i, now)
-          ),
+          layers: (data?.layers || []).map((l, i) => ensureLayerDefaults(l, i, now)),
+
+          // ✅ If caller didn't specify collection, default is Custom
+          collection: data?.collection || "Custom",
         },
         presets.length
       );
@@ -218,7 +380,6 @@ export const db = {
 
       const current = presets[index];
 
-      // If layers provided, normalize them (ensure IDs + safety defaults)
       const next = {
         ...current,
         ...data,
@@ -274,7 +435,10 @@ export const db = {
       await sleep(50);
       const index = presets.findIndex((p) => p.id === id);
       if (index === -1) return null;
-      presets[index] = { ...presets[index], name: newName };
+
+      // Keep metadata stable; just rename and normalize
+      presets[index] = normalizePreset({ ...presets[index], name: newName }, index);
+
       persist();
       return presets[index];
     },
