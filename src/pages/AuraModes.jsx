@@ -36,8 +36,21 @@ import { useGlobalPlayer } from "../audio/GlobalPlayerContext";
 const RECENTS_KEY = "auralab_recent_modes_v1"; // [{ id, t }]
 const FAVS_KEY = "auralab_favorite_modes_v1"; // [id]
 
+function canUseStorage() {
+  try {
+    if (typeof window === "undefined") return false;
+    const k = "__t";
+    window.localStorage.setItem(k, "1");
+    window.localStorage.removeItem(k);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function readJSON(key, fallback) {
   try {
+    if (!canUseStorage()) return fallback;
     const raw = localStorage.getItem(key);
     if (!raw) return fallback;
     return JSON.parse(raw);
@@ -47,6 +60,7 @@ function readJSON(key, fallback) {
 }
 function writeJSON(key, value) {
   try {
+    if (!canUseStorage()) return;
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
     // ignore
@@ -93,13 +107,59 @@ function getCollection(preset) {
 }
 
 function getGoals(preset) {
-  // Canonical metadata-driven path
   if (Array.isArray(preset?.goals) && preset.goals.length) {
     return preset.goals.map((g) => String(g).toLowerCase());
   }
-  // Backward-compat (older presets / user-created)
   if (preset?.goal) return [String(preset.goal).toLowerCase()];
   return [];
+}
+
+function safeNum(v, fallback) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function durationToMinutes(d) {
+  const s = String(d || "").trim().toLowerCase();
+  // Accept: "10m", "15m", "30m", "60m", "90m"
+  const m = s.match(/^(\d+)\s*m$/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) ? n : null;
+}
+
+// Discover-style sort for rails:
+// - Prefer higher intent-quality presets: lower duration for energy/focus rails isn’t universal,
+//   so we keep it neutral: intensity desc, then duration asc (if present), then order asc, then name.
+function railSort(a, b) {
+  const ai = safeNum(a?.intensity, 0);
+  const bi = safeNum(b?.intensity, 0);
+  if (bi !== ai) return bi - ai;
+
+  const ad = durationToMinutes(a?.durationHint);
+  const bd = durationToMinutes(b?.durationHint);
+  if (ad != null && bd != null && ad !== bd) return ad - bd;
+  if (ad != null && bd == null) return -1;
+  if (ad == null && bd != null) return 1;
+
+  const ao = safeNum(a?.order, 0);
+  const bo = safeNum(b?.order, 0);
+  if (ao !== bo) return ao - bo;
+
+  return String(a?.name || "").localeCompare(String(b?.name || ""));
+}
+
+// De-dupe a list by id while preserving first occurrence order.
+function dedupeById(list) {
+  const seen = new Set();
+  const out = [];
+  for (const p of list || []) {
+    if (!p?.id) continue;
+    if (seen.has(p.id)) continue;
+    seen.add(p.id);
+    out.push(p);
+  }
+  return out;
 }
 
 // ------------------------------------------------------------
@@ -384,7 +444,11 @@ function ModeCard({
         ) : null}
 
         <div className="mt-4">
-          <Button className="w-full h-10 font-semibold tracking-wide text-base rounded-lg shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white">
+          {/* FIX: this button must actually activate */}
+          <Button
+            onClick={(e) => handleActivate(e, preset)}
+            className="w-full h-10 font-semibold tracking-wide text-base rounded-lg shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
             <Play className="w-5 h-5 mr-2 fill-white" />
             Activate Aura Mode
           </Button>
@@ -576,7 +640,10 @@ export default function AuraModes() {
 
   const continuePreset = recents[0]?.preset || null;
 
-  const favorites = useMemo(() => presets.filter((p) => favoriteIds.has(p.id)), [presets, favoriteIds]);
+  const favorites = useMemo(() => {
+    const list = presets.filter((p) => favoriteIds.has(p.id));
+    return dedupeById(list).sort(railSort);
+  }, [presets, favoriteIds]);
 
   const byCollection = useMemo(() => {
     const map = new Map();
@@ -588,6 +655,8 @@ export default function AuraModes() {
       if (!map.has(c)) map.set(c, []);
       map.get(c).push(p);
     }
+    // Sort each collection rail
+    for (const [k, arr] of map.entries()) map.set(k, dedupeById(arr).sort(railSort));
     return map;
   }, [presets]);
 
@@ -607,12 +676,13 @@ export default function AuraModes() {
         map.get(g).push(p);
       }
     }
+    // Sort each goal rail
+    for (const [k, arr] of map.entries()) map.set(k, dedupeById(arr).sort(railSort));
     return map;
   }, [presets]);
 
   const filtered = useMemo(() => {
     const q = normalizeText(query).trim();
-
     let list = presets;
 
     if (activeCollection !== "all") {
@@ -648,12 +718,48 @@ export default function AuraModes() {
     } else if (sortBy === "recent") {
       const recentMap = new Map(recents.map((r) => [r.preset.id, r.t]));
       list = [...list].sort((a, b) => (recentMap.get(b.id) || 0) - (recentMap.get(a.id) || 0));
+    } else {
+      // Library order (but still stable with name tie-break)
+      list = [...list].sort((a, b) => {
+        const ao = safeNum(a?.order, 0);
+        const bo = safeNum(b?.order, 0);
+        if (ao !== bo) return ao - bo;
+        return String(a?.name || "").localeCompare(String(b?.name || ""));
+      });
     }
 
-    return list;
+    return dedupeById(list);
   }, [presets, query, activeGoal, activeCollection, sortBy, byGoal, recents]);
 
-  const isFiltered = Boolean(normalizeText(query).trim()) || activeGoal !== "all" || activeCollection !== "all";
+  const isFiltered =
+    Boolean(normalizeText(query).trim()) || activeGoal !== "all" || activeCollection !== "all";
+
+  const scrollToTop = () => {
+    try {
+      // This page is its own scroll container (overflow-y-auto), so ensure we’re at top.
+      const el = document?.querySelector("main") || null;
+      if (el && typeof el.scrollTo === "function") el.scrollTo({ top: 0, behavior: "smooth" });
+      else window?.scrollTo?.({ top: 0, behavior: "smooth" });
+    } catch {
+      // ignore
+    }
+  };
+
+  const applyCollection = (c) => {
+    setActiveCollection(c);
+    setActiveGoal("all");
+    setQuery("");
+    setSortBy("custom");
+    scrollToTop();
+  };
+
+  const applyGoal = (g) => {
+    setActiveGoal(g);
+    setActiveCollection("all");
+    setQuery("");
+    setSortBy("custom");
+    scrollToTop();
+  };
 
   // ------------------------------------------------------------
   // Render
@@ -694,19 +800,31 @@ export default function AuraModes() {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="bg-black/30 border-white/10 text-white hover:bg-black/40">
+                  <Button
+                    variant="outline"
+                    className="bg-black/30 border-white/10 text-white hover:bg-black/40"
+                  >
                     <ArrowUpDown className="w-4 h-4 mr-2" />
                     Sort: {sortBy === "custom" ? "Library" : sortBy === "recent" ? "Recent" : "A–Z"}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-44 bg-zinc-900 border-zinc-700 text-white">
-                  <DropdownMenuItem onClick={() => setSortBy("custom")} className="cursor-pointer hover:bg-zinc-700">
+                  <DropdownMenuItem
+                    onClick={() => setSortBy("custom")}
+                    className="cursor-pointer hover:bg-zinc-700"
+                  >
                     Library Order
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSortBy("recent")} className="cursor-pointer hover:bg-zinc-700">
+                  <DropdownMenuItem
+                    onClick={() => setSortBy("recent")}
+                    className="cursor-pointer hover:bg-zinc-700"
+                  >
                     Recent
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSortBy("az")} className="cursor-pointer hover:bg-zinc-700">
+                  <DropdownMenuItem
+                    onClick={() => setSortBy("az")}
+                    className="cursor-pointer hover:bg-zinc-700"
+                  >
                     A–Z
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -719,7 +837,10 @@ export default function AuraModes() {
                 <Chip
                   key={c.key}
                   active={activeCollection === c.key}
-                  onClick={() => setActiveCollection(c.key)}
+                  onClick={() => {
+                    setActiveCollection(c.key);
+                    scrollToTop();
+                  }}
                 >
                   {c.label}
                 </Chip>
@@ -728,11 +849,24 @@ export default function AuraModes() {
 
             {/* Goals chips */}
             <div className="flex flex-wrap gap-2 mt-3">
-              <Chip active={activeGoal === "all"} onClick={() => setActiveGoal("all")}>
+              <Chip
+                active={activeGoal === "all"}
+                onClick={() => {
+                  setActiveGoal("all");
+                  scrollToTop();
+                }}
+              >
                 All Goals
               </Chip>
               {GOALS.map((g) => (
-                <Chip key={g.key} active={activeGoal === g.key} onClick={() => setActiveGoal(g.key)}>
+                <Chip
+                  key={g.key}
+                  active={activeGoal === g.key}
+                  onClick={() => {
+                    setActiveGoal(g.key);
+                    scrollToTop();
+                  }}
+                >
                   {g.label}
                 </Chip>
               ))}
@@ -746,6 +880,7 @@ export default function AuraModes() {
                     setActiveGoal("all");
                     setActiveCollection("all");
                     setSortBy("custom");
+                    scrollToTop();
                   }}
                 >
                   Clear
@@ -765,7 +900,10 @@ export default function AuraModes() {
               <p className="text-gray-400 mb-6">
                 Create your first Aura Mode to begin crafting custom sonic environments.
               </p>
-              <Button onClick={handleCreateNew} className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+              <Button
+                onClick={handleCreateNew}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+              >
                 <Plus className="w-5 h-5 mr-2" /> Create Your First Mode
               </Button>
             </div>
@@ -815,11 +953,18 @@ export default function AuraModes() {
                         ) : null}
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold" onClick={() => handleCompactActivate(continuePreset)}>
+                        <Button
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                          onClick={() => handleCompactActivate(continuePreset)}
+                        >
                           <Play className="w-4 h-4 mr-2 fill-white" />
                           Play
                         </Button>
-                        <Button variant="outline" className="bg-black/30 border-white/10 text-white hover:bg-black/40" onClick={() => handleCompactOpen(continuePreset)}>
+                        <Button
+                          variant="outline"
+                          className="bg-black/30 border-white/10 text-white hover:bg-black/40"
+                          onClick={() => handleCompactOpen(continuePreset)}
+                        >
                           Details <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>
                       </div>
@@ -882,7 +1027,7 @@ export default function AuraModes() {
                         <Button
                           variant="ghost"
                           className="text-emerald-300 hover:bg-white/5"
-                          onClick={() => setActiveCollection(c)}
+                          onClick={() => applyCollection(c)}
                         >
                           View all <ArrowRight className="w-4 h-4 ml-1" />
                         </Button>
@@ -918,7 +1063,7 @@ export default function AuraModes() {
                           <Button
                             variant="ghost"
                             className="text-emerald-300 hover:bg-white/5"
-                            onClick={() => setActiveGoal(g.key)}
+                            onClick={() => applyGoal(g.key)}
                           >
                             View all <ArrowRight className="w-4 h-4 ml-1" />
                           </Button>

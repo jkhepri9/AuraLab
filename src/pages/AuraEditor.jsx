@@ -8,6 +8,11 @@
 //    - Restored when user returns to Aura Studio.
 // 2) Live layer updates remain enabled (volume/filter/pulse update instantly).
 // -----------------------------------------------------------------------------
+//
+// PATCH (Transport stability):
+// - Only set local isPlaying=true when playLayers succeeds.
+// - Relies on GlobalPlayerContext exporting updateNowPlaying (now restored).
+// -----------------------------------------------------------------------------
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
@@ -187,8 +192,6 @@ export default function AuraEditor() {
   // Establish baseline after first stable render (including session restore)
   useEffect(() => {
     if (readyForDirtyRef.current) return;
-    // After mount + any restore state updates have applied, set the baseline once.
-    // We allow a microtask to avoid capturing intermediate state.
     const id = window.setTimeout(() => {
       baselineRef.current = snapshot;
       readyForDirtyRef.current = true;
@@ -245,10 +248,21 @@ export default function AuraEditor() {
   const handlePlay = async () => {
     if (!player) return;
 
-    await player.playLayers(layers, {
+    if (!layers?.length) {
+      toast.error("Add at least one layer before playing.");
+      return;
+    }
+
+    const ok = await player.playLayers(layers, {
       title: projectName || "Aura Studio",
       artist: "AuraLab",
     });
+
+    if (!ok) {
+      setIsPlaying(false);
+      toast.error("Playback failed to start.");
+      return;
+    }
 
     // Apply current Studio FX values immediately after starting.
     player.engine?.setReverb?.(reverbWet);
@@ -365,12 +379,12 @@ export default function AuraEditor() {
 
       const original = prev[idx];
 
-      // Deep clone: structuredClone if available, otherwise JSON fallback.
       let copy;
       try {
-        copy = typeof structuredClone === "function"
-          ? structuredClone(original)
-          : JSON.parse(JSON.stringify(original));
+        copy =
+          typeof structuredClone === "function"
+            ? structuredClone(original)
+            : JSON.parse(JSON.stringify(original));
       } catch {
         copy = { ...original };
       }
@@ -392,16 +406,13 @@ export default function AuraEditor() {
       const next = [...prev];
       next.splice(idx + 1, 0, copy);
 
-      // Select the duplicated layer immediately.
       setSelectedLayerId(copy.id);
 
-      // If currently playing, apply live update so audio reflects the new layer set.
       if (isPlaying) scheduleLiveUpdate(next);
 
       return next;
     });
   };
-
 
   const deleteLayer = (id) => {
     setLayers((prev) => {

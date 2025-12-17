@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Play, Square, ArrowLeft, Monitor } from "lucide-react";
+import { Play, Square, ArrowLeft, Monitor, Save } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -61,37 +61,153 @@ function hydrateLayersFromPreset(preset) {
   });
 }
 
+// -----------------------------------------------------------------------------
+// Discover metadata helpers (matches db.js intent: minimal + safe heuristics)
+// -----------------------------------------------------------------------------
+const GOAL_OPTIONS = [
+  { key: "sleep", label: "Sleep" },
+  { key: "focus", label: "Focus" },
+  { key: "calm", label: "Calm" },
+  { key: "energy", label: "Energy" },
+  { key: "meditate", label: "Meditate" },
+  { key: "recovery", label: "Recovery" },
+];
+
+const COLLECTION_OPTIONS = [
+  { key: "Featured", label: "Featured" },
+  { key: "Community", label: "Community" },
+  { key: "Fan Favorites", label: "Fan Favorites" },
+  { key: "Custom", label: "Custom" },
+];
+
+const DURATION_OPTIONS = ["10m", "15m", "30m", "60m", "90m"];
+
+function uniq(arr) {
+  const out = [];
+  const seen = new Set();
+  for (const v of arr || []) {
+    const s = String(v || "").trim();
+    if (!s) continue;
+    if (seen.has(s)) continue;
+    seen.add(s);
+    out.push(s);
+  }
+  return out;
+}
+
+function detectBinaural(layers) {
+  // Heuristic:
+  // - two oscillators
+  // - opposite pan
+  // - small frequency difference (0.5–40 Hz)
+  const oscs = (layers || [])
+    .filter((l) => (l?.type === "oscillator" || l?.type === "frequency") && (l?.enabled ?? true))
+    .map((l) => ({
+      pan: Number(l?.pan ?? 0),
+      frequency: Number(l?.frequency ?? 0),
+    }))
+    .filter((x) => Number.isFinite(x.frequency));
+
+  for (let i = 0; i < oscs.length; i++) {
+    for (let j = i + 1; j < oscs.length; j++) {
+      const a = oscs[i];
+      const b = oscs[j];
+
+      const oppositePans =
+        (a.pan < -0.25 && b.pan > 0.25) || (b.pan < -0.25 && a.pan > 0.25);
+      if (!oppositePans) continue;
+
+      const diff = Math.abs(a.frequency - b.frequency);
+      if (diff >= 0.5 && diff <= 40) return true;
+    }
+  }
+  return false;
+}
+
+function defaultDurationForGoals(goals = []) {
+  const g = new Set(goals);
+  if (g.has("sleep") || g.has("recovery")) return "60m";
+  if (g.has("energy")) return "15m";
+  return "30m";
+}
+
 export default function PresetEditor({
   initialPreset,
-  onSave, // kept for compatibility (not used here)
+  onSave,
   onCancel,
   autoPlay = false,
 }) {
   const player = useGlobalPlayer();
   const navigate = useNavigate();
 
-  const setStickyPlayerHidden = player.setStickyPlayerHidden;
+  const setStickyPlayerHidden = player?.setStickyPlayerHidden;
 
   // Hide the global sticky mini player while this editor is mounted.
-  // The editor already contains its own playback controls and layout.
   useEffect(() => {
     setStickyPlayerHidden?.(true);
-    return () => {
-      setStickyPlayerHidden?.(false);
-    };
+    return () => setStickyPlayerHidden?.(false);
   }, [setStickyPlayerHidden]);
 
   const presetId = initialPreset?.id || "__preview__";
+  const isExisting = Boolean(initialPreset?.id);
 
   const name = useMemo(() => initialPreset?.name || "Aura Mode", [initialPreset]);
   const color = useMemo(() => initialPreset?.color || "#10b981", [initialPreset]);
 
   const [layers, setLayers] = useState(() => hydrateLayersFromPreset(initialPreset));
 
-  // Reset layers when preset changes
+  // Discover metadata state
+  const [goals, setGoals] = useState(() =>
+    Array.isArray(initialPreset?.goals) ? uniq(initialPreset.goals) : []
+  );
+
+  const [collection, setCollection] = useState(() => initialPreset?.collection || "Custom");
+
+  const [intensity, setIntensity] = useState(() => {
+    const v = Number(initialPreset?.intensity);
+    return Number.isFinite(v) ? Math.max(1, Math.min(5, Math.round(v))) : 3;
+  });
+
+  const binauralAuto = useMemo(() => detectBinaural(layers), [layers]);
+
+  // If the preset already has an explicit headphones flag, treat that as “override”.
+  const [headphonesOverride, setHeadphonesOverride] = useState(() =>
+    typeof initialPreset?.headphonesRecommended === "boolean"
+  );
+
+  const [headphonesRecommended, setHeadphonesRecommended] = useState(() => {
+    if (typeof initialPreset?.headphonesRecommended === "boolean") {
+      return initialPreset.headphonesRecommended;
+    }
+    return binauralAuto;
+  });
+
+  const [durationHint, setDurationHint] = useState(() => {
+    const d = String(initialPreset?.durationHint || "").trim();
+    if (d) return d;
+    return defaultDurationForGoals(goals);
+  });
+
+  // Reset state when preset changes
   useEffect(() => {
     const hydrated = hydrateLayersFromPreset(initialPreset);
     setLayers(hydrated);
+
+    setGoals(Array.isArray(initialPreset?.goals) ? uniq(initialPreset.goals) : []);
+    setCollection(initialPreset?.collection || "Custom");
+
+    const v = Number(initialPreset?.intensity);
+    setIntensity(Number.isFinite(v) ? Math.max(1, Math.min(5, Math.round(v))) : 3);
+
+    setHeadphonesOverride(typeof initialPreset?.headphonesRecommended === "boolean");
+    setHeadphonesRecommended(
+      typeof initialPreset?.headphonesRecommended === "boolean"
+        ? initialPreset.headphonesRecommended
+        : detectBinaural(hydrated)
+    );
+
+    const d = String(initialPreset?.durationHint || "").trim();
+    setDurationHint(d || defaultDurationForGoals(Array.isArray(initialPreset?.goals) ? initialPreset.goals : []));
 
     if (initialPreset && autoPlay) {
       player.playPreset({
@@ -104,6 +220,19 @@ export default function PresetEditor({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [presetId]);
+
+  // Keep headphonesRecommended synced to auto-detection unless overridden.
+  useEffect(() => {
+    if (headphonesOverride) return;
+    setHeadphonesRecommended(binauralAuto);
+  }, [binauralAuto, headphonesOverride]);
+
+  // Keep duration default reasonable if user has not touched it.
+  useEffect(() => {
+    // Only auto-set duration when it's empty or one of the defaults that might have been auto-filled.
+    // If user picks a duration explicitly, we keep it.
+    setDurationHint((prev) => (prev ? prev : defaultDurationForGoals(goals)));
+  }, [goals]);
 
   const isActivePreset =
     Boolean(player.currentPlayingPreset?.id) &&
@@ -167,7 +296,6 @@ export default function PresetEditor({
   }, [layers, isPlaying]);
 
   // ✅ Prevent “tap anywhere to jump slider”
-  // Only allow pointer-down to reach Radix Slider if it started on the thumb (role="slider")
   const requireThumbDrag = (e) => {
     const el = e?.target;
     const isThumb = typeof el?.closest === "function" && el.closest('[role="slider"]');
@@ -175,6 +303,51 @@ export default function PresetEditor({
       e.preventDefault();
       e.stopPropagation();
     }
+  };
+
+  const pill = (active) =>
+    cn(
+      "h-9 rounded-full px-4 text-sm font-semibold border transition",
+      active
+        ? "bg-emerald-500/90 text-black border-emerald-300/40 shadow-[0_0_16px_rgba(16,185,129,0.25)]"
+        : "bg-black/50 text-white border-white/15 hover:bg-black/70"
+    );
+
+  const toggleGoal = (key) => {
+    setGoals((prev) => {
+      const has = prev.includes(key);
+      if (has) return prev.filter((g) => g !== key);
+
+      // Keep it clean: max 2 goals.
+      if (prev.length >= 2) {
+        const trimmed = prev.slice(0, 1);
+        return uniq([...trimmed, key]);
+      }
+      return uniq([...prev, key]);
+    });
+  };
+
+  const handleSave = () => {
+    if (typeof onSave !== "function") return;
+
+    const data = {
+      // Keep existing fields (safe for update path)
+      ...(initialPreset || {}),
+
+      // Ensure core preview data stays aligned
+      name,
+      color,
+      layers,
+
+      // Discover metadata
+      collection: collection || "Custom",
+      goals: uniq(goals),
+      intensity: Math.max(1, Math.min(5, Math.round(Number(intensity) || 3))),
+      durationHint: String(durationHint || "").trim() || defaultDurationForGoals(goals),
+      headphonesRecommended: Boolean(headphonesRecommended),
+    };
+
+    onSave(data);
   };
 
   return (
@@ -195,7 +368,7 @@ export default function PresetEditor({
 
       {/* CONTENT */}
       <div className="relative z-10 space-y-6 pb-32">
-        {/* STICKY HEADER (Back button always visible) */}
+        {/* STICKY HEADER */}
         <div className="sticky top-0 z-30 px-4 pt-4">
           <div className="rounded-2xl border border-white/10 bg-black/25 backdrop-blur-md shadow-xl">
             <div className="p-3 md:p-4 flex flex-col md:flex-row items-start md:items-center gap-4">
@@ -218,20 +391,188 @@ export default function PresetEditor({
                     {name}
                   </div>
                   <div className="text-xs text-white/80 truncate">
-                    Preview mode — Volume only
+                    Preview mode — Volume only (Discover settings below)
                   </div>
                 </div>
 
-                <Button
-                  onClick={() => {
-                    navigate("/AuraEditor", {
-                      state: { preset: { name, color, layers, id: initialPreset?.id } },
-                    });
-                  }}
-                  className="bg-black/70 hover:bg-black/80 text-white border border-white/15 whitespace-nowrap backdrop-blur-md shadow-lg"
-                >
-                  <Monitor className="w-4 h-4 mr-2" /> Open Studio
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleSave}
+                    disabled={typeof onSave !== "function"}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-300/30 whitespace-nowrap shadow-lg"
+                    title={isExisting ? "Save changes" : "Create this mode"}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {isExisting ? "Save" : "Create"}
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      navigate("/AuraEditor", {
+                        state: { preset: { ...(initialPreset || {}), name, color, layers, id: initialPreset?.id } },
+                      });
+                    }}
+                    className="bg-black/70 hover:bg-black/80 text-white border border-white/15 whitespace-nowrap backdrop-blur-md shadow-lg"
+                  >
+                    <Monitor className="w-4 h-4 mr-2" /> Open Studio
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* DISCOVER SETTINGS (Calm-like “Discover” metadata) */}
+        <div className="px-4">
+          <div className="rounded-2xl border border-white/10 bg-black/35 backdrop-blur-md shadow-xl p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-sm font-extrabold text-white tracking-wide">
+                  Discover Settings
+                </div>
+                <div className="text-xs text-white/70">
+                  This controls how modes are grouped, recommended, and filtered on Aura Modes.
+                </div>
+              </div>
+
+              <div className="text-[11px] text-white/60 text-right">
+                {binauralAuto ? "Binaural detected" : "No binaural detected"}
+              </div>
+            </div>
+
+            {/* Goals */}
+            <div className="mt-4">
+              <div className="text-xs font-bold text-white/80 mb-2">
+                Goals (pick up to 2)
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {GOAL_OPTIONS.map((g) => (
+                  <button
+                    key={g.key}
+                    type="button"
+                    onClick={() => toggleGoal(g.key)}
+                    className={pill(goals.includes(g.key))}
+                  >
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Controls grid */}
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Headphones */}
+              <div className="rounded-xl border border-white/10 bg-black/40 p-3">
+                <div className="text-xs font-bold text-white/80">Headphones</div>
+                <div className="text-sm font-semibold text-white mt-1">
+                  {headphonesRecommended ? "Recommended" : "Not required"}
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHeadphonesOverride(false);
+                      setHeadphonesRecommended(binauralAuto);
+                    }}
+                    className={pill(!headphonesOverride)}
+                    title="Use auto-detection"
+                  >
+                    Auto
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHeadphonesOverride(true);
+                      setHeadphonesRecommended(true);
+                    }}
+                    className={pill(headphonesOverride && headphonesRecommended)}
+                    title="Force on"
+                  >
+                    On
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHeadphonesOverride(true);
+                      setHeadphonesRecommended(false);
+                    }}
+                    className={pill(headphonesOverride && !headphonesRecommended)}
+                    title="Force off"
+                  >
+                    Off
+                  </button>
+                </div>
+              </div>
+
+              {/* Intensity */}
+              <div className="rounded-xl border border-white/10 bg-black/40 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold text-white/80">Intensity</div>
+                  <div className="text-[11px] text-white/70 font-mono tabular-nums">
+                    {Math.max(1, Math.min(5, Math.round(Number(intensity) || 3)))}/5
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <Slider
+                    value={[Math.max(1, Math.min(5, Number(intensity) || 3))]}
+                    onValueChange={(v) => setIntensity(v[0])}
+                    min={1}
+                    max={5}
+                    step={1}
+                    onPointerDownCapture={requireThumbDrag}
+                  />
+                </div>
+
+                <div className="mt-2 text-[11px] text-white/60">
+                  Higher intensity = more “forward” mix / stronger feel (for sorting).
+                </div>
+              </div>
+
+              {/* Duration */}
+              <div className="rounded-xl border border-white/10 bg-black/40 p-3">
+                <div className="text-xs font-bold text-white/80">Suggested Duration</div>
+                <div className="text-sm font-semibold text-white mt-1">
+                  {durationHint || defaultDurationForGoals(goals)}
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {DURATION_OPTIONS.map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setDurationHint(d)}
+                      className={pill((durationHint || "").trim() === d)}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Collection */}
+            <div className="mt-4">
+              <div className="text-xs font-bold text-white/80 mb-2">Collection</div>
+              <div className="flex flex-wrap gap-2">
+                {COLLECTION_OPTIONS.map((c) => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => setCollection(c.key)}
+                    className={pill(collection === c.key)}
+                    title="Used for grouping on Aura Modes"
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-2 text-[11px] text-white/60">
+                For user-made modes, keep this on <span className="text-white/80 font-semibold">Custom</span>.
               </div>
             </div>
           </div>
@@ -246,7 +587,6 @@ export default function PresetEditor({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, height: 0 }}
-                // ✅ TRUE SEE-THROUGH: no blur, no tinted background (no image distortion)
                 className="bg-transparent border border-white/10 p-4 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.25)]"
               >
                 <div className="flex items-center justify-between mb-3">
@@ -266,7 +606,6 @@ export default function PresetEditor({
 
                 {/* ONLY: Volume */}
                 <div className="grid grid-cols-1 gap-4">
-                  {/* ✅ TRUE SEE-THROUGH VOLUME CARD (no blur, no tint) */}
                   <div className="overflow-hidden rounded-xl border border-white/10 bg-transparent shadow-[0_8px_30px_rgba(0,0,0,0.18)]">
                     <div className="p-4 flex flex-col justify-center">
                       <div className="flex items-center justify-between gap-3 mb-3 border-b border-white/10 pb-2">

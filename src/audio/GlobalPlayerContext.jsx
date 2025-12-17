@@ -1,4 +1,11 @@
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createAudioEngine } from "./AudioEngine";
 
 const GlobalPlayerContext = createContext(null);
@@ -10,27 +17,46 @@ export function GlobalPlayerProvider({ children }) {
   const [currentPlayingPreset, setCurrentPlayingPreset] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentLayers, setCurrentLayers] = useState(null);
+
+  // Used to hide sticky player on certain screens (PresetEditor, etc.)
   const [isStickyPlayerHidden, setIsStickyPlayerHidden] = useState(false);
+
+  // Used when user closes the sticky player (X)
   const [tempHidden, setTempHidden] = useState(false);
+
+  // Optional: for Layout animations (fade/slide). If your Layout uses this, it can animate out.
+  const [stickyPlayerVisible, setStickyPlayerVisible] = useState(true);
 
   const safeUnlock = () => {
     try {
       engineRef.current?.unlock?.();
-    } catch {}
+    } catch {
+      // ignore
+    }
   };
 
   const playLayers = async (layers, meta = {}) => {
     if (!layers?.length) return false;
+
     const seq = ++playSeqRef.current;
+
     safeUnlock();
+
     try {
       engineRef.current.stop();
       await engineRef.current.play(layers);
+
       if (seq !== playSeqRef.current) return false;
+
       engineRef.current.setNowPlaying(meta);
+
       setCurrentLayers(layers);
       setIsPlaying(true);
+
+      // Re-show sticky if user closed it previously
       setTempHidden(false);
+      setStickyPlayerVisible(true);
+
       return true;
     } catch (e) {
       console.error("[GlobalPlayer] playLayers failed:", e);
@@ -41,21 +67,33 @@ export function GlobalPlayerProvider({ children }) {
 
   const playPreset = async (preset) => {
     if (!preset?.layers?.length) return false;
+
     const seq = ++playSeqRef.current;
+
+    // Set UI immediately so sticky updates fast
     setCurrentPlayingPreset(preset);
+
     safeUnlock();
+
     try {
       engineRef.current.stop();
       await engineRef.current.play(preset.layers);
+
       if (seq !== playSeqRef.current) return false;
+
       engineRef.current.setNowPlaying({
         title: preset.name || "Aura Mode",
         artist: "AuraLab",
         artworkUrl: preset.imageUrl,
       });
+
       setCurrentLayers(preset.layers);
       setIsPlaying(true);
+
+      // Re-show sticky if user closed it previously
       setTempHidden(false);
+      setStickyPlayerVisible(true);
+
       return true;
     } catch (e) {
       console.error("[GlobalPlayer] playPreset failed:", e);
@@ -64,55 +102,76 @@ export function GlobalPlayerProvider({ children }) {
     }
   };
 
-  const stop = () => {
+  const stop = useCallback(() => {
     playSeqRef.current += 1;
-    engineRef.current.stop();
+    try {
+      engineRef.current.stop();
+    } catch {
+      // ignore
+    }
     setIsPlaying(false);
     setCurrentLayers(null);
     setCurrentPlayingPreset(null);
     setTempHidden(false);
-  };
+    setStickyPlayerVisible(true);
+  }, []);
 
-  const pause = () => {
+  const pause = useCallback(() => {
     playSeqRef.current += 1;
-    engineRef.current.pause();
+    try {
+      engineRef.current.pause();
+    } catch {
+      // ignore
+    }
     setIsPlaying(false);
-  };
+  }, []);
 
-  const resume = async () => {
+  const resume = useCallback(async () => {
     if (!currentLayers?.length) return false;
+
     const seq = ++playSeqRef.current;
+
     safeUnlock();
+
     try {
       await engineRef.current.play(currentLayers);
+
       if (seq !== playSeqRef.current) return false;
+
       setIsPlaying(true);
       setTempHidden(false);
+      setStickyPlayerVisible(true);
+
       return true;
     } catch (e) {
       console.error("[GlobalPlayer] resume failed:", e);
       if (seq === playSeqRef.current) setIsPlaying(false);
       return false;
     }
-  };
+  }, [currentLayers]);
 
-  const togglePlayPause = async () => {
+  const togglePlayPause = useCallback(async () => {
     if (isPlaying) {
       pause();
       return true;
     }
     return await resume();
-  };
+  }, [isPlaying, pause, resume]);
 
-  const hideStickyPlayerOnce = useCallback(() => {
-    setTempHidden(true);
+  /**
+   * IMPORTANT: Aura Studio currently calls `updateNowPlaying(...)`.
+   * Your existing AuraEditor.jsx expects this function.
+   */
+  const updateNowPlaying = useCallback((uiPresetLike, meta = {}) => {
+    if (uiPresetLike) setCurrentPlayingPreset(uiPresetLike);
+    try {
+      engineRef.current.setNowPlaying(meta);
+    } catch {
+      // ignore
+    }
   }, []);
 
-  const setStickyPlayerHidden = useCallback((hidden) => {
-    setIsStickyPlayerHidden(Boolean(hidden));
-  }, []);
-
-  const updateLayers = async (layers) => {
+  const updateLayers = useCallback(async (layers) => {
     setCurrentLayers(layers);
     try {
       await engineRef.current.updateLayers(layers);
@@ -121,7 +180,46 @@ export function GlobalPlayerProvider({ children }) {
       console.error("[GlobalPlayer] updateLayers failed:", e);
       return false;
     }
-  };
+  }, []);
+
+  const setStickyHidden = useCallback((hidden) => {
+    setIsStickyPlayerHidden(Boolean(hidden));
+  }, []);
+
+  /**
+   * This is what your App/Layout currently call on the "X".
+   * Updated per your requirement:
+   * - animate out (by setting stickyPlayerVisible false)
+   * - stop audio immediately
+   * - keep preset around briefly so exit animation can run (if Layout uses it)
+   */
+  const hideStickyPlayerOnce = useCallback(() => {
+    // Hide UI (for Layout animation support)
+    setTempHidden(true);
+    setStickyPlayerVisible(false);
+
+    // Stop audio immediately
+    playSeqRef.current += 1;
+    try {
+      engineRef.current.stop();
+    } catch {
+      // ignore
+    }
+    setIsPlaying(false);
+
+    // Allow UI animation time, then clear now-playing state
+    const mySeq = playSeqRef.current;
+    window.setTimeout(() => {
+      // If something else started playing, don't clear
+      if (playSeqRef.current !== mySeq) return;
+
+      setCurrentLayers(null);
+      setCurrentPlayingPreset(null);
+
+      // Reset for next play (next play will re-show)
+      setStickyPlayerVisible(true);
+    }, 320);
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -129,7 +227,34 @@ export function GlobalPlayerProvider({ children }) {
       currentPlayingPreset,
       currentLayers,
       isPlaying,
+
+      // sticky visibility controls
       isStickyPlayerHidden: isStickyPlayerHidden || tempHidden,
+      stickyPlayerVisible,
+
+      // playback API
+      playPreset,
+      playLayers,
+      pause,
+      resume,
+      stop,
+      togglePlayPause,
+
+      // studio compatibility
+      updateLayers,
+      updateNowPlaying,
+
+      // sticky control
+      setStickyPlayerHidden: setStickyHidden,
+      hideStickyPlayerOnce,
+    }),
+    [
+      currentPlayingPreset,
+      currentLayers,
+      isPlaying,
+      isStickyPlayerHidden,
+      tempHidden,
+      stickyPlayerVisible,
       playPreset,
       playLayers,
       pause,
@@ -137,13 +262,17 @@ export function GlobalPlayerProvider({ children }) {
       stop,
       togglePlayPause,
       updateLayers,
-      setStickyPlayerHidden,
+      updateNowPlaying,
+      setStickyHidden,
       hideStickyPlayerOnce,
-    }),
-    [currentPlayingPreset, currentLayers, isPlaying, isStickyPlayerHidden, tempHidden]
+    ]
   );
 
-  return <GlobalPlayerContext.Provider value={value}>{children}</GlobalPlayerContext.Provider>;
+  return (
+    <GlobalPlayerContext.Provider value={value}>
+      {children}
+    </GlobalPlayerContext.Provider>
+  );
 }
 
 export function useGlobalPlayer() {
