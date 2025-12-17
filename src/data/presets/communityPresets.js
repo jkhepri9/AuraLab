@@ -188,8 +188,8 @@ export const communityPresets = [
     description: "Supports calm confidence and long-horizon thinking for disciplined abundance.",
     layers: [
       // Popular abundance stack: 528 + 639, with a calm offset on the main layer
-      { id: "wa_l", name: "Binaural L (520 Hz)", type: "oscillator", frequency: 520, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
-      { id: "wa_r", name: "Binaural R (536 Hz)", type: "oscillator", frequency: 536, volume: 0.11, pan: 1, waveform: "sine", enabled: true },
+      { id: "wa_l", name: "Binaural L (520 Hz)", type: "oscillator", frequency: 520, volume: 0.08, pan: -1, waveform: "sine", enabled: true },
+      { id: "wa_r", name: "Binaural R (536 Hz)", type: "oscillator", frequency: 536, volume: 0.08, pan: 1, waveform: "sine", enabled: true },
 
       { id: "wa_gold", name: "Gold Noise", type: "noise", frequency: 0, volume: 0.04, pan: 0, waveform: "gold", enabled: true },
       { id: "wa_fire", name: "Fire (Camp)", type: "ambient", frequency: 0, volume: 0.99, pan: 0, waveform: "fire_camp", enabled: true },

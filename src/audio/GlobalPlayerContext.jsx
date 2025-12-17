@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { createAudioEngine } from "./AudioEngine";
 
 const GlobalPlayerContext = createContext(null);
@@ -13,6 +13,11 @@ export function GlobalPlayerProvider({ children }) {
   const [currentPlayingPreset, setCurrentPlayingPreset] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentLayers, setCurrentLayers] = useState(null);
+
+  // UI flags
+  // - Used by Layout to conditionally hide the sticky mini player on certain screens
+  //   (e.g., PresetEditor) without relying on route changes.
+  const [isStickyPlayerHidden, setIsStickyPlayerHidden] = useState(false);
 
   const safeUnlock = () => {
     try {
@@ -160,12 +165,17 @@ export function GlobalPlayerProvider({ children }) {
     engineRef.current.setNowPlaying(meta);
   };
 
+  const setStickyPlayerHidden = useCallback((hidden) => {
+    setIsStickyPlayerHidden(Boolean(hidden));
+  }, []);
+
   const value = useMemo(
     () => ({
       engine: engineRef.current,
       currentPlayingPreset,
       currentLayers,
       isPlaying,
+      isStickyPlayerHidden,
       playPreset,
       playLayers,
       pause,
@@ -175,8 +185,9 @@ export function GlobalPlayerProvider({ children }) {
       updateLayers,
       updateNowPlaying,
       togglePlayPause,
+      setStickyPlayerHidden,
     }),
-    [currentPlayingPreset, currentLayers, isPlaying]
+    [currentPlayingPreset, currentLayers, isPlaying, isStickyPlayerHidden]
   );
 
   return (

@@ -70,6 +70,17 @@ export default function PresetEditor({
   const player = useGlobalPlayer();
   const navigate = useNavigate();
 
+  const setStickyPlayerHidden = player.setStickyPlayerHidden;
+
+  // Hide the global sticky mini player while this editor is mounted.
+  // The editor already contains its own playback controls and layout.
+  useEffect(() => {
+    setStickyPlayerHidden?.(true);
+    return () => {
+      setStickyPlayerHidden?.(false);
+    };
+  }, [setStickyPlayerHidden]);
+
   const presetId = initialPreset?.id || "__preview__";
 
   const name = useMemo(() => initialPreset?.name || "Aura Mode", [initialPreset]);

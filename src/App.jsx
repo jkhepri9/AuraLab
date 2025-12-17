@@ -43,8 +43,7 @@ function FirstRunGate() {
 }
 
 function AppInner() {
-  const { currentPlayingPreset, isPlaying, stop, togglePlayPause, restart } =
-    useGlobalPlayer();
+  const { currentPlayingPreset, isPlaying, togglePlayPause, isStickyPlayerHidden } = useGlobalPlayer();
 
   return (
     <Router>
@@ -52,9 +51,8 @@ function AppInner() {
       <Layout
         currentPlayingPreset={currentPlayingPreset}
         isPlaying={isPlaying}
-        onStop={stop}
+        hideStickyPlayer={isStickyPlayerHidden}
         onTogglePlayPause={togglePlayPause}
-        onBack={restart}
       >
         <Routes>
           <Route path="/Start" element={<Start />} />
