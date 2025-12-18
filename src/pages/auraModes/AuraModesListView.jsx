@@ -88,24 +88,20 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
       const container = scrollWrapRef.current;
       const anchor = document.getElementById("auramodes-results-top");
 
-      // Fallback if refs not ready
       if (!anchor) return false;
 
-      // If we have the scroll container, compute precise target
       if (container && typeof container.scrollTo === "function") {
         const cRect = container.getBoundingClientRect();
         const aRect = anchor.getBoundingClientRect();
         const delta = aRect.top - cRect.top;
 
-        // small pad so the header isn't glued to the edge
         const pad = 8;
-
         const top = Math.max(0, container.scrollTop + delta - pad);
+
         container.scrollTo({ top, behavior });
         return true;
       }
 
-      // Last resort: browser default
       if (typeof anchor.scrollIntoView === "function") {
         anchor.scrollIntoView({ behavior, block: "start" });
         return true;
@@ -120,7 +116,6 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
   useEffect(() => {
     if (!pendingGoalScrollRef.current) return;
 
-    // If user selected "All Goals", there is no dedicated results section to scroll to.
     if (activeGoal === "all") {
       pendingGoalScrollRef.current = false;
       return;
@@ -129,14 +124,10 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
     let tries = 0;
 
     const tick = () => {
-      // We only attempt scrolling once results mode is actually rendered.
-      // (isFiltered should be true when a goal is selected.)
       const ok = scrollResultsTop("smooth");
       if (ok) {
-        // ✅ Hard-correct after layout settles (images/fonts/framer-motion can shift layout)
-        // First correction: quick, no animation
+        // Hard-correct after layout settles (images/fonts/framer-motion can shift layout)
         setTimeout(() => scrollResultsTop("auto"), 250);
-        // Second correction: just in case late layout changes occur
         setTimeout(() => scrollResultsTop("auto"), 650);
 
         pendingGoalScrollRef.current = false;
@@ -149,18 +140,17 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
     };
 
     requestAnimationFrame(tick);
-  }, [activeGoal, isFiltered]); // run when goal/filter state changes
+  }, [activeGoal, isFiltered]);
 
   const chooseGoalFromPanel = (goalKey) => {
     setActiveGoal(goalKey);
-    setGoalsOpen(false); // close immediately
+    setGoalsOpen(false);
 
     if (goalKey === "all") {
       scrollToTop();
       return;
     }
 
-    // Trigger scroll after state/render applies
     pendingGoalScrollRef.current = true;
   };
 
@@ -322,7 +312,6 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
           </div>
         ) : isFiltered ? (
           <div>
-            {/* ✅ Dedicated top-of-results anchor (we scroll to THIS element) */}
             <div id="auramodes-results-top" />
 
             <SectionHeader
@@ -512,11 +501,11 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
               })}
             </div>
 
-            {/* All Modes management grid (DB-managed only) */}
+            {/* Mode Presets grid */}
             <div>
               <SectionHeader
-                title="Custom Modes"
-                subtitle="Your editable library (edit, reorder, manage)."
+                title="Mode Presets"
+                subtitle="Select from these Mode Presets to quickly start a session."
               />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {presets.map((preset, index) => (

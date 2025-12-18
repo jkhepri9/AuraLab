@@ -3,26 +3,13 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import {
-  Play,
-  Heart,
-  ArrowRight,
-  MoreHorizontal,
-  Edit,
-  Edit3,
-  Trash2,
-  Check,
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { ArrowRight, Check, Heart, Play } from "lucide-react";
 
+// ------------------------------------------------------------
+// UI: Small building blocks
+// ------------------------------------------------------------
 export function SectionHeader({ title, subtitle, right }) {
   return (
     <div className="flex items-end justify-between gap-4 mb-3">
@@ -133,10 +120,14 @@ export function CompactCard({ preset, isFavorite, onToggleFavorite, onActivate, 
   );
 }
 
+// ------------------------------------------------------------
+// Full grid card (NO 3-dot menu)
+// ------------------------------------------------------------
 export function ModeCard({
   preset,
   handleActivate,
   handleEditRequest,
+  // (kept for signature compatibility; menu removed for now)
   handleDelete,
   handleReorder,
   renamePreset,
@@ -156,16 +147,20 @@ export function ModeCard({
   }, [preset.id, preset.name]);
 
   const handleRenameSubmit = (e) => {
-    e.stopPropagation();
+    e?.stopPropagation?.();
+
+    // Built-ins are view-only: exit rename mode and open details instead.
     if (isLocked) {
-      finishRename();
-      toast.info("This is a built-in preset. Save a copy to customize.");
+      finishRename?.();
+      handleEditRequest?.(preset);
       return;
     }
-    if (newName.trim() && newName !== preset.name) {
-      renamePreset.mutate({ id: preset.id, newName });
+
+    const next = String(newName || "").trim();
+    if (next && next !== preset.name) {
+      renamePreset?.mutate?.({ id: preset.id, newName: next });
     }
-    finishRename();
+    finishRename?.();
   };
 
   return (
@@ -195,6 +190,7 @@ export function ModeCard({
                 onBlur={handleRenameSubmit}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleRenameSubmit(e);
+                  if (e.key === "Escape") finishRename?.();
                 }}
                 onClick={(e) => e.stopPropagation()}
                 className="text-xl font-bold bg-white/10 border-emerald-500/50 text-white"
@@ -206,10 +202,10 @@ export function ModeCard({
                 onClick={(e) => {
                   e.stopPropagation();
                   if (isLocked) {
-                    handleEditRequest(preset);
+                    handleEditRequest?.(preset);
                     return;
                   }
-                  startRename(preset.id);
+                  startRename?.(preset.id);
                 }}
                 title={isLocked ? "Built-in preset (view details)" : "Click to rename"}
               >
@@ -238,86 +234,7 @@ export function ModeCard({
             />
           </button>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 text-white/70 hover:bg-white/10"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-44 bg-zinc-900 border-zinc-700 text-white">
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEditRequest(preset);
-                }}
-                className="cursor-pointer hover:bg-zinc-700"
-              >
-                <Edit className="w-4 h-4 mr-2" /> Edit Details
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isLocked) return;
-                  handleReorder(preset.id, "up");
-                }}
-                disabled={isLocked || index === 0}
-                className="cursor-pointer hover:bg-zinc-700"
-              >
-                Move Up
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isLocked) return;
-                  handleReorder(preset.id, "down");
-                }}
-                disabled={isLocked || index === totalPresets - 1}
-                className="cursor-pointer hover:bg-zinc-700"
-              >
-                Move Down
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isLocked) {
-                    toast.info("This is a built-in preset. Save a copy to customize.");
-                    return;
-                  }
-                  startRename(preset.id);
-                }}
-                disabled={isLocked}
-                className="cursor-pointer hover:bg-zinc-700"
-              >
-                <Edit3 className="w-4 h-4 mr-2" /> Rename
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isLocked) {
-                    toast.info("This is a built-in preset and can’t be deleted.");
-                    return;
-                  }
-                  handleDelete(preset.id);
-                }}
-                disabled={isLocked}
-                className={cn(
-                  "cursor-pointer hover:bg-red-900/50",
-                  isLocked ? "text-white/30" : "text-red-400"
-                )}
-              >
-                <Trash2 className="w-4 h-4 mr-2" /> Delete Mode
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* ✅ Three-dots menu removed entirely (temporary) */}
         </div>
 
         {preset.description ? (
