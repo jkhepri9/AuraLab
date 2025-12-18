@@ -1,15 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
 export default function LiveBackground({
-  webmSrc = "/live/home.webm",
+  active = false,
+  webmSrc = null,
   mp4Src = "/live/home.mp4",
-  poster = "/live/home.jpg",
-  dim = 0.55, // 0..1 overlay strength for readability
+  poster = "/live/home.png",
+  dim = 0.55, // 0..1 overlay strength
 }) {
   const videoRef = useRef(null);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
 
-  // Respect reduced motion
   useEffect(() => {
     const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
     if (!mq) return;
@@ -26,7 +27,26 @@ export default function LiveBackground({
     };
   }, []);
 
-  // Pause when tab is hidden, try to resume when visible
+  // When inactive, pause video (saves CPU). When active, attempt play.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+
+    if (!active) {
+      try {
+        el.pause();
+      } catch {}
+      return;
+    }
+
+    if (reduceMotion) return;
+
+    try {
+      const p = el.play?.();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } catch {}
+  }, [active, reduceMotion]);
+
   useEffect(() => {
     const onVis = () => {
       const el = videoRef.current;
@@ -36,7 +56,7 @@ export default function LiveBackground({
         try {
           el.pause();
         } catch {}
-      } else {
+      } else if (active && !reduceMotion) {
         try {
           el.play?.();
         } catch {}
@@ -45,7 +65,7 @@ export default function LiveBackground({
 
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
-  }, []);
+  }, [active, reduceMotion]);
 
   const overlayStyle = useMemo(
     () => ({
@@ -58,24 +78,43 @@ export default function LiveBackground({
     [dim]
   );
 
+  // Entire layer fades on/off; video fades in only when ready AND active.
+  const layerOpacity = active ? 1 : 0;
+  const videoOpacity = active && videoReady ? 1 : 0;
+
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-      {!reduceMotion ? (
+    <div
+      className="fixed inset-0 z-0 overflow-hidden pointer-events-none transition-opacity duration-200"
+      style={{ opacity: layerOpacity }}
+      aria-hidden="true"
+    >
+      {/* Poster always paints immediately (React layer). App-shell poster is behind this. */}
+      <img
+        src={poster}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover"
+        draggable="false"
+        loading="eager"
+      />
+
+      {!reduceMotion && (
         <video
           ref={videoRef}
-          className="h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300"
+          style={{ opacity: videoOpacity }}
           autoPlay
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="auto"
           poster={poster}
+          onCanPlay={() => setVideoReady(true)}
+          onLoadedData={() => setVideoReady(true)}
+          onError={() => setVideoReady(false)}
         >
-          <source src={webmSrc} type="video/webm" />
-          <source src={mp4Src} type="video/mp4" />
+          {webmSrc ? <source src={webmSrc} type="video/webm" /> : null}
+          {mp4Src ? <source src={mp4Src} type="video/mp4" /> : null}
         </video>
-      ) : (
-        <img src={poster} alt="" className="h-full w-full object-cover" draggable="false" />
       )}
 
       {/* Readability overlay */}

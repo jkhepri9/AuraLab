@@ -7,7 +7,7 @@ import { Pause, Play, Music, X } from "lucide-react";
 import { cn } from "./lib/utils";
 import { Toaster } from "sonner";
 
-// ✅ NEW: Calm-style live background (homepage only)
+// ✅ Calm-style live background (kept mounted; toggled on Home)
 import LiveBackground from "./components/LiveBackground";
 
 function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onTogglePlayPause, onClose }) {
@@ -51,9 +51,7 @@ function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onTogglePlayPause,
           }}
         />
 
-        {/* Sticky Player with Play/Pause and Close (X) */}
         <div className="relative w-full flex items-center gap-3 p-3 text-left">
-          {/* Tap left section opens NowPlaying or Studio */}
           <button
             type="button"
             onClick={handleOpen}
@@ -76,7 +74,6 @@ function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onTogglePlayPause,
             </div>
           </button>
 
-          {/* Play / Pause */}
           <Button
             variant="ghost"
             size="icon"
@@ -91,7 +88,6 @@ function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onTogglePlayPause,
             {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
           </Button>
 
-          {/* Close (X) */}
           <Button
             variant="ghost"
             size="icon"
@@ -122,7 +118,6 @@ export default function Layout({
   const location = useLocation();
   const isImmersive = location.pathname === "/Start";
 
-  // ✅ Live background only on homepage ("/")
   const showHomeLiveBg = !isImmersive && location.pathname === "/";
 
   const hideStickyInStudio =
@@ -142,23 +137,28 @@ export default function Layout({
       ? "pb-[calc(9rem+env(safe-area-inset-bottom))] md:pb-0"
       : "pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0";
 
+  // ✅ Critical: Home must not paint an opaque background over the shell poster.
+  const shellBg = showHomeLiveBg ? "bg-transparent" : "bg-zinc-950";
+
   return (
     <div
-      className="
-        min-h-screen bg-zinc-950 text-white relative
+      className={cn(
+        `
+        min-h-screen text-white relative
         w-screen max-w-[100vw] overflow-x-hidden touch-pan-y
-      "
+      `,
+        shellBg
+      )}
       style={{ overscrollBehaviorX: "none" }}
     >
-      {/* ✅ Calm-style live background for Home only */}
-      {showHomeLiveBg && (
-        <LiveBackground
-          webmSrc="/live/home.webm"
-          mp4Src="/live/home.mp4"
-          poster="/live/home.jpg"
-          dim={0.55}
-        />
-      )}
+      {/* ✅ Keep mounted always; toggle only */}
+      <LiveBackground
+        active={showHomeLiveBg}
+        webmSrc="/live/home.webm"
+        mp4Src="/live/home.mp4"
+        poster="/live/home.png"
+        dim={0.55}
+      />
 
       <div
         className="fixed inset-0 pointer-events-none opacity-20 w-screen max-w-[100vw] overflow-x-hidden"

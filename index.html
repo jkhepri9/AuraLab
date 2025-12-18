@@ -19,13 +19,43 @@
     <link rel="icon" type="image/png" href="/icons/favicon-16.png" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png" />
 
-    <!-- IMPORTANT:
-         Do NOT hard-link manifest.webmanifest here for Codespaces dev.
-         vite-plugin-pwa injects the manifest + SW in production builds. -->
+    <!-- ✅ Preload poster + video -->
+    <link rel="preload" as="image" href="/live/home.png" />
+    <link rel="preload" as="video" href="/live/home.mp4" type="video/mp4" />
+
+    <!-- ✅ App-shell poster: always available instantly -->
+    <style>
+      html {
+        background-color: #09090b;
+      }
+      body {
+        margin: 0;
+        background: transparent;
+      }
+
+      #app-shell-bg {
+        position: fixed;
+        inset: 0;
+        background-image: url("/live/home.png");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        pointer-events: none;
+        opacity: 1;
+        z-index: 0;
+      }
+
+      #root {
+        position: relative;
+        z-index: 1;
+      }
+    </style>
+
     <title>AuraLab</title>
   </head>
 
   <body>
+    <div id="app-shell-bg"></div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

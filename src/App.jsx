@@ -1,3 +1,5 @@
+//App.jsx
+
 import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import Layout from "./Layout";

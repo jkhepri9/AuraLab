@@ -57,12 +57,19 @@ function setupServiceWorker() {
   });
 }
 
-async function bootstrap() {
+function bootstrap() {
   setupPwaInstallCapture();
   setupServiceWorker();
 
-  const cfg = await loadPublicConfig();
-  initSupabaseFromConfig(cfg);
+  // ✅ Do not block first paint on network config.
+  // Live background + UI should mount immediately on hard refresh.
+  // Supabase has a production-safe fallback and can hydrate config later if needed.
+  initSupabaseFromConfig();
+
+  // Fire-and-forget: populates window.__AURALAB_PUBLIC_CONFIG__ for any later reads.
+  // Intentionally NOT re-initializing Supabase here to avoid swapping clients after
+  // AuthProvider subscriptions are established.
+  loadPublicConfig().catch(() => {});
 
   ReactDOM.createRoot(document.getElementById("root")).render(
     <React.StrictMode>
