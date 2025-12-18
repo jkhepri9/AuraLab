@@ -1,505 +1,26 @@
 // src/pages/AuraModes.jsx
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { db } from "@/lib/db";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import {
-  Plus,
-  Play,
-  Trash2,
-  MoreHorizontal,
-  Edit,
-  Edit3,
-  Loader2,
-  Heart,
-  Search,
-  ArrowRight,
-  ArrowUpDown,
-  Check,
-  ChevronDown,
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import PresetEditor from "@/components/presets/PresetEditor";
-import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useGlobalPlayer } from "../audio/GlobalPlayerContext";
 
-// ✅ ZODIAC PRESETS (built-in library)
+// Built-in library
 import zodiacPresets from "@/data/presets/zodiacPresets";
 
-// ------------------------------------------------------------
-// Local UX persistence (no DB changes required)
-// ------------------------------------------------------------
-const RECENTS_KEY = "auralab_recent_modes_v1"; // [{ id, t }]
-const FAVS_KEY = "auralab_favorite_modes_v1"; // [id]
+// Refactor modules
+import AuraModesListView from "./auraModes/AuraModesListView";
+import { readFavs, writeFavs } from "./auraModes/storage";
+import { dedupeById, isZodiacPreset } from "./auraModes/presetUtils";
+import { useAuraModesLibrary } from "./auraModes/hooks";
 
-function canUseStorage() {
-  try {
-    if (typeof window === "undefined") return false;
-    const k = "__t";
-    window.localStorage.setItem(k, "1");
-    window.localStorage.removeItem(k);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function readJSON(key, fallback) {
-  try {
-    if (!canUseStorage()) return fallback;
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw);
-  } catch {
-    return fallback;
-  }
-}
-function writeJSON(key, value) {
-  try {
-    if (!canUseStorage()) return;
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // ignore
-  }
-}
-function bumpRecent(id) {
-  const list = readJSON(RECENTS_KEY, []);
-  const next = [{ id, t: Date.now() }, ...list.filter((x) => x?.id !== id)];
-  writeJSON(RECENTS_KEY, next.slice(0, 24));
-}
-function readFavs() {
-  return new Set(readJSON(FAVS_KEY, []));
-}
-function writeFavs(set) {
-  writeJSON(FAVS_KEY, Array.from(set));
-}
-
-// ------------------------------------------------------------
-// Canonical goals + collections
-// ------------------------------------------------------------
-const GOALS = [
-  { key: "sleep", label: "Sleep" },
-  { key: "focus", label: "Focus" },
-  { key: "calm", label: "Calm" },
-  { key: "energy", label: "Energy" },
-  { key: "meditate", label: "Meditate" },
-  { key: "recovery", label: "Recovery" },
-];
-
-const COLLECTIONS = [
-  { key: "all", label: "All" },
-  { key: "Featured", label: "Featured" },
-  { key: "Community", label: "Community" },
-  { key: "Fan Favorites", label: "Fan Favorites" },
-  { key: "Zodiac", label: "Zodiac" }, // ✅ NEW
-  { key: "Custom", label: "Custom" },
-];
-
-function normalizeText(s) {
-  return String(s || "").toLowerCase();
-}
-
-function getCollection(preset) {
-  return preset?.collection || "Custom";
-}
-
-function getGoals(preset) {
-  if (Array.isArray(preset?.goals) && preset.goals.length) {
-    return preset.goals.map((g) => String(g).toLowerCase());
-  }
-  if (preset?.goal) return [String(preset.goal).toLowerCase()];
-  return [];
-}
-
-// ✅ Treat Zodiac as built-in (non-DB) content so we never try to rename/reorder/delete/update it in db.
-function isZodiacPreset(preset) {
-  const id = String(preset?.id || "");
-  const col = String(preset?.collection || "");
-  return col === "Zodiac" || id.startsWith("z_");
-}
-
-function safeNum(v, fallback) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
-}
-
-function durationToMinutes(d) {
-  const s = String(d || "").trim().toLowerCase();
-  // Accept: "10m", "15m", "30m", "60m", "90m"
-  const m = s.match(/^(\d+)\s*m$/);
-  if (!m) return null;
-  const n = Number(m[1]);
-  return Number.isFinite(n) ? n : null;
-}
-
-// Discover-style sort for rails:
-// - Prefer higher intent-quality presets: intensity desc, then duration asc (if present), then order asc, then name.
-function railSort(a, b) {
-  const ai = safeNum(a?.intensity, 0);
-  const bi = safeNum(b?.intensity, 0);
-  if (bi !== ai) return bi - ai;
-
-  const ad = durationToMinutes(a?.durationHint);
-  const bd = durationToMinutes(b?.durationHint);
-  if (ad != null && bd != null && ad !== bd) return ad - bd;
-  if (ad != null && bd == null) return -1;
-  if (ad == null && bd != null) return 1;
-
-  const ao = safeNum(a?.order, 0);
-  const bo = safeNum(b?.order, 0);
-  if (ao !== bo) return ao - bo;
-
-  return String(a?.name || "").localeCompare(String(b?.name || ""));
-}
-
-// De-dupe a list by id while preserving first occurrence order.
-function dedupeById(list) {
-  const seen = new Set();
-  const out = [];
-  for (const p of list || []) {
-    if (!p?.id) continue;
-    if (seen.has(p.id)) continue;
-    seen.add(p.id);
-    out.push(p);
-  }
-  return out;
-}
-
-// ------------------------------------------------------------
-// UI: Components
-// ------------------------------------------------------------
-function SectionHeader({ title, subtitle, right }) {
-  return (
-    <div className="flex items-end justify-between gap-4 mb-3">
-      <div className="min-w-0">
-        <h2 className="text-xl md:text-2xl font-extrabold text-white tracking-tight truncate">
-          {title}
-        </h2>
-        {subtitle ? <p className="text-sm text-white/60 mt-1">{subtitle}</p> : null}
-      </div>
-      {right ? <div className="shrink-0">{right}</div> : null}
-    </div>
-  );
-}
-
-function CategoryItem({ active, children, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-sm font-semibold border transition",
-        active
-          ? "bg-emerald-600 text-white border-emerald-500/60 shadow-[0_0_0_1px_rgba(16,185,129,0.25)]"
-          : "bg-white/5 text-white/80 border-white/10 hover:bg-white/10"
-      )}
-    >
-      <span className="truncate">{children}</span>
-      {active ? <Check className="w-4 h-4 shrink-0" /> : <span className="w-4 h-4 shrink-0" />}
-    </button>
-  );
-}
-
-function Rail({ children }) {
-  return <div className="flex gap-3 overflow-x-auto pb-2 pr-2">{children}</div>;
-}
-
-function CompactCard({ preset, isFavorite, onToggleFavorite, onActivate, onOpen }) {
-  return (
-    <div
-      className={cn(
-        "relative rounded-xl overflow-hidden bg-gradient-to-br from-slate-900 to-emerald-900 border border-white/10",
-        "min-w-[240px] max-w-[240px] h-[140px] shrink-0 cursor-pointer group"
-      )}
-      style={{
-        backgroundImage: preset.imageUrl ? `url(${preset.imageUrl})` : undefined,
-        backgroundSize: preset.imageUrl ? "cover" : undefined,
-        backgroundPosition: "center",
-      }}
-      onClick={() => onOpen(preset)}
-    >
-      <div className="absolute inset-0 bg-black/60 group-hover:bg-black/45 transition-colors" />
-
-      <div className="relative h-full p-3 flex flex-col justify-between">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="text-white font-extrabold leading-tight truncate">{preset.name}</div>
-            {preset.description ? (
-              <div className="text-xs text-white/70 mt-1 line-clamp-2">{preset.description}</div>
-            ) : null}
-          </div>
-
-          <button
-            type="button"
-            className={cn(
-              "h-8 w-8 rounded-full flex items-center justify-center",
-              "bg-white/10 hover:bg-white/15 border border-white/10"
-            )}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite(preset.id);
-            }}
-            title={isFavorite ? "Unfavorite" : "Favorite"}
-          >
-            <Heart
-              className={cn(
-                "w-4 h-4",
-                isFavorite ? "fill-emerald-400 text-emerald-400" : "text-white/70"
-              )}
-            />
-          </button>
-        </div>
-
-        <div className="flex items-center justify-between gap-2">
-          <Button
-            className="h-9 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-            onClick={(e) => {
-              e.stopPropagation();
-              onActivate(preset);
-            }}
-          >
-            <Play className="w-4 h-4 mr-2 fill-white" />
-            Play
-          </Button>
-
-          <Button
-            variant="ghost"
-            className="h-9 px-3 rounded-lg text-white/70 hover:bg-white/10"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpen(preset);
-            }}
-          >
-            Details <ArrowRight className="w-4 h-4 ml-1" />
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ------------------------------------------------------------
-// Full grid card (with menu + rename + reorder)
-// ------------------------------------------------------------
-function ModeCard({
-  preset,
-  handleActivate,
-  handleEditRequest,
-  handleDelete,
-  handleReorder,
-  renamePreset,
-  index,
-  totalPresets,
-  isRenaming,
-  startRename,
-  finishRename,
-  isFavorite,
-  onToggleFavorite,
-  isLocked,
-}) {
-  const [newName, setNewName] = useState(preset.name);
-
-  useEffect(() => {
-    setNewName(preset.name);
-  }, [preset.id, preset.name]);
-
-  const handleRenameSubmit = (e) => {
-    e.stopPropagation();
-    if (isLocked) {
-      finishRename();
-      toast.info("This is a built-in preset. Save a copy to customize.");
-      return;
-    }
-    if (newName.trim() && newName !== preset.name) {
-      renamePreset.mutate({ id: preset.id, newName });
-    }
-    finishRename();
-  };
-
-  return (
-    <motion.div
-      key={preset.id}
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -14 }}
-      transition={{ duration: 0.25 }}
-      className="w-full rounded-xl overflow-hidden shadow-xl transition-transform duration-300 transform hover:scale-[1.01] relative cursor-pointer group bg-gradient-to-br from-slate-900 to-emerald-900"
-      onClick={(e) => handleActivate(e, preset)}
-      style={{
-        backgroundImage: preset.imageUrl ? `url(${preset.imageUrl})` : undefined,
-        backgroundSize: preset.imageUrl ? "cover" : undefined,
-        backgroundPosition: "center",
-      }}
-    >
-      <div className="absolute inset-0 bg-black/60 group-hover:bg-black/40 transition-colors" />
-
-      <div className="relative p-5 flex flex-col justify-between h-full">
-        <div className="flex justify-between items-start mb-3 gap-2">
-          <div className="flex-1 min-w-0">
-            {isRenaming === preset.id ? (
-              <Input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onBlur={handleRenameSubmit}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleRenameSubmit(e);
-                }}
-                onClick={(e) => e.stopPropagation()}
-                className="text-xl font-bold bg-white/10 border-emerald-500/50 text-white"
-                autoFocus
-              />
-            ) : (
-              <h3
-                className="text-2xl font-extrabold text-white drop-shadow mb-1 truncate"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isLocked) {
-                    handleEditRequest(preset);
-                    return;
-                  }
-                  startRename(preset.id);
-                }}
-                title={isLocked ? "Built-in preset (view details)" : "Click to rename"}
-              >
-                {preset.name}
-              </h3>
-            )}
-          </div>
-
-          <button
-            type="button"
-            className={cn(
-              "h-9 w-9 rounded-full flex items-center justify-center",
-              "bg-white/10 hover:bg-white/15 border border-white/10"
-            )}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite(preset.id);
-            }}
-            title={isFavorite ? "Unfavorite" : "Favorite"}
-          >
-            <Heart
-              className={cn(
-                "w-4 h-4",
-                isFavorite ? "fill-emerald-400 text-emerald-400" : "text-white/70"
-              )}
-            />
-          </button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 text-white/70 hover:bg-white/10"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-44 bg-zinc-900 border-zinc-700 text-white">
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEditRequest(preset);
-                }}
-                className="cursor-pointer hover:bg-zinc-700"
-              >
-                <Edit className="w-4 h-4 mr-2" /> Edit Details
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isLocked) return;
-                  handleReorder(preset.id, "up");
-                }}
-                disabled={isLocked || index === 0}
-                className="cursor-pointer hover:bg-zinc-700"
-              >
-                Move Up
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isLocked) return;
-                  handleReorder(preset.id, "down");
-                }}
-                disabled={isLocked || index === totalPresets - 1}
-                className="cursor-pointer hover:bg-zinc-700"
-              >
-                Move Down
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isLocked) {
-                    toast.info("This is a built-in preset. Save a copy to customize.");
-                    return;
-                  }
-                  startRename(preset.id);
-                }}
-                disabled={isLocked}
-                className="cursor-pointer hover:bg-zinc-700"
-              >
-                <Edit3 className="w-4 h-4 mr-2" /> Rename
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isLocked) {
-                    toast.info("This is a built-in preset and can’t be deleted.");
-                    return;
-                  }
-                  handleDelete(preset.id);
-                }}
-                disabled={isLocked}
-                className={cn(
-                  "cursor-pointer hover:bg-red-900/50",
-                  isLocked ? "text-white/30" : "text-red-400"
-                )}
-              >
-                <Trash2 className="w-4 h-4 mr-2" /> Delete Mode
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {preset.description ? (
-          <p className="mt-1 text-sm text-white/80 line-clamp-2">{preset.description}</p>
-        ) : null}
-
-        <div className="mt-4">
-          <Button
-            onClick={(e) => handleActivate(e, preset)}
-            className="w-full h-10 font-semibold tracking-wide text-base rounded-lg shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white"
-          >
-            <Play className="w-5 h-5 mr-2 fill-white" />
-            Activate Aura Mode
-          </Button>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// ------------------------------------------------------------
-// Page
-// ------------------------------------------------------------
 export default function AuraModes() {
   const player = useGlobalPlayer();
+
   const [view, setView] = useState("list"); // 'list' | 'edit' | 'create'
   const [editingPreset, setEditingPreset] = useState(null);
   const [isRenaming, setIsRenaming] = useState(null);
@@ -511,8 +32,8 @@ export default function AuraModes() {
   const [activeCollection, setActiveCollection] = useState("all");
   const [sortBy, setSortBy] = useState("custom"); // custom | recent | az
 
-  // Filters UI (collapsible)
-  const [goalsOpen, setGoalsOpen] = useState(true);
+  // ✅ Collapsed by default (user must toggle open)
+  const [goalsOpen, setGoalsOpen] = useState(false);
 
   const [favoriteIds, setFavoriteIds] = useState(() => readFavs());
 
@@ -526,7 +47,7 @@ export default function AuraModes() {
     queryFn: () => db.presets.list(),
   });
 
-  // ✅ Combined library: Zodiac (built-in) + DB presets
+  // Combined library: Zodiac (built-in) + DB presets
   const allPresets = useMemo(() => {
     return dedupeById([...(zodiacPresets || []), ...(presets || [])]);
   }, [presets]);
@@ -572,18 +93,33 @@ export default function AuraModes() {
     onError: () => toast.error("Failed to rename mode."),
   });
 
+  const {
+    recents,
+    continuePreset,
+    favorites,
+    byCollection,
+    byGoal,
+    filtered,
+    isFiltered,
+    bumpRecent,
+  } = useAuraModesLibrary({
+    allPresets,
+    favoriteIds,
+    query,
+    activeGoal,
+    activeCollection,
+    sortBy,
+  });
+
   const sanitizeCreatePayload = (data) => {
     const out = { ...(data || {}) };
-    // Prevent accidental overwriting of built-ins / fixed ids
     if ("id" in out) delete out.id;
-    // Copies should live as user content
     if (out.collection === "Zodiac") out.collection = "Custom";
     return out;
   };
 
   const handleSave = (data) => {
-    // ✅ If the user is viewing a Zodiac preset in the editor and hits Save,
-    // we save a *copy* into the DB instead of trying to update the built-in.
+    // If editing a Zodiac preset, save as a copy (do not update built-in).
     if (editingPreset && isZodiacPreset(editingPreset)) {
       const payload = sanitizeCreatePayload({
         ...data,
@@ -633,11 +169,14 @@ export default function AuraModes() {
     reorderPreset.mutate({ id, direction });
   };
 
+  // ✅ Create New must go to Aura Studio (AuraEditor.jsx route)
   const handleCreateNew = () => {
-    player.stop();
-    setEditingPreset(null);
-    setAutoPlay(false);
-    setView("create");
+    try {
+      player.stop();
+    } catch {
+      // ignore
+    }
+    navigate("/AuraEditor");
   };
 
   const startRename = (id) => {
@@ -648,6 +187,7 @@ export default function AuraModes() {
     }
     setIsRenaming(id);
   };
+
   const finishRename = () => setIsRenaming(null);
 
   const handleActivate = (e, preset) => {
@@ -708,125 +248,13 @@ export default function AuraModes() {
     setView("edit");
 
     navigate(location.pathname, { replace: true });
-  }, [allPresets, location.search, location.pathname, navigate]);
+  }, [allPresets, location.search, location.pathname, navigate, bumpRecent]);
 
   // Sticky-player-aware padding
   const hasStickyPlayer = Boolean(player?.currentPlayingPreset);
   const pagePadBottom = hasStickyPlayer
     ? "pb-[calc(12rem+env(safe-area-inset-bottom))] md:pb-8"
     : "pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8";
-
-  // ------------------------------------------------------------
-  // Derived: maps, recents, favorites, filters, indices
-  // ------------------------------------------------------------
-  const presetById = useMemo(() => {
-    const map = new Map();
-    for (const p of allPresets) map.set(p.id, p);
-    return map;
-  }, [allPresets]);
-
-  const recents = useMemo(() => {
-    const list = readJSON(RECENTS_KEY, []);
-    const resolved = [];
-    for (const item of list) {
-      const p = presetById.get(item?.id);
-      if (p) resolved.push({ preset: p, t: item?.t || 0 });
-    }
-    return resolved;
-  }, [presetById]);
-
-  const continuePreset = recents[0]?.preset || null;
-
-  const favorites = useMemo(() => {
-    const list = allPresets.filter((p) => favoriteIds.has(p.id));
-    return dedupeById(list).sort(railSort);
-  }, [allPresets, favoriteIds]);
-
-  const byCollection = useMemo(() => {
-    const map = new Map();
-    for (const c of COLLECTIONS) {
-      if (c.key !== "all") map.set(c.key, []);
-    }
-    for (const p of allPresets) {
-      const c = getCollection(p);
-      if (!map.has(c)) map.set(c, []);
-      map.get(c).push(p);
-    }
-    for (const [k, arr] of map.entries()) map.set(k, dedupeById(arr).sort(railSort));
-    return map;
-  }, [allPresets]);
-
-  const byGoal = useMemo(() => {
-    const map = new Map();
-    for (const g of GOALS) map.set(g.key, []);
-    map.set("uncategorized", []);
-
-    for (const p of allPresets) {
-      const goals = getGoals(p);
-      if (!goals.length) {
-        map.get("uncategorized").push(p);
-        continue;
-      }
-      for (const g of goals) {
-        if (!map.has(g)) map.set(g, []);
-        map.get(g).push(p);
-      }
-    }
-    for (const [k, arr] of map.entries()) map.set(k, dedupeById(arr).sort(railSort));
-    return map;
-  }, [allPresets]);
-
-  const filtered = useMemo(() => {
-    const q = normalizeText(query).trim();
-    let list = allPresets;
-
-    if (activeCollection !== "all") {
-      list = list.filter((p) => getCollection(p) === activeCollection);
-    }
-
-    if (activeGoal !== "all") {
-      const set = new Set((byGoal.get(activeGoal) || []).map((p) => p.id));
-      list = list.filter((p) => set.has(p.id));
-    }
-
-    if (q) {
-      list = list.filter((p) => {
-        const meta = [
-          p.name,
-          p.description,
-          getCollection(p),
-          ...(Array.isArray(p.tags) ? p.tags : []),
-          ...(Array.isArray(p.scenarios) ? p.scenarios : []),
-          ...(Array.isArray(p.styles) ? p.styles : []),
-          ...(Array.isArray(p.goals) ? p.goals : []),
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-
-        return meta.includes(q);
-      });
-    }
-
-    if (sortBy === "az") {
-      list = [...list].sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
-    } else if (sortBy === "recent") {
-      const recentMap = new Map(recents.map((r) => [r.preset.id, r.t]));
-      list = [...list].sort((a, b) => (recentMap.get(b.id) || 0) - (recentMap.get(a.id) || 0));
-    } else {
-      list = [...list].sort((a, b) => {
-        const ao = safeNum(a?.order, 0);
-        const bo = safeNum(b?.order, 0);
-        if (ao !== bo) return ao - bo;
-        return String(a?.name || "").localeCompare(String(b?.name || ""));
-      });
-    }
-
-    return dedupeById(list);
-  }, [allPresets, query, activeGoal, activeCollection, sortBy, byGoal, recents]);
-
-  const isFiltered =
-    Boolean(normalizeText(query).trim()) || activeGoal !== "all" || activeCollection !== "all";
 
   const scrollToTop = () => {
     try {
@@ -862,395 +290,9 @@ export default function AuraModes() {
     scrollToTop();
   };
 
-  const activeGoalLabel = useMemo(() => {
-    if (activeGoal === "all") return "All Goals";
-    const found = GOALS.find((g) => g.key === activeGoal);
-    return found?.label || "Goals";
-  }, [activeGoal]);
-
-  // ------------------------------------------------------------
-  // Render
-  // ------------------------------------------------------------
-  return (
-    <div className={cn("h-full w-full p-6 md:p-8 overflow-y-auto bg-black/80", pagePadBottom)}>
-      {view === "list" ? (
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-            <div>
-              <h1 className="text-4xl font-extrabold text-white tracking-tight">
-                Aura Modes <span className="text-emerald-400">| Discover</span>
-              </h1>
-              <p className="text-white/60 mt-2">Find a mode fast. Or build your own.</p>
-            </div>
-
-            <Button
-              onClick={handleCreateNew}
-              className="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 font-bold shadow-lg shadow-emerald-500/30"
-            >
-              <Plus className="w-5 h-5 mr-2" /> Create New
-            </Button>
-          </div>
-
-          {/* Search + Sort + Filters */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5 mb-4">
-            <div className="flex flex-col md:flex-row md:items-center gap-3">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-white/50 absolute left-3 top-1/2 -translate-y-1/2" />
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search modes (sleep, focus, ocean, theta...)"
-                  className="pl-9 bg-black/40 border-white/10 text-white placeholder:text-white/40"
-                />
-              </div>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="bg-black/30 border-white/10 text-white hover:bg-black/40"
-                  >
-                    <ArrowUpDown className="w-4 h-4 mr-2" />
-                    Sort: {sortBy === "custom" ? "Library" : sortBy === "recent" ? "Recent" : "A–Z"}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-44 bg-zinc-900 border-zinc-700 text-white">
-                  <DropdownMenuItem
-                    onClick={() => setSortBy("custom")}
-                    className="cursor-pointer hover:bg-zinc-700"
-                  >
-                    Library Order
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setSortBy("recent")}
-                    className="cursor-pointer hover:bg-zinc-700"
-                  >
-                    Recent
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setSortBy("az")}
-                    className="cursor-pointer hover:bg-zinc-700"
-                  >
-                    A–Z
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            {/* GOALS (collapsible, smooth) */}
-            <div className="mt-4 rounded-xl border border-white/10 bg-black/20 overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setGoalsOpen((v) => !v)}
-                className="w-full px-3 py-3 flex items-center justify-between gap-3"
-              >
-                <div className="min-w-0 text-left">
-                  <div className="text-xs font-extrabold text-white/70 uppercase tracking-wider">
-                    Goals
-                  </div>
-                  <div className="text-sm font-semibold text-white truncate">{activeGoalLabel}</div>
-                </div>
-
-                <motion.div
-                  animate={{ rotate: goalsOpen ? 180 : 0 }}
-                  transition={{ duration: 0.18 }}
-                  className="shrink-0 text-white/70"
-                >
-                  <ChevronDown className="w-5 h-5" />
-                </motion.div>
-              </button>
-
-              <AnimatePresence initial={false}>
-                {goalsOpen ? (
-                  <motion.div
-                    key="goals-panel"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.22, ease: "easeOut" }}
-                    className="overflow-hidden"
-                  >
-                    <div className="px-3 pb-3 grid grid-cols-1 gap-2">
-                      <CategoryItem
-                        active={activeGoal === "all"}
-                        onClick={() => {
-                          setActiveGoal("all");
-                          scrollToTop();
-                        }}
-                      >
-                        All Goals
-                      </CategoryItem>
-
-                      {GOALS.map((g) => (
-                        <CategoryItem
-                          key={g.key}
-                          active={activeGoal === g.key}
-                          onClick={() => {
-                            setActiveGoal(g.key);
-                            scrollToTop();
-                          }}
-                        >
-                          {g.label}
-                        </CategoryItem>
-                      ))}
-                    </div>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
-            </div>
-
-            {isFiltered ? (
-              <div className="mt-4 flex justify-end">
-                <button
-                  type="button"
-                  className="text-sm text-emerald-300 hover:text-emerald-200 font-semibold"
-                  onClick={clearAllFilters}
-                >
-                  Clear
-                </button>
-              </div>
-            ) : null}
-          </div>
-
-          {isLoading && allPresets.length === 0 ? (
-            <div className="text-center py-20 text-gray-400 flex flex-col items-center">
-              <Loader2 className="w-8 h-8 animate-spin mb-4" />
-              Loading Aura Modes...
-            </div>
-          ) : allPresets.length === 0 ? (
-            <div className="text-center py-20 border-2 border-dashed border-white/10 rounded-xl">
-              <h3 className="text-2xl text-white mb-4">No Modes Yet</h3>
-              <p className="text-gray-400 mb-6">
-                Create your first Aura Mode to begin crafting custom sonic environments.
-              </p>
-              <Button
-                onClick={handleCreateNew}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-              >
-                <Plus className="w-5 h-5 mr-2" /> Create Your First Mode
-              </Button>
-            </div>
-          ) : isFiltered ? (
-            <div>
-              <SectionHeader
-                title={`Results (${filtered.length})`}
-                subtitle="Filtered by your selections."
-              />
-              {filtered.length === 0 ? (
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-white/70">
-                  No modes found. Try a different search term.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {filtered.map((preset, index) => (
-                    <ModeCard
-                      key={preset.id}
-                      preset={preset}
-                      handleActivate={handleActivate}
-                      handleEditRequest={handleEditRequest}
-                      handleDelete={handleDelete}
-                      handleReorder={handleReorder}
-                      renamePreset={renamePreset}
-                      index={index}
-                      totalPresets={filtered.length}
-                      isRenaming={isRenaming}
-                      startRename={startRename}
-                      finishRename={finishRename}
-                      isFavorite={favoriteIds.has(preset.id)}
-                      onToggleFavorite={toggleFavorite}
-                      isLocked={isZodiacPreset(preset)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-8">
-              {/* Continue + Recent */}
-              {continuePreset ? (
-                <div>
-                  <SectionHeader title="Continue" subtitle="Pick up where you left off." />
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                      <div className="min-w-0">
-                        <div className="text-white/60 text-sm font-semibold">Last played</div>
-                        <div className="text-2xl font-extrabold text-white truncate">
-                          {continuePreset.name}
-                        </div>
-                        {continuePreset.description ? (
-                          <div className="text-white/70 mt-1 line-clamp-2">
-                            {continuePreset.description}
-                          </div>
-                        ) : null}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-                          onClick={() => handleCompactActivate(continuePreset)}
-                        >
-                          <Play className="w-4 h-4 mr-2 fill-white" />
-                          Play
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="bg-black/30 border-white/10 text-white hover:bg-black/40"
-                          onClick={() => handleCompactOpen(continuePreset)}
-                        >
-                          Details <ArrowRight className="w-4 h-4 ml-2" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {recents.length > 1 ? (
-                    <div className="mt-5">
-                      <SectionHeader title="Recent" subtitle="Fast re-entry." />
-                      <Rail>
-                        {recents.slice(0, 12).map(({ preset }) => (
-                          <CompactCard
-                            key={preset.id}
-                            preset={preset}
-                            isFavorite={favoriteIds.has(preset.id)}
-                            onToggleFavorite={toggleFavorite}
-                            onActivate={handleCompactActivate}
-                            onOpen={handleCompactOpen}
-                          />
-                        ))}
-                      </Rail>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {/* Favorites */}
-              <div>
-                <SectionHeader title="Favorites" subtitle="Your go-to modes." />
-                {favorites.length === 0 ? (
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-white/70">
-                    Tap the <Heart className="inline w-4 h-4 mx-1 text-white/70" /> on any mode to
-                    save it here.
-                  </div>
-                ) : (
-                  <Rail>
-                    {favorites.slice(0, 12).map((preset) => (
-                      <CompactCard
-                        key={preset.id}
-                        preset={preset}
-                        isFavorite={favoriteIds.has(preset.id)}
-                        onToggleFavorite={toggleFavorite}
-                        onActivate={handleCompactActivate}
-                        onOpen={handleCompactOpen}
-                      />
-                    ))}
-                  </Rail>
-                )}
-              </div>
-
-              {/* Collection rails */}
-              {["Featured", "Community", "Fan Favorites", "Zodiac"].map((c) => {
-                const list = byCollection.get(c) || [];
-                if (!list.length) return null;
-                return (
-                  <div key={c}>
-                    <SectionHeader
-                      title={c}
-                      subtitle={`Curated from ${c}.`}
-                      right={
-                        <Button
-                          variant="ghost"
-                          className="text-emerald-300 hover:bg-white/5"
-                          onClick={() => applyCollection(c)}
-                        >
-                          View all <ArrowRight className="w-4 h-4 ml-1" />
-                        </Button>
-                      }
-                    />
-                    <Rail>
-                      {list.slice(0, 12).map((preset) => (
-                        <CompactCard
-                          key={preset.id}
-                          preset={preset}
-                          isFavorite={favoriteIds.has(preset.id)}
-                          onToggleFavorite={toggleFavorite}
-                          onActivate={handleCompactActivate}
-                          onOpen={handleCompactOpen}
-                        />
-                      ))}
-                    </Rail>
-                  </div>
-                );
-              })}
-
-              {/* Goal rails */}
-              <div className="space-y-6">
-                {GOALS.map((g) => {
-                  const list = byGoal.get(g.key) || [];
-                  if (!list.length) return null;
-                  return (
-                    <div key={g.key}>
-                      <SectionHeader
-                        title={g.label}
-                        subtitle={`Modes for ${g.label.toLowerCase()}.`}
-                        right={
-                          <Button
-                            variant="ghost"
-                            className="text-emerald-300 hover:bg-white/5"
-                            onClick={() => applyGoal(g.key)}
-                          >
-                            View all <ArrowRight className="w-4 h-4 ml-1" />
-                          </Button>
-                        }
-                      />
-                      <Rail>
-                        {list.slice(0, 12).map((preset) => (
-                          <CompactCard
-                            key={preset.id}
-                            preset={preset}
-                            isFavorite={favoriteIds.has(preset.id)}
-                            onToggleFavorite={toggleFavorite}
-                            onActivate={handleCompactActivate}
-                            onOpen={handleCompactOpen}
-                          />
-                        ))}
-                      </Rail>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* All Modes management grid (DB-managed only) */}
-              <div>
-                <SectionHeader
-                  title="Custom Modes"
-                  subtitle="Your editable library (edit, reorder, manage)."
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {presets.map((preset, index) => (
-                    <ModeCard
-                      key={preset.id}
-                      preset={preset}
-                      handleActivate={handleActivate}
-                      handleEditRequest={handleEditRequest}
-                      handleDelete={handleDelete}
-                      handleReorder={handleReorder}
-                      renamePreset={renamePreset}
-                      index={index}
-                      totalPresets={presets.length}
-                      isRenaming={isRenaming}
-                      startRename={startRename}
-                      finishRename={finishRename}
-                      isFavorite={favoriteIds.has(preset.id)}
-                      onToggleFavorite={toggleFavorite}
-                      isLocked={false}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      ) : (
+  if (view !== "list") {
+    return (
+      <div className={cn("h-full w-full overflow-hidden bg-black/80", pagePadBottom)}>
         <PresetEditor
           key={`${view}:${editingPreset?.id || "new"}`}
           initialPreset={editingPreset}
@@ -1258,7 +300,52 @@ export default function AuraModes() {
           onCancel={handleEditorCancel}
           autoPlay={autoPlay}
         />
-      )}
-    </div>
+      </div>
+    );
+  }
+
+  return (
+    <AuraModesListView
+      pagePadBottom={pagePadBottom}
+      ctx={{
+        isLoading,
+        presets,
+        allPresets,
+        filtered,
+        isFiltered,
+        continuePreset,
+        recents,
+        favorites,
+        byCollection,
+        byGoal,
+
+        query,
+        setQuery,
+        sortBy,
+        setSortBy,
+        goalsOpen,
+        setGoalsOpen,
+        activeGoal,
+        setActiveGoal,
+        favoriteIds,
+
+        clearAllFilters,
+        applyCollection,
+        applyGoal,
+        handleCreateNew,
+        handleActivate,
+        handleEditRequest,
+        handleDelete,
+        handleReorder,
+        renamePreset,
+        isRenaming,
+        startRename,
+        finishRename,
+        toggleFavorite,
+        handleCompactActivate,
+        handleCompactOpen,
+        scrollToTop,
+      }}
+    />
   );
 }
