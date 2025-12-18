@@ -27,6 +27,9 @@ export const fanFavoritesPresets = [
       // ✅ Sub Foundation
       { id: "fs_sub", name: "Sub Foundation (60 Hz)", type: "oscillator", frequency: 60, volume: 0.42, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (flow/focus)
+      { id: "fs_drone", name: "Atmospheric Drone (96 Hz)", type: "synth", frequency: 96, volume: 0.05, pan: 0, waveform: "drone", enabled: true },
+
       { id: "fs_amb", name: "Ambient: River (Soft)", type: "ambient", frequency: 0, volume: 0.40, pan: 0, waveform: "river_soft", enabled: true },
 
       // ~10 Hz (alpha) on a 432 base
@@ -65,6 +68,9 @@ export const fanFavoritesPresets = [
       // ✅ Sub Foundation
       { id: "sr_sub", name: "Sub Foundation (65 Hz)", type: "oscillator", frequency: 65, volume: 0.15, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (calm + productive)
+      { id: "sr_drone", name: "Atmospheric Drone (90 Hz)", type: "synth", frequency: 90, volume: 0.05, pan: 0, waveform: "drone", enabled: true },
+
       { id: "sr_amb", name: "Ambient: Ocean (Deep)", type: "ambient", frequency: 0, volume: 0.15, pan: 0, waveform: "ocean_deep", enabled: true },
 
       // ~8 Hz on a 432 base (alpha calm)
@@ -100,6 +106,9 @@ export const fanFavoritesPresets = [
     layers: [
       // ✅ Sub Foundation
       { id: "cf_sub", name: "Sub Foundation (75 Hz)", type: "oscillator", frequency: 75, volume: 0.10, pan: 0, waveform: "sine", enabled: true },
+
+      // ✅ Atmospheric Drone (creative ignition)
+      { id: "cf_drone", name: "Atmospheric Drone (110 Hz)", type: "synth", frequency: 110, volume: 0.045, pan: 0, waveform: "drone", enabled: true },
 
       { id: "cf_amb", name: "Ambient: Fire (Camp)", type: "ambient", frequency: 0, volume: 0.95, pan: 0, waveform: "fire_camp", enabled: true },
 
@@ -138,6 +147,9 @@ export const fanFavoritesPresets = [
       // ✅ Sub Foundation
       { id: "sh_sub", name: "Sub Foundation (100 Hz)", type: "oscillator", frequency: 100, volume: 0.15, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (grounding calm) — distinct from 100 Hz
+      { id: "sh_drone", name: "Atmospheric Drone (90 Hz)", type: "synth", frequency: 90, volume: 0.05, pan: 0, waveform: "drone", enabled: true },
+
       { id: "sh_amb", name: "Ambient: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.06, pan: 0, waveform: "wind_forest", enabled: true },
 
       // ~7.83 Hz (Schumann) on a 432 base
@@ -175,6 +187,9 @@ export const fanFavoritesPresets = [
     layers: [
       // ✅ Sub Foundation
       { id: "grf_sub", name: "Sub Foundation (60 Hz)", type: "oscillator", frequency: 60, volume: 0.11, pan: 0, waveform: "sine", enabled: true },
+
+      // ✅ Atmospheric Drone (focused coherence)
+      { id: "grf_drone", name: "Atmospheric Drone (96 Hz)", type: "synth", frequency: 96, volume: 0.045, pan: 0, waveform: "drone", enabled: true },
 
       { id: "grf_amb", name: "Ambient: River (Soft)", type: "ambient", frequency: 0, volume: 0.44, pan: 0, waveform: "river_soft", enabled: true },
 
@@ -215,6 +230,9 @@ export const fanFavoritesPresets = [
       // ✅ Sub Foundation
       { id: "sga_sub", name: "Sub Foundation (85 Hz)", type: "oscillator", frequency: 85, volume: 0.20, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (high-intensity focus)
+      { id: "sga_drone", name: "Atmospheric Drone (110 Hz)", type: "synth", frequency: 110, volume: 0.04, pan: 0, waveform: "drone", enabled: true },
+
       { id: "sga_amb", name: "Ambient: Crickets (Lake)", type: "ambient", frequency: 0, volume: 0.27, pan: 0, waveform: "crickets_lake", enabled: true },
 
       // Bright bed on 963 (culture), small offset for focus edge
@@ -253,6 +271,9 @@ export const fanFavoritesPresets = [
       // ✅ Sub Foundation
       { id: "ht_sub", name: "Sub Foundation (99 Hz)", type: "oscillator", frequency: 99, volume: 0.10, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (coherence/calm)
+      { id: "ht_drone", name: "Atmospheric Drone (90 Hz)", type: "synth", frequency: 90, volume: 0.05, pan: 0, waveform: "drone", enabled: true },
+
       { id: "ht_amb", name: "Ambient: Birds (Park)", type: "ambient", frequency: 0, volume: 0.28, pan: 0, waveform: "birds_park", enabled: true },
 
       // ~10 Hz on 528
@@ -289,6 +310,9 @@ export const fanFavoritesPresets = [
     layers: [
       // ✅ Sub Foundation
       { id: "rr_sub", name: "Sub Foundation (90 Hz)", type: "oscillator", frequency: 90, volume: 0.15, pan: 0, waveform: "sine", enabled: true },
+
+      // ✅ Atmospheric Drone (sleep/recovery) — avoid duplicating 90 Hz
+      { id: "rr_drone", name: "Atmospheric Drone (84 Hz)", type: "synth", frequency: 84, volume: 0.055, pan: 0, waveform: "drone", enabled: true },
 
       { id: "rr_amb", name: "Ambient: Thunder (Rolling)", type: "ambient", frequency: 0, volume: 0.30, pan: 0, waveform: "thunder_rolling", enabled: true },
 

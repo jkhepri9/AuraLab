@@ -23,6 +23,9 @@ export const FEATURED_PRESETS = [
       // ✅ Sub Foundation (sleep body)
       { id: "ds_sub", name: "Sub Foundation (65 Hz)", type: "oscillator", frequency: 65, volume: 0.40, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (deep sleep)
+      { id: "ds_drone", name: "Atmospheric Drone (84 Hz)", type: "synth", frequency: 84, volume: 0.06, pan: 0, waveform: "drone", enabled: true },
+
       { id: "ds_amb", name: "Ambient: Ocean Deep", type: "ambient", waveform: "ocean_deep", volume: 0.08, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
 
       // Deep sleep bed anchored to 432 with a gentle low-offset (popular approach)
@@ -59,6 +62,9 @@ export const FEATURED_PRESETS = [
     layers: [
       // ✅ Sub Foundation (calm bed)
       { id: "tg_sub", name: "Sub Foundation (55 Hz)", type: "oscillator", frequency: 55, volume: 0.04, pan: 0, waveform: "sine", enabled: true },
+
+      // ✅ Atmospheric Drone (stillness/meditation)
+      { id: "tg_drone", name: "Atmospheric Drone (84 Hz)", type: "synth", frequency: 84, volume: 0.055, pan: 0, waveform: "drone", enabled: true },
 
       { id: "tg_amb", name: "Ambient: Wind Forest", type: "ambient", waveform: "wind_forest", volume: 0.08, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
 
@@ -97,6 +103,9 @@ export const FEATURED_PRESETS = [
       // ✅ Sub Foundation (stability)
       { id: "ff_sub", name: "Sub Foundation (70 Hz)", type: "oscillator", frequency: 70, volume: 0.15, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (stable focus)
+      { id: "ff_drone", name: "Atmospheric Drone (96 Hz)", type: "synth", frequency: 96, volume: 0.045, pan: 0, waveform: "drone", enabled: true },
+
       { id: "ff_amb", name: "Ambient: Campfire", type: "ambient", waveform: "fire_camp", volume: 0.95, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
 
       // Popular focus/clarity anchors: 528 + 741 (use 528 as main bed)
@@ -132,6 +141,9 @@ export const FEATURED_PRESETS = [
     layers: [
       // ✅ Sub Foundation (coherence)
       { id: "hc_sub", name: "Sub Foundation (55 Hz)", type: "oscillator", frequency: 55, volume: 0.11, pan: 0, waveform: "sine", enabled: true },
+
+      // ✅ Atmospheric Drone (coherence/calm reset)
+      { id: "hc_drone", name: "Atmospheric Drone (90 Hz)", type: "synth", frequency: 90, volume: 0.05, pan: 0, waveform: "drone", enabled: true },
 
       { id: "hc_amb", name: "Ambient: Park Birds", type: "ambient", waveform: "birds_park", volume: 0.23, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 17000, Q: 0.7 } },
 
@@ -171,6 +183,9 @@ export const FEATURED_PRESETS = [
       // ✅ Sub Foundation (drive)
       { id: "ei_sub", name: "Sub Foundation (80 Hz)", type: "oscillator", frequency: 80, volume: 0.02, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (morning ignition)
+      { id: "ei_drone", name: "Atmospheric Drone (110 Hz)", type: "synth", frequency: 110, volume: 0.04, pan: 0, waveform: "drone", enabled: true },
+
       { id: "ei_amb", name: "Ambient: Wind Soft", type: "ambient", waveform: "wind_soft", volume: 0.22, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 17000, Q: 0.7 } },
 
       // Popular “activation” anchor: 741 / 852 / 963
@@ -208,6 +223,9 @@ export const FEATURED_PRESETS = [
       // ✅ Sub Foundation (relaxation)
       { id: "zg_sub", name: "Sub Foundation (55 Hz)", type: "oscillator", frequency: 55, volume: 0.25, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (gentle meditation)
+      { id: "zg_drone", name: "Atmospheric Drone (84 Hz)", type: "synth", frequency: 84, volume: 0.055, pan: 0, waveform: "drone", enabled: true },
+
       { id: "p2_amb", name: "Ambient: Gentle River", type: "ambient", waveform: "river_soft", volume: 0.33, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
       { id: "hc_amb", name: "Ambient: Park Birds", type: "ambient", waveform: "birds_park", volume: 0.23, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 17000, Q: 0.7 } },
 
@@ -244,6 +262,9 @@ export const FEATURED_PRESETS = [
       // ✅ Sub Foundation (wind-down)
       { id: "of_sub", name: "Sub Foundation (111 Hz)", type: "oscillator", frequency: 111, volume: 0.20, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (wind-down/sleep prep)
+      { id: "of_drone", name: "Atmospheric Drone (84 Hz)", type: "synth", frequency: 84, volume: 0.055, pan: 0, waveform: "drone", enabled: true },
+
       { id: "p3_amb", name: "Ambient: Ocean Deep", type: "ambient", waveform: "ocean_deep", volume: 0.30, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
 
       // Replace sub-audible “3 Hz oscillator” with a 432-based low-offset drift
@@ -279,6 +300,9 @@ export const FEATURED_PRESETS = [
     layers: [
       // ✅ Sub Foundation (night grounding)
       { id: "ns_sub", name: "Sub Foundation (80 Hz)", type: "oscillator", frequency: 80, volume: 0.30, pan: 0, waveform: "sine", enabled: true },
+
+      // ✅ Atmospheric Drone (night wind-down)
+      { id: "ns_drone", name: "Atmospheric Drone (90 Hz)", type: "synth", frequency: 90, volume: 0.055, pan: 0, waveform: "drone", enabled: true },
 
       { id: "p4_amb", name: "Ambient: Thunder Rolling", type: "ambient", waveform: "thunder_rolling", volume: 0.20, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
 

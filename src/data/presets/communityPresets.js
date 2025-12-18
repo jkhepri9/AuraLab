@@ -24,6 +24,9 @@ export const communityPresets = [
       // ✅ Sub Foundation (comfort / low-end safety bed)
       { id: "ld_sub", name: "Sub Foundation (72 Hz)", type: "oscillator", frequency: 72, volume: 0.12, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (sleep/dreaming) — must be >= 70 Hz and not the same as sub
+      { id: "ld_drone", name: "Atmospheric Drone (84 Hz)", type: "synth", frequency: 84, volume: 0.06, pan: 0, waveform: "drone", enabled: true },
+
       // Theta-style binaural using a 432 Hz anchor (popular sound healing)
       { id: "ld_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 432, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
       { id: "ld_r", name: "Binaural R (436 Hz)", type: "oscillator", frequency: 436, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
@@ -60,6 +63,9 @@ export const communityPresets = [
     layers: [
       // ✅ Sub Foundation (comfort / grounding)
       { id: "sc_sub", name: "Sub Foundation (80 Hz)", type: "oscillator", frequency: 80, volume: 0.12, pan: 0, waveform: "sine", enabled: true },
+
+      // ✅ Atmospheric Drone (calm/regulation)
+      { id: "sc_drone", name: "Atmospheric Drone (90 Hz)", type: "synth", frequency: 90, volume: 0.06, pan: 0, waveform: "drone", enabled: true },
 
       { id: "sc_amb", name: "Ambient: Rain Light", type: "ambient", waveform: "rain_light", volume: 0.40, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
 
@@ -99,6 +105,9 @@ export const communityPresets = [
       // ✅ Sub Foundation (comfort)
       { id: "pr_sub", name: "Sub Foundation (70 Hz)", type: "oscillator", frequency: 70, volume: 0.30, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (recovery/downshift) — avoid matching 70 Hz exactly
+      { id: "pr_drone", name: "Atmospheric Drone (84 Hz)", type: "synth", frequency: 84, volume: 0.045, pan: 0, waveform: "drone", enabled: true },
+
       // Popular “pain relief” tone: 174 Hz, with a gentle low-offset beat
       { id: "pr_l", name: "Binaural L (170 Hz)", type: "oscillator", frequency: 170, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
       { id: "pr_r", name: "Binaural R (178 Hz)", type: "oscillator", frequency: 178, volume: 0.11, pan: 1, waveform: "sine", enabled: true },
@@ -134,6 +143,9 @@ export const communityPresets = [
     layers: [
       // ✅ Sub Foundation (stability under high harmonics)
       { id: "sg_sub", name: "Sub Foundation (80 Hz)", type: "oscillator", frequency: 80, volume: 0.15, pan: 0, waveform: "sine", enabled: true },
+
+      // ✅ Atmospheric Drone (focus/energy) — low bed without duplicating sub
+      { id: "sg_drone", name: "Atmospheric Drone (110 Hz)", type: "synth", frequency: 110, volume: 0.04, pan: 0, waveform: "drone", enabled: true },
 
       // Bright “portal” bed: 963 anchor with a subtle offset, plus an audible 432 stabilizer
       { id: "sg_l", name: "Binaural L (963 Hz)", type: "oscillator", frequency: 963, volume: 0.08, pan: -1, waveform: "sine", enabled: true },
@@ -173,6 +185,9 @@ export const communityPresets = [
       // ✅ Sub Foundation (coherence bed)
       { id: "gr_sub", name: "Sub Foundation (65 Hz)", type: "oscillator", frequency: 65, volume: 0.11, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (coherence/creative focus)
+      { id: "gr_drone", name: "Atmospheric Drone (96 Hz)", type: "synth", frequency: 96, volume: 0.05, pan: 0, waveform: "drone", enabled: true },
+
       // Already aligned with popular “sacred math” patterns; keep core structure and add a subtle 432 stabilizer
       { id: "gr_161", name: "Phi Center (161.8 Hz)", type: "oscillator", frequency: 161.8, volume: 0.24, pan: 0, waveform: "sine", enabled: true },
       { id: "gr_89", name: "Fibonacci (89 Hz)", type: "oscillator", frequency: 89, volume: 0.30, pan: -0.15, waveform: "sine", enabled: true },
@@ -202,6 +217,8 @@ export const communityPresets = [
       // ✅ Sub Foundation (coherence bed)
       { id: "gr_sub", name: "Sub Foundation (55 Hz)", type: "oscillator", frequency: 55, volume: 0.025, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (meditative focus/visualization)
+      { id: "te_drone", name: "Atmospheric Drone (90 Hz)", type: "synth", frequency: 90, volume: 0.05, pan: 0, waveform: "drone", enabled: true },
 
       { id: "te_l", name: "Binaural L (430 Hz)", type: "oscillator", frequency: 430, volume: 0.12, pan: -1, waveform: "sine", enabled: true },
       { id: "te_r", name: "Binaural R (434 Hz)", type: "oscillator", frequency: 434, volume: 0.12, pan: 1, waveform: "sine", enabled: true },
@@ -234,6 +251,9 @@ export const communityPresets = [
     layers: [
       // ✅ Sub Foundation (stability + drive)
       { id: "gm_sub", name: "Sub Foundation (80 Hz)", type: "oscillator", frequency: 80, volume: 0.25, pan: 0, waveform: "sine", enabled: true },
+
+      // ✅ Atmospheric Drone (execution/drive)
+      { id: "gm_drone", name: "Atmospheric Drone (110 Hz)", type: "synth", frequency: 110, volume: 0.04, pan: 0, waveform: "drone", enabled: true },
 
       // Popular “activation” anchors: 528 + 963
       { id: "gm_l", name: "Binaural L (524 Hz)", type: "oscillator", frequency: 524, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
@@ -269,6 +289,9 @@ export const communityPresets = [
       // ✅ Sub Foundation (warmth / body)
       { id: "mm_sub", name: "Sub Foundation (60 Hz)", type: "oscillator", frequency: 60, volume: 0.025, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (creative flow/practice)
+      { id: "mm_drone", name: "Atmospheric Drone (96 Hz)", type: "synth", frequency: 96, volume: 0.05, pan: 0, waveform: "drone", enabled: true },
+
       // Flow-state bed on 432 with alpha-ish offset
       { id: "mm_l", name: "Binaural L (428 Hz)", type: "oscillator", frequency: 428, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
       { id: "mm_r", name: "Binaural R (436 Hz)", type: "oscillator", frequency: 436, volume: 0.10, pan: 1, waveform: "sine", enabled: true },
@@ -303,6 +326,9 @@ export const communityPresets = [
       // ✅ Sub Foundation (grounded confidence)
       { id: "wa_sub", name: "Sub Foundation (55 Hz)", type: "oscillator", frequency: 55, volume: 0.025, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (planning/calm confidence)
+      { id: "wa_drone", name: "Atmospheric Drone (90 Hz)", type: "synth", frequency: 90, volume: 0.05, pan: 0, waveform: "drone", enabled: true },
+
       // Popular abundance stack: 528 + 639, with a calm offset on the main layer
       { id: "wa_l", name: "Binaural L (520 Hz)", type: "oscillator", frequency: 520, volume: 0.08, pan: -1, waveform: "sine", enabled: true },
       { id: "wa_r", name: "Binaural R (536 Hz)", type: "oscillator", frequency: 536, volume: 0.08, pan: 1, waveform: "sine", enabled: true },
@@ -331,6 +357,10 @@ export const communityPresets = [
       { id: "ef_brown", name: "Brown Noise", type: "noise", frequency: 0, volume: 0.10, pan: 0, waveform: "brown", enabled: true },
       { id: "ef_river", name: "River (Rapids)", type: "ambient", frequency: 0, volume: 0.30, pan: 0, waveform: "river_rapids", enabled: true },
       { id: "ef_55", name: "Sub (55 Hz)", type: "oscillator", frequency: 55, volume: 0.03, pan: 0, waveform: "sine", enabled: true },
+
+      // ✅ Atmospheric Drone (grounding/steady calm) — audible low bed, >= 70 Hz
+      { id: "ef_drone", name: "Atmospheric Drone (90 Hz)", type: "synth", frequency: 90, volume: 0.05, pan: 0, waveform: "drone", enabled: true },
+
       { id: "ef_33", name: "Sub (33.8 Hz)", type: "oscillator", frequency: 33.8, volume: 0.08, pan: 0, waveform: "sine", enabled: true },
       { id: "ef_7", name: "Sub (7.83 Hz)", type: "oscillator", frequency: 7.83, volume: 0.08, pan: 0, waveform: "sine", enabled: true },
       { id: "c_earth_frequency_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", frequency: 0, volume: 0.11, pan: 0, waveform: "wind_forest", enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },

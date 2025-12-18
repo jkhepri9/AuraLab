@@ -37,6 +37,9 @@ export const zodiacPresets = [
     layers: [
       { id: "ar_sub", name: "Sub Foundation (80 Hz)", type: "oscillator", frequency: 80, volume: 0.2, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (energy/drive)
+      { id: "ar_drone", name: "Atmospheric Drone (110 Hz)", type: "synth", frequency: 110, volume: 0.04, pan: 0, waveform: "drone", enabled: true },
+
       // Binaural: 16 Hz (low-beta / action edge)
       { id: "ar_l", name: "Binaural L (220 Hz)", type: "oscillator", frequency: 205, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
       { id: "ar_r", name: "Binaural R (236 Hz)", type: "oscillator", frequency: 235, volume: 0.11, pan: 1, waveform: "sine", enabled: true },
@@ -79,6 +82,9 @@ export const zodiacPresets = [
     layers: [
       { id: "ta_sub", name: "Sub Foundation (65 Hz)", type: "oscillator", frequency: 65, volume: 0.15, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (comfort/grounding)
+      { id: "ta_drone", name: "Atmospheric Drone (84 Hz)", type: "synth", frequency: 84, volume: 0.055, pan: 0, waveform: "drone", enabled: true },
+
       // Binaural: 6 Hz (theta calm / body release)
       { id: "ta_l", name: "Binaural L (174 Hz)", type: "oscillator", frequency: 170, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
       { id: "ta_r", name: "Binaural R (180 Hz)", type: "oscillator", frequency: 180, volume: 0.11, pan: 1, waveform: "sine", enabled: true },
@@ -117,6 +123,9 @@ export const zodiacPresets = [
 
     layers: [
       { id: "ge_sub", name: "Sub Foundation (70 Hz)", type: "oscillator", frequency: 70, volume: 0.15, pan: 0, waveform: "sine", enabled: true },
+
+      // ✅ Atmospheric Drone (learning/clarity)
+      { id: "ge_drone", name: "Atmospheric Drone (96 Hz)", type: "synth", frequency: 96, volume: 0.045, pan: 0, waveform: "drone", enabled: true },
 
       // Binaural: 12 Hz (focused alpha / learning-ready)
       { id: "ge_l", name: "Binaural L (240 Hz)", type: "oscillator", frequency: 238, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
@@ -157,6 +166,9 @@ export const zodiacPresets = [
     layers: [
       { id: "ca_sub", name: "Sub Foundation (65 Hz)", type: "oscillator", frequency: 65, volume: 0.15, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (nurture/sleep)
+      { id: "ca_drone", name: "Atmospheric Drone (84 Hz)", type: "synth", frequency: 84, volume: 0.06, pan: 0, waveform: "drone", enabled: true },
+
       // Binaural: 4 Hz (theta / emotional settling)
       { id: "ca_l", name: "Binaural L (220 Hz)", type: "oscillator", frequency: 220, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
       { id: "ca_r", name: "Binaural R (224 Hz)", type: "oscillator", frequency: 224, volume: 0.11, pan: 1, waveform: "sine", enabled: true },
@@ -195,6 +207,9 @@ export const zodiacPresets = [
 
     layers: [
       { id: "le_sub", name: "Sub Foundation (85 Hz)", type: "oscillator", frequency: 85, volume: 0.15, pan: 0, waveform: "sine", enabled: true },
+
+      // ✅ Atmospheric Drone (confidence/command)
+      { id: "le_drone", name: "Atmospheric Drone (110 Hz)", type: "synth", frequency: 110, volume: 0.04, pan: 0, waveform: "drone", enabled: true },
 
       // Binaural: 18 Hz (high beta / “spotlight” energy)
       { id: "le_l", name: "Binaural L (260 Hz)", type: "oscillator", frequency: 180, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
@@ -235,6 +250,9 @@ export const zodiacPresets = [
     layers: [
       { id: "vi_sub", name: "Sub Foundation (60 Hz)", type: "oscillator", frequency: 60, volume: 0.12, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (precision focus)
+      { id: "vi_drone", name: "Atmospheric Drone (96 Hz)", type: "synth", frequency: 96, volume: 0.045, pan: 0, waveform: "drone", enabled: true },
+
       // Binaural: 14 Hz (focused beta, not too aggressive)
       { id: "vi_l", name: "Binaural L (240 Hz)", type: "oscillator", frequency: 240, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
       { id: "vi_r", name: "Binaural R (254 Hz)", type: "oscillator", frequency: 255, volume: 0.10, pan: 1, waveform: "sine", enabled: true },
@@ -273,6 +291,9 @@ export const zodiacPresets = [
 
     layers: [
       { id: "li_sub", name: "Sub Foundation (80 Hz)", type: "oscillator", frequency: 80, volume: 0.20, pan: 0, waveform: "sine", enabled: true },
+
+      // ✅ Atmospheric Drone (balance/coherence)
+      { id: "li_drone", name: "Atmospheric Drone (90 Hz)", type: "synth", frequency: 90, volume: 0.05, pan: 0, waveform: "drone", enabled: true },
 
       // Binaural: 10 Hz (alpha harmony / coherence)
       { id: "li_l", name: "Binaural L (518 Hz)", type: "oscillator", frequency: 524, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
@@ -313,6 +334,9 @@ export const zodiacPresets = [
     layers: [
       { id: "sc_sub", name: "Sub Foundation (60 Hz)", type: "oscillator", frequency: 60, volume: 0.11, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (depth/reset)
+      { id: "scor_drone", name: "Atmospheric Drone (90 Hz)", type: "synth", frequency: 90, volume: 0.05, pan: 0, waveform: "drone", enabled: true },
+
       // Binaural: 7 Hz (theta depth / inward attention)
       { id: "scor_l", name: "Binaural L (396 Hz)", type: "oscillator", frequency: 185, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
       { id: "scor_r", name: "Binaural R (403 Hz)", type: "oscillator", frequency: 200, volume: 0.10, pan: 1, waveform: "sine", enabled: true },
@@ -351,6 +375,9 @@ export const zodiacPresets = [
 
     layers: [
       { id: "sa_sub", name: "Sub Foundation (75 Hz)", type: "oscillator", frequency: 75, volume: 0.12, pan: 0, waveform: "sine", enabled: true },
+
+      // ✅ Atmospheric Drone (expansion/drive)
+      { id: "sa_drone", name: "Atmospheric Drone (110 Hz)", type: "synth", frequency: 110, volume: 0.04, pan: 0, waveform: "drone", enabled: true },
 
       // Binaural: 15 Hz (motivated focus / expedition)
       { id: "sa_l", name: "Binaural L (432 Hz)", type: "oscillator", frequency: 422, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
@@ -391,6 +418,9 @@ export const zodiacPresets = [
     layers: [
       { id: "cp_sub", name: "Sub Foundation (80 Hz)", type: "oscillator", frequency: 80, volume: 0.11, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (discipline/sustained work)
+      { id: "cp_drone", name: "Atmospheric Drone (96 Hz)", type: "synth", frequency: 96, volume: 0.045, pan: 0, waveform: "drone", enabled: true },
+
       // Binaural: 13 Hz (steady beta / sustained work)
       { id: "cp_l", name: "Binaural L (233 Hz)", type: "oscillator", frequency: 200, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
       { id: "cp_r", name: "Binaural R (246 Hz)", type: "oscillator", frequency: 220, volume: 0.10, pan: 1, waveform: "sine", enabled: true },
@@ -430,6 +460,9 @@ export const zodiacPresets = [
     layers: [
       { id: "aq_sub", name: "Sub Foundation (65 Hz)", type: "oscillator", frequency: 65, volume: 0.11, pan: 0, waveform: "sine", enabled: true },
 
+      // ✅ Atmospheric Drone (innovation/insight)
+      { id: "aq_drone", name: "Atmospheric Drone (108 Hz)", type: "synth", frequency: 108, volume: 0.045, pan: 0, waveform: "drone", enabled: true },
+
       // Binaural: 11 Hz (alpha-to-low-beta insight)
       { id: "aq_l", name: "Binaural L (288 Hz)", type: "oscillator", frequency: 222, volume: 0.10, pan: -1, waveform: "sine", enabled: true },
       { id: "aq_r", name: "Binaural R (299 Hz)", type: "oscillator", frequency: 244, volume: 0.10, pan: 1, waveform: "sine", enabled: true },
@@ -468,6 +501,9 @@ export const zodiacPresets = [
 
     layers: [
       { id: "pi_sub", name: "Sub Foundation (80 Hz)", type: "oscillator", frequency: 80, volume: 0.15, pan: 0, waveform: "sine", enabled: true },
+
+      // ✅ Atmospheric Drone (dream/trance)
+      { id: "pi_drone", name: "Atmospheric Drone (84 Hz)", type: "synth", frequency: 84, volume: 0.06, pan: 0, waveform: "drone", enabled: true },
 
       // Binaural: 3 Hz (delta edge / drifting into sleep)
       { id: "pi_l", name: "Binaural L (200 Hz)", type: "oscillator", frequency: 220, volume: 0.11, pan: -1, waveform: "sine", enabled: true },

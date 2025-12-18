@@ -4,7 +4,9 @@
 // - Ships with built-in presets (featured/community/fan favorites)
 // - Persists user edits to localStorage so modes survive refresh/reload
 // - ✅ Adds Discover metadata defaults for user-created / legacy stored presets
+// - ✅ Option A: Versionless migration that guarantees Atmospheric Drone on ALL presets
 // -----------------------------------------------------------------------------
+
 
 import { allPresets, initialPresets } from "@/data/presets";
 
@@ -101,7 +103,6 @@ function normalizeGoals(goals, fallbackText = "") {
   }
 
   // Minimal heuristic ONLY when no explicit goal(s) exist:
-  // (This is just to avoid "Custom" modes becoming uncategorized forever.)
   const t = String(fallbackText || "").toLowerCase();
 
   const hits = [];
@@ -120,10 +121,6 @@ function normalizeGoals(goals, fallbackText = "") {
 }
 
 function detectBinaural(layers) {
-  // Heuristic based on typical binaural construction:
-  // - two oscillators
-  // - opposite pan
-  // - small frequency difference (0.5–40 Hz)
   const oscs = (layers || [])
     .filter((l) => (l?.type === "oscillator" || l?.type === "frequency") && (l?.enabled ?? true))
     .map((l) => ({
@@ -137,7 +134,6 @@ function detectBinaural(layers) {
       const a = oscs[i];
       const b = oscs[j];
 
-      // opposite-ish pans
       if (!((a.pan < -0.25 && b.pan > 0.25) || (b.pan < -0.25 && a.pan > 0.25))) continue;
 
       const diff = Math.abs(a.frequency - b.frequency);
@@ -172,9 +168,10 @@ function ensureDiscoverDefaults(preset) {
 
   const goals = normalizeGoals(preset?.goals ?? preset?.goal, fallbackText);
 
-  const styles = Array.isArray(preset?.styles) && preset.styles.length
-    ? uniq(preset.styles.map((s) => String(s || "").trim()))
-    : inferStyles(layers);
+  const styles =
+    Array.isArray(preset?.styles) && preset.styles.length
+      ? uniq(preset.styles.map((s) => String(s || "").trim()))
+      : inferStyles(layers);
 
   const headphonesRecommended =
     typeof preset?.headphonesRecommended === "boolean"
@@ -243,6 +240,215 @@ function ensureLayerDefaults(layer, i, seed) {
   };
 }
 
+// -----------------------------------------------------------------------------
+// OPTION A — ATMOSPHERIC DRONE MIGRATION (idempotent)
+// Ensures EVERY preset contains a low-end atmospheric drone synth layer:
+// - type: "synth"
+// - waveform: "drone"
+// - frequency >= 70 Hz (audible)
+// - not equal to the preset's sub foundation frequency
+// - volume MUST be within 0.1–0.3 (per your spec)
+// -----------------------------------------------------------------------------
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function findSubFoundationFrequency(layers) {
+  const ls = Array.isArray(layers) ? layers : [];
+
+  // Strong signals first: id/name contains "sub"
+  const subByIdOrName = ls.find((l) => {
+    const id = String(l?.id || "").toLowerCase();
+    const name = String(l?.name || "").toLowerCase();
+    const type = String(l?.type || "").toLowerCase();
+    const f = Number(l?.frequency ?? NaN);
+
+    if (!Number.isFinite(f)) return false;
+    if (!(type === "oscillator" || type === "frequency")) return false;
+
+    return id.includes("sub") || name.includes("sub foundation") || name.startsWith("sub");
+  });
+
+  if (subByIdOrName && Number.isFinite(Number(subByIdOrName.frequency))) {
+    return Number(subByIdOrName.frequency);
+  }
+
+  // Fallback: choose lowest oscillator-ish frequency in a "sub range"
+  const candidates = ls
+    .filter((l) => {
+      const type = String(l?.type || "").toLowerCase();
+      if (!(type === "oscillator" || type === "frequency")) return false;
+      const f = Number(l?.frequency ?? NaN);
+      return Number.isFinite(f) && f > 0 && f <= 140;
+    })
+    .map((l) => Number(l.frequency))
+    .sort((a, b) => a - b);
+
+  return candidates.length ? candidates[0] : null;
+}
+
+function pickDroneFrequency(preset) {
+  const goals = Array.isArray(preset?.goals) ? preset.goals : [];
+  const intensity = typeof preset?.intensity === "number" ? preset.intensity : 3;
+
+  // Goal-first mapping: low-end but audible and distinct from sub foundations.
+  const primary = String(goals[0] || "").toLowerCase();
+
+  let base;
+  switch (primary) {
+    case "sleep":
+      base = 88;
+      break;
+    case "recovery":
+      base = 92;
+      break;
+    case "calm":
+      base = 96;
+      break;
+    case "meditate":
+      base = 100;
+      break;
+    case "energy":
+      base = 132;
+      break;
+    case "focus":
+    default:
+      base = 110;
+      break;
+  }
+
+  // Small intensity shaping (kept subtle to avoid “cool” over “effective”)
+  const iAdj = Math.max(-2, Math.min(2, Math.round((Number(intensity) - 3) * 1)));
+  let f = base + iAdj * 2;
+
+  // Hard constraints: audible + low-end
+  if (f < 70) f = 70;
+  if (f > 160) f = 160;
+
+  const subF = findSubFoundationFrequency(preset?.layers);
+  if (Number.isFinite(subF)) {
+    // Avoid same (or essentially same) as sub foundation.
+    if (Math.abs(f - subF) < 1) {
+      const up = f + 7;
+      const down = f - 7;
+      if (up <= 160) f = up;
+      else if (down >= 70) f = down;
+      else f = Math.min(160, Math.max(70, f + 3));
+    }
+  }
+
+  return f;
+}
+
+function pickDroneVolume(preset) {
+  const goals = Array.isArray(preset?.goals) ? preset.goals : [];
+  const primary = String(goals[0] || "").toLowerCase();
+
+  // REQUIRED SPEC: volume must be within 0.1–0.3
+  // Goal-weighted values, still strictly in-range.
+  switch (primary) {
+    case "energy":
+      return 0.20;
+    case "focus":
+      return 0.17;
+    case "meditate":
+      return 0.15;
+    case "calm":
+      return 0.14;
+    case "sleep":
+      return 0.12;
+    case "recovery":
+      return 0.13;
+    default:
+      return 0.16;
+  }
+}
+
+function ensureAtmosphericDrone(preset, seedForDefaults) {
+  const layers = Array.isArray(preset?.layers) ? [...preset.layers] : [];
+
+  // Already has a drone synth?
+  const hasDrone = layers.some((l) => {
+    const type = String(l?.type || "").toLowerCase();
+    const wf = String(l?.waveform || "").toLowerCase();
+    const id = String(l?.id || "").toLowerCase();
+    return (type === "synth" && wf === "drone") || id.includes("atm_drone") || id.includes("_drone");
+  });
+
+  if (hasDrone) {
+    // Enforce policy:
+    // - drone must be >= 70 Hz
+    // - drone volume must be within 0.1–0.3
+    const next = layers.map((l) => {
+      const type = String(l?.type || "").toLowerCase();
+      const wf = String(l?.waveform || "").toLowerCase();
+      const id = String(l?.id || "").toLowerCase();
+      const isDrone =
+        (type === "synth" && wf === "drone") ||
+        id.includes("atm_drone") ||
+        id.includes("_drone");
+
+      if (!isDrone) return l;
+
+      // Frequency enforcement
+      const f0 = Number(l?.frequency ?? NaN);
+      const safeF = Number.isFinite(f0) && f0 >= 70
+        ? f0
+        : pickDroneFrequency({ ...preset, layers });
+
+      // Volume enforcement (STRICT 0.1–0.3)
+      const v0 = Number(l?.volume ?? NaN);
+      const safeV = Number.isFinite(v0)
+        ? clamp(v0, 0.1, 0.3)
+        : pickDroneVolume(preset);
+
+      return {
+        ...l,
+        frequency: safeF,
+        volume: safeV,
+        name: `Atmospheric Drone (${safeF} Hz)`,
+      };
+    });
+
+    return { ...preset, layers: next };
+  }
+
+  const f = pickDroneFrequency({ ...preset, layers });
+  const v = clamp(pickDroneVolume(preset), 0.1, 0.3);
+
+  const droneLayerRaw = {
+    id: `${preset?.id || "preset"}_atm_drone`,
+    name: `Atmospheric Drone (${f} Hz)`,
+    type: "synth",
+    frequency: f,
+    volume: v,
+    pan: 0,
+    waveform: "drone",
+    enabled: true,
+
+    // Warm, atmospheric voicing (keeps it in the “low bed” role)
+    filterEnabled: true,
+    filter: { type: "lowpass", frequency: 1400, Q: 0.7 },
+  };
+
+  // Normalize defaults for safety/compatibility with the rest of the app.
+  const droneLayer = ensureLayerDefaults(droneLayerRaw, layers.length, seedForDefaults);
+
+  // Insert right after the sub foundation layer if we can find it; else near the top.
+  let insertAt = 0;
+  const subIndex = layers.findIndex((l) => {
+    const id = String(l?.id || "").toLowerCase();
+    const name = String(l?.name || "").toLowerCase();
+    return id.includes("sub") || name.includes("sub foundation") || name.startsWith("sub");
+  });
+
+  if (subIndex >= 0) insertAt = subIndex + 1;
+
+  const nextLayers = [...layers.slice(0, insertAt), droneLayer, ...layers.slice(insertAt)];
+
+  return { ...preset, layers: nextLayers };
+}
+
 function normalizePreset(preset, index = 0) {
   const seed = Date.now();
 
@@ -264,22 +470,20 @@ function normalizePreset(preset, index = 0) {
     order: typeof preset?.order === "number" ? preset.order : index,
   };
 
+  // ✅ Option A: guarantee Atmospheric Drone on every preset (stored + base + user)
+  const withDrone = ensureAtmosphericDrone(base, seed);
+
   // ✅ Add Discover metadata defaults (without breaking built-ins)
-  return ensureDiscoverDefaults(base);
+  return ensureDiscoverDefaults(withDrone);
 }
 
 function mergeBaseWithStored(base, stored) {
-  // Strategy:
-  // - If stored exists: use stored as the source of truth for those IDs
-  // - Keep any built-in presets that are missing from stored
-  // - Keep any user-created presets that are not in base
-
   const baseById = new Map(base.map((p) => [p.id, p]));
   const storedById = new Map((stored || []).map((p) => [p.id, p]));
 
   const merged = [];
 
-  // 1) Start with stored, but normalize to ensure app safety
+  // 1) Start with stored, but normalize to ensure app safety + migrations
   for (const p of stored || []) {
     merged.push(normalizePreset(p));
   }
@@ -298,9 +502,7 @@ function mergeBaseWithStored(base, stored) {
 
   merged.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-  // 4) If base preset exists and stored preset is missing new fields in future,
-  // we can shallow-merge base behind stored for those same IDs.
-  // (Stored wins; base fills in missing keys.)
+  // 4) Shallow-merge base behind stored for missing keys (stored wins; base fills gaps)
   const final = merged.map((p) => {
     const basePreset = baseById.get(p.id);
     if (!basePreset) return p;
@@ -320,7 +522,7 @@ let presets = storedPresets
   ? mergeBaseWithStored(basePresets, storedPresets)
   : [...basePresets];
 
-// Ensure the stored payload remains compatible with any new defaults
+// Ensure the stored payload remains compatible with any new defaults/migrations
 if (storedPresets) {
   writeStoredPresets(presets);
 }
@@ -436,7 +638,6 @@ export const db = {
       const index = presets.findIndex((p) => p.id === id);
       if (index === -1) return null;
 
-      // Keep metadata stable; just rename and normalize
       presets[index] = normalizePreset({ ...presets[index], name: newName }, index);
 
       persist();
