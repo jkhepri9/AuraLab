@@ -6,7 +6,7 @@
 // - ✅ Adds Discover metadata defaults for user-created / legacy stored presets
 // - ✅ Option A: Versionless migration that guarantees Atmospheric Drone on ALL presets
 // - ✅ Adds migration: Strip "Ground State Aura —" prefix from stored presets + rename collection
-// - ✅ Adds cleanup: Deduplicate Grounded Aura Mode presets by NAME (prefer ga_* canonical IDs)
+// - ✅ FIX: Replace generic Layer 1/2/3 names with real inferred channel names
 // -----------------------------------------------------------------------------
 
 
@@ -63,7 +63,7 @@ function writeStoredPresets(nextPresets) {
 }
 
 // -----------------------------------------------------------------------------
-// DISCOVER METADATA DEFAULTS
+// DISCOVER METADATA DEFAULTS (metadata-first; heuristics only when missing)
 // -----------------------------------------------------------------------------
 const CANONICAL_GOALS = new Set([
   "sleep",
@@ -92,16 +92,19 @@ function toLowerUniq(arr) {
 }
 
 function normalizeGoals(goals, fallbackText = "") {
+  // If caller gave goals, trust it (but normalize/canonicalize).
   if (Array.isArray(goals) && goals.length) {
     const normalized = toLowerUniq(goals).filter((g) => CANONICAL_GOALS.has(g));
     if (normalized.length) return normalized;
   }
 
+  // If caller gave a legacy single "goal" field
   if (typeof goals === "string") {
     const g = goals.trim().toLowerCase();
     if (CANONICAL_GOALS.has(g)) return [g];
   }
 
+  // Minimal heuristic ONLY when no explicit goal(s) exist:
   const t = String(fallbackText || "").toLowerCase();
 
   const hits = [];
@@ -115,6 +118,7 @@ function normalizeGoals(goals, fallbackText = "") {
   const canonicalHits = uniq(hits.filter((g) => CANONICAL_GOALS.has(g)));
   if (canonicalHits.length) return canonicalHits.slice(0, 2);
 
+  // Safe default: focus (neutral, non-controversial).
   return ["focus"];
 }
 
@@ -161,7 +165,9 @@ function ensureDiscoverDefaults(preset) {
   const fallbackText = `${name} ${description}`;
 
   const layers = Array.isArray(preset?.layers) ? preset.layers : [];
+
   const collection = preset?.collection || "Custom";
+
   const goals = normalizeGoals(preset?.goals ?? preset?.goal, fallbackText);
 
   const styles =
@@ -207,26 +213,91 @@ function ensureDiscoverDefaults(preset) {
 // -----------------------------------------------------------------------------
 // LAYER SAFETY
 // -----------------------------------------------------------------------------
+
+// ✅ Human label for ambient waveforms without importing UI helpers.
+// Examples: "wind_soft" -> "Wind (Soft)", "ocean_deep" -> "Ocean (Deep)"
+function humanizeWaveform(wf) {
+  const s = String(wf || "").trim();
+  if (!s) return "";
+  const parts = s.split("_").filter(Boolean);
+  const cap = (x) => (x ? x.charAt(0).toUpperCase() + x.slice(1) : "");
+  if (parts.length === 1) return cap(parts[0]);
+  const head = cap(parts[0]);
+  const tail = parts.slice(1).map(cap).join(" ");
+  return `${head} (${tail})`;
+}
+
+// ✅ Infer a real channel name when missing / placeholder
+function inferLayerName(layer) {
+  const type = String(layer?.type || "").toLowerCase();
+  const wf = String(layer?.waveform || "").toLowerCase();
+
+  if (type === "ambient") {
+    const label = humanizeWaveform(wf);
+    return label ? `Ambient: ${label}` : "Ambient";
+  }
+
+  if (type === "noise" || type === "color") {
+    if (wf === "brown") return "Brown Noise";
+    if (wf === "pink") return "Pink Noise";
+    if (wf === "white") return "White Noise";
+    return wf ? `${humanizeWaveform(wf)} Noise` : "Noise";
+  }
+
+  if (type === "synth") {
+    if (wf === "sub") return "Sub Foundation";
+    if (wf === "drone") return "Atmospheric Drone";
+    return "Synth";
+  }
+
+  if (type === "oscillator" || type === "frequency") {
+    const pan = Number(layer?.pan ?? 0);
+    if (pan <= -0.75) return "Binaural Left";
+    if (pan >= 0.75) return "Binaural Right";
+
+    const f = Number(layer?.frequency ?? NaN);
+    if (Number.isFinite(f) && f > 0) return `${Math.round(f)} Hz Tone`;
+
+    return "Frequency";
+  }
+
+  return "Layer";
+}
+
+function isGenericLayerName(name) {
+  const n = String(name || "").trim();
+  if (!n) return true;
+  // Treat "Layer 1", "Layer2", etc. as placeholders that should be replaced.
+  return /^layer\s*\d+$/i.test(n);
+}
+
 function ensureLayerDefaults(layer, i, seed) {
   const id = layer?.id || `${seed}_${i}`;
 
+  const rawName = String(layer?.name || "").trim();
+  const name = isGenericLayerName(rawName) ? inferLayerName(layer) : rawName;
+
   return {
     id,
-    name: layer?.name || `Layer ${i + 1}`,
+    name,
     type: layer?.type || "oscillator",
 
+    // Oscillator / synth
     frequency:
       layer?.frequency ??
       (layer?.type === "noise" || layer?.type === "color" ? 0 : 432),
 
+    // Shared
     volume: layer?.volume ?? 0.2,
     pan: layer?.pan ?? 0,
     waveform: layer?.waveform || "sine",
     enabled: layer?.enabled ?? true,
 
+    // Pulse (if you use it in UI)
     pulseRate: layer?.pulseRate ?? 0,
     pulseDepth: layer?.pulseDepth ?? 0,
 
+    // Filter
     filterEnabled: layer?.filterEnabled ?? true,
     filter: layer?.filter || { type: "lowpass", frequency: 20000, Q: 1 },
   };
@@ -234,6 +305,8 @@ function ensureLayerDefaults(layer, i, seed) {
 
 // -----------------------------------------------------------------------------
 // GROUNDED AURA NAME/COLLECTION MIGRATION (idempotent)
+// - Fixes persisted (localStorage) presets still showing old "Ground State Aura — X" names
+// - Standardizes collection to "Grounded Aura Mode"
 // -----------------------------------------------------------------------------
 function migrateGroundedAuraNaming(preset) {
   const id = String(preset?.id || "");
@@ -241,11 +314,11 @@ function migrateGroundedAuraNaming(preset) {
   const collection = String(preset?.collection || "");
 
   const isGroundedSet =
-    id.startsWith("ga_") ||
-    id.startsWith("gs_aura_") ||
-    /ground\s*state\s*aura/i.test(name) ||
-    /grounded\s*aura/i.test(name) ||
-    /grounded\s*aura/i.test(collection);
+    id.startsWith("ga_") ||                // new ids
+    id.startsWith("gs_aura_") ||           // earlier ids
+    /ground\s*state\s*aura/i.test(name) || // legacy prefix in name
+    /grounded\s*aura/i.test(name) ||       // variants
+    /grounded\s*aura/i.test(collection);   // old collection naming
 
   if (!isGroundedSet) return preset;
 
@@ -258,10 +331,12 @@ function migrateGroundedAuraNaming(preset) {
 
   const nextName = stripped || name;
 
+  const nextCollection = "Grounded Aura Mode";
+
   return {
     ...preset,
     name: nextName,
-    collection: "Grounded Aura Mode",
+    collection: nextCollection,
   };
 }
 
@@ -307,17 +382,30 @@ function findSubFoundationFrequency(layers) {
 function pickDroneFrequency(preset) {
   const goals = Array.isArray(preset?.goals) ? preset.goals : [];
   const intensity = typeof preset?.intensity === "number" ? preset.intensity : 3;
+
   const primary = String(goals[0] || "").toLowerCase();
 
   let base;
   switch (primary) {
-    case "sleep": base = 88; break;
-    case "recovery": base = 92; break;
-    case "calm": base = 96; break;
-    case "meditate": base = 100; break;
-    case "energy": base = 132; break;
+    case "sleep":
+      base = 88;
+      break;
+    case "recovery":
+      base = 92;
+      break;
+    case "calm":
+      base = 96;
+      break;
+    case "meditate":
+      base = 100;
+      break;
+    case "energy":
+      base = 132;
+      break;
     case "focus":
-    default: base = 110; break;
+    default:
+      base = 110;
+      break;
   }
 
   const iAdj = Math.max(-2, Math.min(2, Math.round((Number(intensity) - 3) * 1)));
@@ -327,12 +415,14 @@ function pickDroneFrequency(preset) {
   if (f > 160) f = 160;
 
   const subF = findSubFoundationFrequency(preset?.layers);
-  if (Number.isFinite(subF) && Math.abs(f - subF) < 1) {
-    const up = f + 7;
-    const down = f - 7;
-    if (up <= 160) f = up;
-    else if (down >= 70) f = down;
-    else f = Math.min(160, Math.max(70, f + 3));
+  if (Number.isFinite(subF)) {
+    if (Math.abs(f - subF) < 1) {
+      const up = f + 7;
+      const down = f - 7;
+      if (up <= 160) f = up;
+      else if (down >= 70) f = down;
+      else f = Math.min(160, Math.max(70, f + 3));
+    }
   }
 
   return f;
@@ -343,13 +433,20 @@ function pickDroneVolume(preset) {
   const primary = String(goals[0] || "").toLowerCase();
 
   switch (primary) {
-    case "energy": return 0.20;
-    case "focus": return 0.17;
-    case "meditate": return 0.15;
-    case "calm": return 0.14;
-    case "sleep": return 0.12;
-    case "recovery": return 0.13;
-    default: return 0.16;
+    case "energy":
+      return 0.20;
+    case "focus":
+      return 0.17;
+    case "meditate":
+      return 0.15;
+    case "calm":
+      return 0.14;
+    case "sleep":
+      return 0.12;
+    case "recovery":
+      return 0.13;
+    default:
+      return 0.16;
   }
 }
 
@@ -376,10 +473,14 @@ function ensureAtmosphericDrone(preset, seedForDefaults) {
       if (!isDrone) return l;
 
       const f0 = Number(l?.frequency ?? NaN);
-      const safeF = Number.isFinite(f0) && f0 >= 70 ? f0 : pickDroneFrequency({ ...preset, layers });
+      const safeF = Number.isFinite(f0) && f0 >= 70
+        ? f0
+        : pickDroneFrequency({ ...preset, layers });
 
       const v0 = Number(l?.volume ?? NaN);
-      const safeV = Number.isFinite(v0) ? clamp(v0, 0.1, 0.3) : pickDroneVolume(preset);
+      const safeV = Number.isFinite(v0)
+        ? clamp(v0, 0.1, 0.3)
+        : pickDroneVolume(preset);
 
       return {
         ...l,
@@ -404,6 +505,7 @@ function ensureAtmosphericDrone(preset, seedForDefaults) {
     pan: 0,
     waveform: "drone",
     enabled: true,
+
     filterEnabled: true,
     filter: { type: "lowpass", frequency: 1400, Q: 0.7 },
   };
@@ -416,55 +518,12 @@ function ensureAtmosphericDrone(preset, seedForDefaults) {
     const name = String(l?.name || "").toLowerCase();
     return id.includes("sub") || name.includes("sub foundation") || name.startsWith("sub");
   });
+
   if (subIndex >= 0) insertAt = subIndex + 1;
 
   const nextLayers = [...layers.slice(0, insertAt), droneLayer, ...layers.slice(insertAt)];
+
   return { ...preset, layers: nextLayers };
-}
-
-// -----------------------------------------------------------------------------
-// GROUNDED AURA DEDUPE (by name; prefer canonical ga_* ids)
-// -----------------------------------------------------------------------------
-function dedupeGroundedByName(presets) {
-  const out = [];
-  const indexByName = new Map();
-
-  const isGrounded = (p) => String(p?.collection || "") === "Grounded Aura Mode";
-
-  const rank = (p) => {
-    const id = String(p?.id || "");
-    if (id.startsWith("ga_")) return 3;       // canonical
-    if (id.startsWith("gs_aura_")) return 2;  // legacy set ids
-    return 1;                                  // user/stored copies
-  };
-
-  for (const p of presets || []) {
-    if (!isGrounded(p)) {
-      out.push(p);
-      continue;
-    }
-
-    const key = String(p?.name || "").trim().toLowerCase();
-    if (!key) {
-      out.push(p);
-      continue;
-    }
-
-    const existingIndex = indexByName.get(key);
-    if (existingIndex == null) {
-      indexByName.set(key, out.length);
-      out.push(p);
-      continue;
-    }
-
-    const existing = out[existingIndex];
-    if (rank(p) > rank(existing)) {
-      out[existingIndex] = p;
-    }
-    // else: drop duplicate
-  }
-
-  return out;
 }
 
 function normalizePreset(preset, index = 0) {
@@ -499,26 +558,25 @@ function mergeBaseWithStored(base, stored) {
 
   const merged = [];
 
-  // 1) Start with stored (normalized)
   for (const p of stored || []) {
     merged.push(normalizePreset(p));
   }
 
-  // 2) Add base missing by id
   for (const p of base) {
     if (!storedById.has(p.id)) {
       merged.push(normalizePreset(p));
     }
   }
 
-  // 3) Stable ordering
   merged.forEach((p, i) => {
     if (typeof p.order !== "number") p.order = i;
   });
+
   merged.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-  // 4) Merge base behind stored (stored wins), but force base imageUrl for Grounded
-  let final = merged.map((p) => {
+  // 4) Shallow-merge base behind stored for missing keys (stored wins; base fills gaps)
+  // ✅ Patch: For Grounded Aura Mode presets, force base imageUrl to win (so repo updates show)
+  const final = merged.map((p) => {
     const basePreset = baseById.get(p.id);
     if (!basePreset) return p;
 
@@ -539,19 +597,11 @@ function mergeBaseWithStored(base, stored) {
     return normalizePreset(mergedPreset);
   });
 
-  // ✅ 5) Cleanup duplicates for Grounded Aura Mode (by name)
-  final = dedupeGroundedByName(final);
-
-  // Re-compact orders after any deletions
-  final = final
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-    .map((p, i) => ({ ...p, order: i }));
-
   return final;
 }
 
 // -----------------------------------------------------------------------------
-// IN-MEMORY STATE
+// IN-MEMORY STATE (backed by localStorage)
 // -----------------------------------------------------------------------------
 const basePresets = (allPresets || []).map((p, i) => normalizePreset(p, i));
 const storedPresets = readStoredPresets();
@@ -560,7 +610,6 @@ let presets = storedPresets
   ? mergeBaseWithStored(basePresets, storedPresets)
   : [...basePresets];
 
-// Persist migrations/cleanup back to storage
 if (storedPresets) {
   writeStoredPresets(presets);
 }
@@ -625,7 +674,6 @@ export const db = {
       };
 
       presets[index] = normalizePreset(next, index);
-      presets = dedupeGroundedByName(presets); // keep clean if edits create dupes
       persist();
       return presets[index];
     },
@@ -673,7 +721,7 @@ export const db = {
       if (index === -1) return null;
 
       presets[index] = normalizePreset({ ...presets[index], name: newName }, index);
-      presets = dedupeGroundedByName(presets);
+
       persist();
       return presets[index];
     },

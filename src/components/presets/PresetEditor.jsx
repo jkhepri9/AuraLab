@@ -377,6 +377,117 @@ export default function PresetEditor({
     return type || "Layer";
   };
 
+  // ---------------------------------------------------------------------------
+  // ✅ CONSISTENT LAYER TITLES (display only)
+  // Rule:
+  // - Oscillator/Frequency/Synth: show "Name — {Hz} Hz" when frequency exists
+  // - Ambient/Noise: show Name only (no frequency)
+  // Also: strip any existing "(xx Hz)" in stored layer.name so it can't be inconsistent.
+  // ---------------------------------------------------------------------------
+  const formatHzText = (hz) => {
+    const n = Number(hz);
+    if (!Number.isFinite(n)) return "";
+    const rounded = Math.round(n);
+    const display = Math.abs(n - rounded) < 0.01 ? rounded : n;
+    return `${display} Hz`;
+  };
+
+  const stripHzFromName = (s) => {
+    const raw = String(s || "").trim();
+    if (!raw) return "";
+    // Remove trailing " (123 Hz)" or " - 123 Hz" or " — 123 Hz"
+    return raw
+      .replace(/\s*[\(\[\{]?\s*\d+(?:\.\d+)?\s*hz\s*[\)\]\}]?\s*$/i, "")
+      .replace(/\s*[-—,:]\s*$/i, "")
+      .trim();
+  };
+
+  // ✅ UI title label: consistent naming + consistent Hz suffix where appropriate
+  const layerTitleLabel = (layer) => {
+    if (!layer) return "Layer";
+
+    const type = String(layer?.type || "").toLowerCase();
+    const wf = String(layer?.waveform || "").toLowerCase();
+
+    // Base label: prefer layer.name but normalize it (strip any embedded Hz)
+    const baseFromName = stripHzFromName(layer?.name);
+
+    const pan = typeof layer.pan === "number" && !Number.isNaN(layer.pan) ? layer.pan : 0;
+    const isHardLeft = pan <= -0.75;
+    const isHardRight = pan >= 0.75;
+
+    const hzText = (() => {
+      // Prefer numeric frequency; if it isn't usable, don't append.
+      const hz =
+        typeof layer.frequency === "number" && !Number.isNaN(layer.frequency)
+          ? layer.frequency
+          : null;
+      if (hz == null) return "";
+      // Only meaningful for tonal layers; noise/ambient typically 0
+      if (hz <= 0) return "";
+      return formatHzText(hz);
+    })();
+
+    // Ambient: no Hz suffix
+    if (type === "ambient") {
+      const base =
+        baseFromName ||
+        getAmbientLabel(layer.waveform) ||
+        "Ambient";
+      return base;
+    }
+
+    // Noise/Color: no Hz suffix
+    if (type === "noise" || type === "color") {
+      const base =
+        baseFromName ||
+        (wf === "brown"
+          ? "Brown Noise"
+          : wf === "pink"
+          ? "Pink Noise"
+          : wf === "white"
+          ? "White Noise"
+          : wf
+          ? `${wf.charAt(0).toUpperCase() + wf.slice(1)} Noise`
+          : "Noise");
+      return base;
+    }
+
+    // Synth: consistent Hz suffix (if present)
+    if (type === "synth") {
+      const base =
+        baseFromName ||
+        (wf === "drone"
+          ? "Atmospheric Drone"
+          : wf === "sub"
+          ? "Sub Foundation"
+          : wf
+          ? `Synth: ${wf}`
+          : "Synth");
+
+      return hzText ? `${base} — ${hzText}` : base;
+    }
+
+    // Oscillator/Frequency: consistent Hz suffix (if present)
+    if (type === "oscillator" || type === "frequency") {
+      const base =
+        baseFromName ||
+        (isHardLeft
+          ? "Binaural Left"
+          : isHardRight
+          ? "Binaural Right"
+          : (() => {
+              const wave = wf ? wf.charAt(0).toUpperCase() + wf.slice(1) : "Sine";
+              return `${wave} Tone`;
+            })());
+
+      return hzText ? `${base} — ${hzText}` : base;
+    }
+
+    // Fallback: no Hz suffix
+    return baseFromName || layerRightLabel(layer) || "Layer";
+  };
+
   // Live-mix updates while playing
   useEffect(() => {
     if (!isPlaying) return;
@@ -683,16 +794,10 @@ export default function PresetEditor({
                 className="bg-transparent border border-white/10 p-4 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.25)]"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span className="text-xs font-bold text-white/80 drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]">
-                      CHANNEL {index + 1}
-                    </span>
-                  </div>
-
-                  <div className="max-w-[70%] text-right">
-                    <span className="inline-flex items-center rounded-full bg-black/60 px-3 py-1 text-sm font-semibold text-white shadow-sm ring-1 ring-white/20 backdrop-blur-sm truncate">
-                      {layerRightLabel(layer)}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                    <span className="text-sm md:text-base font-extrabold text-white truncate drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]">
+                      {layerTitleLabel(layer)}
                     </span>
                   </div>
                 </div>

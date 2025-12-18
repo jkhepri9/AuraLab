@@ -51,21 +51,21 @@ export const groundedAuraPresets = [
     ],
   },
 
-  {
-    id: "ga_gravity_bed",
-    name: "Gravity Bed",
-    color: "linear-gradient(135deg, #061018, #13202a)",
-    imageUrl: "/modeimages/gravitybed.png",
-    description: "Full-body low-end weight designed for deep relaxation.",
-    collection: "Grounded Aura Mode",
-    layers: [
-      { id: "gb_sub", type: "synth", waveform: "sub", frequency: 50, volume: 0.24, pan: 0, enabled: true },
-      { id: "gb_l", type: "oscillator", waveform: "sine", frequency: 110, volume: 0.11, pan: -1, enabled: true },
-      { id: "gb_r", type: "oscillator", waveform: "sine", frequency: 113, volume: 0.11, pan: 1, enabled: true },
-      { id: "gb_drone", type: "synth", waveform: "drone", frequency: 72, volume: 0.16, pan: 0, enabled: true },
-      { id: "gb_thunder", type: "ambient", waveform: "thunder_distant", volume: 0.08, pan: 0, enabled: true },
-    ],
-  },
+{
+  id: "ga_gravity_bed",
+  name: "Gravity Bed",
+  color: "linear-gradient(135deg, #061018, #13202a)",
+  imageUrl: "/modeimages/gravitybed.png",
+  description: "Full-body low-end weight designed for deep relaxation.",
+  collection: "Grounded Aura Mode",
+  layers: [
+    { id: "gb_sub", type: "synth", waveform: "sub", frequency: 50, volume: 0.24, pan: 0, enabled: true },
+    { id: "gb_l", type: "oscillator", waveform: "sine", frequency: 110, volume: 0.11, pan: -1, enabled: true },
+    { id: "gb_r", type: "oscillator", waveform: "sine", frequency: 113, volume: 0.11, pan: 1, enabled: true },
+    { id: "gb_drone", type: "synth", waveform: "drone", frequency: 72, volume: 0.16, pan: 0, enabled: true },
+    { id: "gb_thunder", type: "ambient", waveform: "thunder_rolling", volume: 0.08, pan: 0, enabled: true },
+  ],
+},
 
   {
     id: "ga_stone_breath",

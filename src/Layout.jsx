@@ -7,6 +7,9 @@ import { Pause, Play, Music, X } from "lucide-react";
 import { cn } from "./lib/utils";
 import { Toaster } from "sonner";
 
+// ✅ NEW: Calm-style live background (homepage only)
+import LiveBackground from "./components/LiveBackground";
+
 function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onTogglePlayPause, onClose }) {
   const navigate = useNavigate();
   if (!currentPlayingPreset) return null;
@@ -119,6 +122,9 @@ export default function Layout({
   const location = useLocation();
   const isImmersive = location.pathname === "/Start";
 
+  // ✅ Live background only on homepage ("/")
+  const showHomeLiveBg = !isImmersive && location.pathname === "/";
+
   const hideStickyInStudio =
     location.pathname === "/AuraEditor" &&
     currentPlayingPreset?.id === "__studio__";
@@ -144,6 +150,16 @@ export default function Layout({
       "
       style={{ overscrollBehaviorX: "none" }}
     >
+      {/* ✅ Calm-style live background for Home only */}
+      {showHomeLiveBg && (
+        <LiveBackground
+          webmSrc="/live/home.webm"
+          mp4Src="/live/home.mp4"
+          poster="/live/home.jpg"
+          dim={0.55}
+        />
+      )}
+
       <div
         className="fixed inset-0 pointer-events-none opacity-20 w-screen max-w-[100vw] overflow-x-hidden"
         style={{
