@@ -1,11 +1,10 @@
 // src/pages/auraModes/components.jsx
 
 import React, { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { ArrowRight, Check, Heart, Play } from "lucide-react";
+import { Check, Heart } from "lucide-react";
 
 // ------------------------------------------------------------
 // UI: Small building blocks
@@ -47,22 +46,31 @@ export function Rail({ children }) {
 }
 
 export function CompactCard({ preset, isFavorite, onToggleFavorite, onActivate, onOpen }) {
-  return (
-    <div
-      className={cn(
-        "relative rounded-xl overflow-hidden bg-gradient-to-br from-slate-900 to-emerald-900 border border-white/10",
-        "min-w-[240px] max-w-[240px] h-[140px] shrink-0 cursor-pointer group"
-      )}
-      style={{
-        backgroundImage: preset.imageUrl ? `url(${preset.imageUrl})` : undefined,
-        backgroundSize: preset.imageUrl ? "cover" : undefined,
-        backgroundPosition: "center",
-      }}
-      onClick={() => onOpen(preset)}
-    >
-      <div className="absolute inset-0 bg-black/60 group-hover:bg-black/45 transition-colors" />
+  const handleClick = () => {
+    // Prefer "activate" (open + autoplay). Keep "open" as a fallback for older call sites.
+    if (typeof onActivate === "function") onActivate(preset);
+    else if (typeof onOpen === "function") onOpen(preset);
+  };
 
-      <div className="relative h-full p-3 flex flex-col justify-between">
+  return (
+    <div className={cn("min-w-[240px] max-w-[240px] shrink-0 group")}>
+      {/* Image-only card */}
+      <div
+        className={cn(
+          "rounded-xl overflow-hidden border border-white/10",
+          "h-[140px] bg-gradient-to-br from-slate-900 to-emerald-900",
+          "transition-transform duration-300 group-hover:scale-[1.01] cursor-pointer"
+        )}
+        onClick={handleClick}
+        style={{
+          backgroundImage: preset?.imageUrl ? `url(${preset.imageUrl})` : undefined,
+          backgroundSize: preset?.imageUrl ? "cover" : undefined,
+          backgroundPosition: "center",
+        }}
+      />
+
+      {/* Title + description UNDER the image */}
+      <div className="mt-2 px-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="text-white font-extrabold leading-tight truncate">{preset.name}</div>
@@ -71,49 +79,27 @@ export function CompactCard({ preset, isFavorite, onToggleFavorite, onActivate, 
             ) : null}
           </div>
 
-          <button
-            type="button"
-            className={cn(
-              "h-8 w-8 rounded-full flex items-center justify-center",
-              "bg-white/10 hover:bg-white/15 border border-white/10"
-            )}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite(preset.id);
-            }}
-            title={isFavorite ? "Unfavorite" : "Favorite"}
-          >
-            <Heart
+          {typeof onToggleFavorite === "function" ? (
+            <button
+              type="button"
               className={cn(
-                "w-4 h-4",
-                isFavorite ? "fill-emerald-400 text-emerald-400" : "text-white/70"
+                "h-8 w-8 rounded-full flex items-center justify-center",
+                "bg-white/10 hover:bg-white/15 border border-white/10"
               )}
-            />
-          </button>
-        </div>
-
-        <div className="flex items-center justify-between gap-2">
-          <Button
-            className="h-9 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-            onClick={(e) => {
-              e.stopPropagation();
-              onActivate(preset);
-            }}
-          >
-            <Play className="w-4 h-4 mr-2 fill-white" />
-            Play
-          </Button>
-
-          <Button
-            variant="ghost"
-            className="h-9 px-3 rounded-lg text-white/70 hover:bg-white/10"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpen(preset);
-            }}
-          >
-            Details <ArrowRight className="w-4 h-4 ml-1" />
-          </Button>
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFavorite(preset.id);
+              }}
+              title={isFavorite ? "Unfavorite" : "Favorite"}
+            >
+              <Heart
+                className={cn(
+                  "w-4 h-4",
+                  isFavorite ? "fill-emerald-400 text-emerald-400" : "text-white/70"
+                )}
+              />
+            </button>
+          ) : null}
         </div>
       </div>
     </div>
@@ -170,18 +156,28 @@ export function ModeCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -14 }}
       transition={{ duration: 0.25 }}
-      className="w-full rounded-xl overflow-hidden shadow-xl transition-transform duration-300 transform hover:scale-[1.01] relative cursor-pointer group bg-gradient-to-br from-slate-900 to-emerald-900"
-      onClick={(e) => handleActivate(e, preset)}
-      style={{
-        backgroundImage: preset.imageUrl ? `url(${preset.imageUrl})` : undefined,
-        backgroundSize: preset.imageUrl ? "cover" : undefined,
-        backgroundPosition: "center",
-      }}
+      className={cn("w-full group")}
     >
-      <div className="absolute inset-0 bg-black/60 group-hover:bg-black/40 transition-colors" />
+      {/* Image-only card */}
+      <div
+        className={cn(
+          "w-full rounded-xl overflow-hidden shadow-xl",
+          "border border-white/10",
+          "h-[220px] md:h-[240px]",
+          "bg-gradient-to-br from-slate-900 to-emerald-900",
+          "transition-transform duration-300 group-hover:scale-[1.01] cursor-pointer"
+        )}
+        onClick={(e) => handleActivate(e, preset)}
+        style={{
+          backgroundImage: preset?.imageUrl ? `url(${preset.imageUrl})` : undefined,
+          backgroundSize: preset?.imageUrl ? "cover" : undefined,
+          backgroundPosition: "center",
+        }}
+      />
 
-      <div className="relative p-5 flex flex-col justify-between h-full">
-        <div className="flex justify-between items-start mb-3 gap-2">
+      {/* Title + description UNDER the image */}
+      <div className="mt-3 px-1">
+        <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             {isRenaming === preset.id ? (
               <Input
@@ -193,63 +189,51 @@ export function ModeCard({
                   if (e.key === "Escape") finishRename?.();
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className="text-xl font-bold bg-white/10 border-emerald-500/50 text-white"
+                className="text-lg font-bold bg-white/10 border-emerald-500/50 text-white"
                 autoFocus
               />
             ) : (
               <h3
-                className="text-2xl font-extrabold text-white drop-shadow mb-1 truncate"
-                onClick={(e) => {
+                className="text-xl font-extrabold text-white truncate"
+                onDoubleClick={(e) => {
+                  // Keep rename available without stealing single-click (single-click opens + autoplay)
                   e.stopPropagation();
-                  if (isLocked) {
-                    handleEditRequest?.(preset);
-                    return;
-                  }
+                  if (isLocked) return;
                   startRename?.(preset.id);
                 }}
-                title={isLocked ? "Built-in preset (view details)" : "Click to rename"}
+                title={isLocked ? "Built-in preset" : "Double-click to rename"}
               >
                 {preset.name}
               </h3>
             )}
           </div>
 
-          <button
-            type="button"
-            className={cn(
-              "h-9 w-9 rounded-full flex items-center justify-center",
-              "bg-white/10 hover:bg-white/15 border border-white/10"
-            )}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite(preset.id);
-            }}
-            title={isFavorite ? "Unfavorite" : "Favorite"}
-          >
-            <Heart
+          {typeof onToggleFavorite === "function" ? (
+            <button
+              type="button"
               className={cn(
-                "w-4 h-4",
-                isFavorite ? "fill-emerald-400 text-emerald-400" : "text-white/70"
+                "h-9 w-9 rounded-full flex items-center justify-center",
+                "bg-white/10 hover:bg-white/15 border border-white/10"
               )}
-            />
-          </button>
-
-          {/* ✅ Three-dots menu removed entirely (temporary) */}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFavorite(preset.id);
+              }}
+              title={isFavorite ? "Unfavorite" : "Favorite"}
+            >
+              <Heart
+                className={cn(
+                  "w-4 h-4",
+                  isFavorite ? "fill-emerald-400 text-emerald-400" : "text-white/70"
+                )}
+              />
+            </button>
+          ) : null}
         </div>
 
         {preset.description ? (
-          <p className="mt-1 text-sm text-white/80 line-clamp-2">{preset.description}</p>
+          <p className="mt-1 text-sm text-white/70 line-clamp-2">{preset.description}</p>
         ) : null}
-
-        <div className="mt-4">
-          <Button
-            onClick={(e) => handleActivate(e, preset)}
-            className="w-full h-10 font-semibold tracking-wide text-base rounded-lg shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white"
-          >
-            <Play className="w-5 h-5 mr-2 fill-white" />
-            Activate Aura Mode
-          </Button>
-        </div>
       </div>
     </motion.div>
   );
