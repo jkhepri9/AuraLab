@@ -9,6 +9,7 @@ import { Toaster } from "sonner";
 
 // ✅ Calm-style live background (kept mounted; toggled on Home)
 import LiveBackground from "./components/LiveBackground";
+import BackToTopButton from "./components/BackToTopButton";
 
 function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onTogglePlayPause, onClose }) {
   const navigate = useNavigate();
@@ -137,6 +138,13 @@ export default function Layout({
       ? "pb-[calc(9rem+env(safe-area-inset-bottom))] md:pb-0"
       : "pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0";
 
+  // Global: show the back-to-top button across the app (except immersive Start screen).
+  const showBackToTop = !isImmersive;
+
+  const backToTopBottomClass = showStickyPlayer
+    ? "bottom-[calc(11rem+env(safe-area-inset-bottom))] md:bottom-24"
+    : "bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-6";
+
   // ✅ Critical: Home must not paint an opaque background over the shell poster.
   const shellBg = showHomeLiveBg ? "bg-transparent" : "bg-zinc-950";
 
@@ -172,6 +180,8 @@ export default function Layout({
       <main className={cn("z-20 relative w-screen max-w-[100vw] overflow-x-hidden", mainPadBottom)}>
         {children}
       </main>
+
+      <BackToTopButton enabled={showBackToTop} bottomClassName={backToTopBottomClass} />
 
       {showStickyPlayer && (
         <GlobalAudioPlayer
