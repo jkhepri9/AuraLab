@@ -2,7 +2,15 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Play, Square, ArrowLeft, Monitor, Save, Clock } from "lucide-react";
+import {
+  Play,
+  Square,
+  ArrowLeft,
+  Monitor,
+  Save,
+  Clock,
+  EyeOff,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -190,6 +198,10 @@ export default function PresetEditor({
     return Number.isFinite(v) ? Math.max(1, Math.min(5, Math.round(v))) : 3;
   });
 
+  // Image-only view: hide all editor controls so the user can just see the artwork.
+  // Tap/click anywhere to restore controls.
+  const [uiHidden, setUiHidden] = useState(false);
+
   const binauralAuto = useMemo(() => detectBinaural(layers), [layers]);
 
   // Keep existing metadata values (UI sections removed, but we preserve data on save)
@@ -280,6 +292,7 @@ export default function PresetEditor({
   useEffect(() => {
     const hydrated = hydrateLayersFromPreset(initialPreset);
     setLayers(hydrated);
+    setUiHidden(false);
 
     setGoals(Array.isArray(initialPreset?.goals) ? uniq(initialPreset.goals) : []);
 
@@ -379,10 +392,6 @@ export default function PresetEditor({
 
   // ---------------------------------------------------------------------------
   // ✅ CONSISTENT LAYER TITLES (display only)
-  // Rule:
-  // - Oscillator/Frequency/Synth: show "Name — {Hz} Hz" when frequency exists
-  // - Ambient/Noise: show Name only (no frequency)
-  // Also: strip any existing "(xx Hz)" in stored layer.name so it can't be inconsistent.
   // ---------------------------------------------------------------------------
   const formatHzText = (hz) => {
     const n = Number(hz);
@@ -402,14 +411,12 @@ export default function PresetEditor({
       .trim();
   };
 
-  // ✅ UI title label: consistent naming + consistent Hz suffix where appropriate
   const layerTitleLabel = (layer) => {
     if (!layer) return "Layer";
 
     const type = String(layer?.type || "").toLowerCase();
     const wf = String(layer?.waveform || "").toLowerCase();
 
-    // Base label: prefer layer.name but normalize it (strip any embedded Hz)
     const baseFromName = stripHzFromName(layer?.name);
 
     const pan = typeof layer.pan === "number" && !Number.isNaN(layer.pan) ? layer.pan : 0;
@@ -417,27 +424,20 @@ export default function PresetEditor({
     const isHardRight = pan >= 0.75;
 
     const hzText = (() => {
-      // Prefer numeric frequency; if it isn't usable, don't append.
       const hz =
         typeof layer.frequency === "number" && !Number.isNaN(layer.frequency)
           ? layer.frequency
           : null;
       if (hz == null) return "";
-      // Only meaningful for tonal layers; noise/ambient typically 0
       if (hz <= 0) return "";
       return formatHzText(hz);
     })();
 
-    // Ambient: no Hz suffix
     if (type === "ambient") {
-      const base =
-        baseFromName ||
-        getAmbientLabel(layer.waveform) ||
-        "Ambient";
+      const base = baseFromName || getAmbientLabel(layer.waveform) || "Ambient";
       return base;
     }
 
-    // Noise/Color: no Hz suffix
     if (type === "noise" || type === "color") {
       const base =
         baseFromName ||
@@ -453,7 +453,6 @@ export default function PresetEditor({
       return base;
     }
 
-    // Synth: consistent Hz suffix (if present)
     if (type === "synth") {
       const base =
         baseFromName ||
@@ -468,7 +467,6 @@ export default function PresetEditor({
       return hzText ? `${base} — ${hzText}` : base;
     }
 
-    // Oscillator/Frequency: consistent Hz suffix (if present)
     if (type === "oscillator" || type === "frequency") {
       const base =
         baseFromName ||
@@ -484,7 +482,6 @@ export default function PresetEditor({
       return hzText ? `${base} — ${hzText}` : base;
     }
 
-    // Fallback: no Hz suffix
     return baseFromName || layerRightLabel(layer) || "Layer";
   };
 
@@ -551,6 +548,12 @@ export default function PresetEditor({
   const TOP_NAV_OFFSET_PX = 72; // adjust if needed
 
   // ------------------------------------------------------------
+  // ✅ NEW: Bottom nav clearance so floating controls are not blocked on mobile.
+  // If your bottom nav is taller/shorter, adjust this number only.
+  // ------------------------------------------------------------
+  const BOTTOM_NAV_OFFSET_PX = 84;
+
+  // ------------------------------------------------------------
   // UX POLISH:
   // - At top: only the header back button is visible.
   // - After scroll: show the sticky back button.
@@ -560,7 +563,7 @@ export default function PresetEditor({
 
   const handleScroll = (e) => {
     const y = e?.currentTarget?.scrollTop ?? 0;
-    const next = y > 8; // small threshold so it doesn't flicker at 1px
+    const next = y > 8;
     if (next !== showStickyBackRef.current) {
       showStickyBackRef.current = next;
       setShowStickyBack(next);
@@ -569,10 +572,12 @@ export default function PresetEditor({
 
   return (
     <div className="fixed inset-0 z-[120] w-screen h-screen overflow-hidden bg-black">
-      <RotatePrompt
-        title="Rotate your device"
-        message="For the best experience in Preset Editor on mobile, rotate to landscape."
-      />
+      {!uiHidden ? (
+        <RotatePrompt
+          title="Rotate your device"
+          message="For the best experience in Preset Editor on mobile, rotate to landscape."
+        />
+      ) : null}
 
       {backgroundUrl && (
         <div
@@ -581,280 +586,319 @@ export default function PresetEditor({
         />
       )}
 
-      {/* STICKY BACK BUTTON (appears only after user scrolls down) */}
-      <AnimatePresence>
-        {showStickyBack ? (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.18 }}
-            className="fixed left-4 z-[200]"
-            style={{
-              top: `calc(${TOP_NAV_OFFSET_PX}px + 1rem + env(safe-area-inset-top))`,
-            }}
-          >
-            <Button
-              onClick={() => onCancel?.()}
-              className="bg-black/70 hover:bg-black/80 text-white border border-white/15 whitespace-nowrap backdrop-blur-md shadow-lg"
-            >
-              <ArrowLeft className="w-5 h-5 mr-2" /> Back
-            </Button>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      {/* IMAGE-ONLY VIEW OVERLAY (tap anywhere to restore controls) */}
+      {uiHidden ? (
+        <div
+          className="absolute inset-0 z-[190]"
+          role="button"
+          tabIndex={0}
+          aria-label="Show controls"
+          onClick={() => setUiHidden(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setUiHidden(false);
+            }
+          }}
+        />
+      ) : null}
 
-      {/* CONTENT (entire page pushed down; header is NOT sticky) */}
-      <div
-        onScroll={handleScroll}
-        className="relative z-10 h-full overflow-y-auto space-y-6 pb-[calc(12rem+env(safe-area-inset-bottom))]"
-        style={{
-          paddingTop: `calc(${TOP_NAV_OFFSET_PX}px + env(safe-area-inset-top))`,
-        }}
-      >
-        {/* NORMAL HEADER (not sticky) */}
-        <div className="px-4">
-          <div className="rounded-2xl border border-white/10 bg-black/25 backdrop-blur-md shadow-xl">
-            <div className="p-3 md:p-4 flex flex-col md:flex-row items-start md:items-center gap-4">
-              {/* HEADER BACK BUTTON (works at top of page) */}
-              <div className="shrink-0 w-full md:w-[110px] flex items-center">
+      {/* FLOATING VIEW BUTTON (BOTTOM-RIGHT, clears bottom nav, safe-area aware) */}
+      {!uiHidden ? (
+        <div
+          className="fixed right-4 z-[210]"
+          style={{
+            bottom: `calc(1rem + env(safe-area-inset-bottom) + ${BOTTOM_NAV_OFFSET_PX}px)`,
+          }}
+        >
+          <Button
+            onClick={() => setUiHidden(true)}
+            className="bg-black/70 hover:bg-black/80 text-white border border-white/15 whitespace-nowrap backdrop-blur-md shadow-lg"
+            title="View image only"
+          >
+            <EyeOff className="w-4 h-4 mr-2" /> View
+          </Button>
+        </div>
+      ) : null}
+
+      {!uiHidden ? (
+        <>
+          {/* STICKY BACK BUTTON (appears only after user scrolls down) */}
+          <AnimatePresence>
+            {showStickyBack ? (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.18 }}
+                className="fixed left-4 z-[200]"
+                style={{
+                  top: `calc(${TOP_NAV_OFFSET_PX}px + 1rem + env(safe-area-inset-top))`,
+                }}
+              >
                 <Button
                   onClick={() => onCancel?.()}
                   className="bg-black/70 hover:bg-black/80 text-white border border-white/15 whitespace-nowrap backdrop-blur-md shadow-lg"
                 >
-                  <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                  <ArrowLeft className="w-5 h-5 mr-2" /> Back
                 </Button>
-              </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
 
-              <div className="flex-1 w-full flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="text-2xl font-bold text-white truncate drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]">
-                    {name}
+          {/* CONTENT (entire page pushed down; header is NOT sticky) */}
+          <div
+            onScroll={handleScroll}
+            className="relative z-10 h-full overflow-y-auto space-y-6 pb-[calc(12rem+env(safe-area-inset-bottom))]"
+            style={{
+              paddingTop: `calc(${TOP_NAV_OFFSET_PX}px + env(safe-area-inset-top))`,
+            }}
+          >
+            {/* NORMAL HEADER (not sticky) */}
+            <div className="px-4">
+              <div className="rounded-2xl border border-white/10 bg-black/25 backdrop-blur-md shadow-xl">
+                <div className="p-3 md:p-4 flex flex-col md:flex-row items-start md:items-center gap-4">
+                  {/* HEADER BACK BUTTON (works at top of page) */}
+                  <div className="shrink-0 w-full md:w-[110px] flex items-center">
+                    <Button
+                      onClick={() => onCancel?.()}
+                      className="bg-black/70 hover:bg-black/80 text-white border border-white/15 whitespace-nowrap backdrop-blur-md shadow-lg"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                    </Button>
                   </div>
-                  <div className="text-xs text-white/80 truncate">
-                    Preview mode — Volume only (Discover settings below)
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={handleSave}
-                    disabled={typeof onSave !== "function"}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-300/30 whitespace-nowrap shadow-lg"
-                    title={isExisting ? "Save changes" : "Create this mode"}
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {isExisting ? "Save" : "Create"}
-                  </Button>
-
-                  <Button
-                    onClick={() => {
-                      navigate("/AuraEditor", {
-                        state: {
-                          preset: {
-                            ...(initialPreset || {}),
-                            name,
-                            color,
-                            layers,
-                            id: initialPreset?.id,
-                          },
-                        },
-                      });
-                    }}
-                    className="bg-black/70 hover:bg-black/80 text-white border border-white/15 whitespace-nowrap backdrop-blur-md shadow-lg"
-                  >
-                    <Monitor className="w-4 h-4 mr-2" /> Open Studio
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* DISCOVER SETTINGS */}
-        <div className="px-4">
-          <div className="rounded-2xl border border-white/10 bg-black/35 backdrop-blur-md shadow-xl p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-sm font-extrabold text-white tracking-wide">
-                  Discover Settings
-                </div>
-                <div className="text-xs text-white/70">
-                  This controls how modes are grouped, recommended, and filtered on Aura Modes.
-                </div>
-              </div>
-
-              <div className="text-[11px] text-white/60 text-right">
-                {binauralAuto ? "Binaural detected" : "No binaural detected"}
-              </div>
-            </div>
-
-            {/* Goals */}
-            <div className="mt-4">
-              <div className="text-xs font-bold text-white/80 mb-2">
-                Goals (pick up to 2)
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {GOAL_OPTIONS.map((g) => (
-                  <button
-                    key={g.key}
-                    type="button"
-                    onClick={() => toggleGoal(g.key)}
-                    className={pill(goals.includes(g.key))}
-                  >
-                    {g.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Controls */}
-            <div className="mt-4 grid grid-cols-1 gap-3">
-              {/* Intensity */}
-              <div className="rounded-xl border border-white/10 bg-black/40 p-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-bold text-white/80">Intensity</div>
-                  <div className="text-[11px] text-white/70 font-mono tabular-nums">
-                    {Math.max(1, Math.min(5, Math.round(Number(intensity) || 3)))}/5
-                  </div>
-                </div>
-
-                <div className="mt-3">
-                  <Slider
-                    value={[Math.max(1, Math.min(5, Number(intensity) || 3))]}
-                    onValueChange={(v) => setIntensity(v[0])}
-                    min={1}
-                    max={5}
-                    step={1}
-                    onPointerDownCapture={requireThumbDrag}
-                  />
-                </div>
-
-                <div className="mt-2 text-[11px] text-white/60">
-                  Higher intensity = more “forward” mix / stronger feel (for sorting).
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Session Timer */}
-        <div className="px-4">
-          <div className="rounded-2xl border border-white/10 bg-black/35 backdrop-blur-md shadow-xl p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <div className="text-sm font-extrabold text-white tracking-wide flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-white/80" />
-                  Session Timer
-                </div>
-                <div className="text-xs text-white/70">
-                  Stops playback automatically when the timer ends.
-                </div>
-              </div>
-
-              {isPlaying && timerEndsAt && typeof timeLeftSec === "number" ? (
-                <div className="shrink-0 text-right">
-                  <div className="text-[11px] text-white/60">Ends in</div>
-                  <div className="text-sm font-extrabold text-white font-mono tabular-nums">
-                    {formatMMSS(timeLeftSec)}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              {SESSION_TIMER_OPTIONS.map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setSessionTimerMinutes(m)}
-                  className={pill(sessionTimerMinutes === m)}
-                  title={m === 0 ? "No auto-stop" : `Stop after ${m} minutes`}
-                >
-                  {m === 0 ? "Off" : `${m}m`}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-2 text-[11px] text-white/60">
-              Your choice is remembered on this device.
-            </div>
-          </div>
-        </div>
-
-        {/* LAYERS */}
-        <div className="px-4 grid gap-4">
-          <AnimatePresence>
-            {layers.map((layer, index) => (
-              <motion.div
-                key={layer.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, height: 0 }}
-                className="bg-transparent border border-white/10 p-4 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.25)]"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                    <span className="text-sm md:text-base font-extrabold text-white truncate drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]">
-                      {layerTitleLabel(layer)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* ONLY: Volume */}
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="overflow-hidden rounded-xl border border-white/10 bg-transparent shadow-[0_8px_30px_rgba(0,0,0,0.18)]">
-                    <div className="p-4 flex flex-col justify-center">
-                      <div className="flex items-center justify-between gap-3 mb-3 border-b border-white/10 pb-2">
-                        <span className="text-xs font-bold text-white/90 uppercase tracking-wider">
-                          Volume
-                        </span>
-                        <span className="text-[11px] text-white/80 font-mono tabular-nums">
-                          {safeNum(layer.volume, 0.5).toFixed(2)}
-                        </span>
+                  <div className="flex-1 w-full flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="text-2xl font-bold text-white truncate drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]">
+                        {name}
                       </div>
-
-                      <div className="flex gap-3 items-center">
-                        <Slider
-                          value={[safeNum(layer.volume, 0.5)]}
-                          onValueChange={(v) => updateLayer(layer.id, "volume", v[0])}
-                          max={1}
-                          step={0.01}
-                          className="flex-1"
-                          onPointerDownCapture={requireThumbDrag}
-                        />
+                      <div className="text-xs text-white/80 truncate">
+                        Preview mode — Volume only (Discover settings below)
                       </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={handleSave}
+                        disabled={typeof onSave !== "function"}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-300/30 whitespace-nowrap shadow-lg"
+                        title={isExisting ? "Save changes" : "Create this mode"}
+                      >
+                        <Save className="w-4 h-4 mr-2" />
+                        {isExisting ? "Save" : "Create"}
+                      </Button>
+
+                      <Button
+                        onClick={() => {
+                          navigate("/AuraEditor", {
+                            state: {
+                              preset: {
+                                ...(initialPreset || {}),
+                                name,
+                                color,
+                                layers,
+                                id: initialPreset?.id,
+                              },
+                            },
+                          });
+                        }}
+                        className="bg-black/70 hover:bg-black/80 text-white border border-white/15 whitespace-nowrap backdrop-blur-md shadow-lg"
+                      >
+                        <Monitor className="w-4 h-4 mr-2" /> Open Studio
+                      </Button>
                     </div>
                   </div>
                 </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
+              </div>
+            </div>
 
-        {/* Playback Control */}
-        <div className="mt-8 flex justify-center">
-          <div className="bg-[#0a0a0a]/90 backdrop-blur-xl border border-white/10 p-2 rounded-full shadow-2xl flex gap-2">
-            <Button
-              onClick={togglePlay}
-              className={cn(
-                "rounded-full px-8 h-12 text-lg font-bold transition-all",
-                isPlaying
-                  ? "bg-red-500/90 hover:bg-red-600 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)]"
-                  : "bg-emerald-500/90 hover:bg-emerald-600 text-black shadow-[0_0_20px_rgba(16,185,129,0.4)]"
-              )}
-            >
-              {isPlaying ? (
-                <Square className="w-5 h-5 mr-2 fill-current" />
-              ) : (
-                <Play className="w-5 h-5 mr-2 fill-current" />
-              )}
-              {isPlaying ? "Stop" : "Play Audio"}
-            </Button>
+            {/* DISCOVER SETTINGS */}
+            <div className="px-4">
+              <div className="rounded-2xl border border-white/10 bg-black/35 backdrop-blur-md shadow-xl p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-extrabold text-white tracking-wide">
+                      Discover Settings
+                    </div>
+                    <div className="text-xs text-white/70">
+                      This controls how modes are grouped, recommended, and filtered on Aura Modes.
+                    </div>
+                  </div>
+
+                  <div className="text-[11px] text-white/60 text-right">
+                    {binauralAuto ? "Binaural detected" : "No binaural detected"}
+                  </div>
+                </div>
+
+                {/* Goals */}
+                <div className="mt-4">
+                  <div className="text-xs font-bold text-white/80 mb-2">
+                    Goals (pick up to 2)
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {GOAL_OPTIONS.map((g) => (
+                      <button
+                        key={g.key}
+                        type="button"
+                        onClick={() => toggleGoal(g.key)}
+                        className={pill(goals.includes(g.key))}
+                      >
+                        {g.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Controls */}
+                <div className="mt-4 grid grid-cols-1 gap-3">
+                  {/* Intensity */}
+                  <div className="rounded-xl border border-white/10 bg-black/40 p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-bold text-white/80">Intensity</div>
+                      <div className="text-[11px] text-white/70 font-mono tabular-nums">
+                        {Math.max(1, Math.min(5, Math.round(Number(intensity) || 3)))}/5
+                      </div>
+                    </div>
+
+                    <div className="mt-3">
+                      <Slider
+                        value={[Math.max(1, Math.min(5, Number(intensity) || 3))]}
+                        onValueChange={(v) => setIntensity(v[0])}
+                        min={1}
+                        max={5}
+                        step={1}
+                        onPointerDownCapture={requireThumbDrag}
+                      />
+                    </div>
+
+                    <div className="mt-2 text-[11px] text-white/60">
+                      Higher intensity = more “forward” mix / stronger feel (for sorting).
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Session Timer */}
+            <div className="px-4">
+              <div className="rounded-2xl border border-white/10 bg-black/35 backdrop-blur-md shadow-xl p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-sm font-extrabold text-white tracking-wide flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-white/80" />
+                      Session Timer
+                    </div>
+                    <div className="text-xs text-white/70">
+                      Stops playback automatically when the timer ends.
+                    </div>
+                  </div>
+
+                  {isPlaying && timerEndsAt && typeof timeLeftSec === "number" ? (
+                    <div className="shrink-0 text-right">
+                      <div className="text-[11px] text-white/60">Ends in</div>
+                      <div className="text-sm font-extrabold text-white font-mono tabular-nums">
+                        {formatMMSS(timeLeftSec)}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {SESSION_TIMER_OPTIONS.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setSessionTimerMinutes(m)}
+                      className={pill(sessionTimerMinutes === m)}
+                      title={m === 0 ? "No auto-stop" : `Stop after ${m} minutes`}
+                    >
+                      {m === 0 ? "Off" : `${m}m`}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-2 text-[11px] text-white/60">
+                  Your choice is remembered on this device.
+                </div>
+              </div>
+            </div>
+
+            {/* LAYERS */}
+            <div className="px-4 grid gap-4">
+              <AnimatePresence>
+                {layers.map((layer) => (
+                  <motion.div
+                    key={layer.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="bg-transparent border border-white/10 p-4 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.25)]"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                        <span className="text-sm md:text-base font-extrabold text-white truncate drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]">
+                          {layerTitleLabel(layer)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* ONLY: Volume */}
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="overflow-hidden rounded-xl border border-white/10 bg-transparent shadow-[0_8px_30px_rgba(0,0,0,0.18)]">
+                        <div className="p-4 flex flex-col justify-center">
+                          <div className="flex items-center justify-between gap-3 mb-3 border-b border-white/10 pb-2">
+                            <span className="text-xs font-bold text-white/90 uppercase tracking-wider">
+                              Volume
+                            </span>
+                            <span className="text-[11px] text-white/80 font-mono tabular-nums">
+                              {safeNum(layer.volume, 0.5).toFixed(2)}
+                            </span>
+                          </div>
+
+                          <div className="flex gap-3 items-center">
+                            <Slider
+                              value={[safeNum(layer.volume, 0.5)]}
+                              onValueChange={(v) => updateLayer(layer.id, "volume", v[0])}
+                              max={1}
+                              step={0.01}
+                              className="flex-1"
+                              onPointerDownCapture={requireThumbDrag}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+
+            {/* Playback Control */}
+            <div className="mt-8 flex justify-center">
+              <div className="bg-[#0a0a0a]/90 backdrop-blur-xl border border-white/10 p-2 rounded-full shadow-2xl flex gap-2">
+                <Button
+                  onClick={togglePlay}
+                  className={cn(
+                    "rounded-full px-8 h-12 text-lg font-bold transition-all",
+                    isPlaying
+                      ? "bg-red-500/90 hover:bg-red-600 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)]"
+                      : "bg-emerald-500/90 hover:bg-emerald-600 text-black shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+                  )}
+                >
+                  {isPlaying ? (
+                    <Square className="w-5 h-5 mr-2 fill-current" />
+                  ) : (
+                    <Play className="w-5 h-5 mr-2 fill-current" />
+                  )}
+                  {isPlaying ? "Stop" : "Play Audio"}
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      ) : null}
     </div>
   );
 }

@@ -19,11 +19,67 @@
     <link rel="icon" type="image/png" href="/icons/favicon-16.png" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png" />
 
-    <!-- ✅ Preload poster + video -->
-    <link rel="preload" as="image" href="/live/home.png" />
-    <link rel="preload" as="video" href="/live/home.mp4" type="video/mp4" />
+    <!-- ✅ Preload BOTH posters so AM never flashes during PM (and vice-versa) -->
+    <link rel="preload" as="image" href="/live/home.png" fetchpriority="high" />
+    <link
+      rel="preload"
+      as="image"
+      href="/live/home_pm.png"
+      fetchpriority="high"
+    />
 
-    <!-- ✅ App-shell poster: always available instantly -->
+    <!-- ✅ Determine AM/PM early (before CSS paints) + preload the correct video -->
+    <script>
+      (function () {
+        var dayStartHour = 6; // 6:00 AM
+        var pmStartHour = 18; // 6:00 PM
+
+        function isPmNow() {
+          var h = new Date().getHours();
+          return h >= pmStartHour || h < dayStartHour;
+        }
+
+        function msUntilNextBoundary(pm) {
+          var now = new Date();
+          var targetHour = pm ? dayStartHour : pmStartHour;
+          var next = new Date(now);
+          next.setHours(targetHour, 0, 0, 0);
+          if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1);
+          return Math.max(250, next.getTime() - now.getTime());
+        }
+
+        function apply(pm) {
+          document.documentElement.classList.toggle("is-pm", !!pm);
+        }
+
+        var pm = isPmNow();
+        apply(pm);
+
+        // Preload ONLY the relevant video (avoid doubling bandwidth on first paint)
+        var link = document.createElement("link");
+        link.id = "aura-shell-video-preload";
+        link.rel = "preload";
+        link.as = "video";
+        link.type = "video/mp4";
+        link.href = pm ? "/live/home_pm.mp4" : "/live/home.mp4";
+        document.head.appendChild(link);
+
+        // Keep shell correct if app stays open across boundary
+        (function schedule() {
+          var curPm = isPmNow();
+          var ms = msUntilNextBoundary(curPm);
+          window.setTimeout(function () {
+            var nextPm = isPmNow();
+            apply(nextPm);
+            var l = document.getElementById("aura-shell-video-preload");
+            if (l) l.href = nextPm ? "/live/home_pm.mp4" : "/live/home.mp4";
+            schedule();
+          }, ms);
+        })();
+      })();
+    </script>
+
+    <!-- ✅ App-shell background + FIRST-PAINT intro mask -->
     <style>
       html {
         background-color: #09090b;
@@ -33,6 +89,7 @@
         background: transparent;
       }
 
+      /* Live background shell (poster) */
       #app-shell-bg {
         position: fixed;
         inset: 0;
@@ -44,10 +101,234 @@
         opacity: 1;
         z-index: 0;
       }
+      html.is-pm #app-shell-bg {
+        background-image: url("/live/home_pm.png");
+      }
 
       #root {
         position: relative;
         z-index: 1;
+      }
+
+      /* ------------------------------------------------------------------- */
+      /* AuraLab Intro Mask — 5s, opaque, first paint, blocks everything      */
+      /* ------------------------------------------------------------------- */
+      #aura-intro {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #09090b; /* OPAQUE: hides UI + live background while loading */
+        color: #ffffff;
+        overflow: hidden;
+        animation: auraIntroContainer 5s forwards;
+      }
+
+      /* Stays fully visible, then fades out near the end of 5s */
+      @keyframes auraIntroContainer {
+        0% {
+          opacity: 1;
+          visibility: visible;
+          pointer-events: auto;
+        }
+        92% {
+          opacity: 1;
+          visibility: visible;
+          pointer-events: auto;
+        }
+        100% {
+          opacity: 0;
+          visibility: hidden;
+          pointer-events: none;
+        }
+      }
+
+      #aura-intro .aura-intro-skip {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        z-index: 2;
+        border: 0;
+        cursor: pointer;
+        border-radius: 9999px;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.92);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      #aura-intro .aura-intro-skip:hover {
+        background: rgba(255, 255, 255, 0.12);
+      }
+      #aura-intro .aura-intro-skip:active {
+        background: rgba(255, 255, 255, 0.16);
+      }
+
+      #aura-intro .aura-intro-center {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 24px;
+      }
+
+      #aura-intro .aura-intro-ring {
+        width: 128px;
+        height: 128px;
+        border-radius: 9999px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        position: relative;
+        margin-bottom: 22px;
+        animation: auraRingPulse 2.4s ease-in-out infinite;
+      }
+      #aura-intro .aura-intro-ring::after {
+        content: "";
+        position: absolute;
+        inset: 10px;
+        border-radius: 9999px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      @keyframes auraRingPulse {
+        0% {
+          transform: scale(0.96);
+          opacity: 0.22;
+        }
+        50% {
+          transform: scale(1.04);
+          opacity: 0.38;
+        }
+        100% {
+          transform: scale(0.96);
+          opacity: 0.22;
+        }
+      }
+
+      #aura-intro .aura-intro-phrases {
+        position: relative;
+        height: 2.4em;
+        min-width: 260px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #aura-intro .aura-phrase {
+        position: absolute;
+        left: 0;
+        right: 0;
+        opacity: 0;
+        transform: translateY(6px);
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+
+      /* 5s total: 3 beats across the window */
+      #aura-intro .aura-phrase.p1 {
+        animation: auraPhrase1 5s forwards;
+      }
+      #aura-intro .aura-phrase.p2 {
+        animation: auraPhrase2 5s forwards;
+      }
+      #aura-intro .aura-phrase.p3 {
+        animation: auraPhrase3 5s forwards;
+      }
+
+      @keyframes auraPhrase1 {
+        0% {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        8% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        30% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        34% {
+          opacity: 0;
+          transform: translateY(-6px);
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-6px);
+        }
+      }
+      @keyframes auraPhrase2 {
+        0% {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        34% {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        42% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        63% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        67% {
+          opacity: 0;
+          transform: translateY(-6px);
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-6px);
+        }
+      }
+      @keyframes auraPhrase3 {
+        0% {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        67% {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        75% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        92% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-6px);
+        }
+      }
+
+      #aura-intro .aura-intro-brand {
+        margin-top: 12px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #aura-intro {
+          animation: auraIntroContainer 5s forwards;
+        }
+        #aura-intro .aura-intro-ring {
+          animation: none;
+          opacity: 0.3;
+        }
       }
     </style>
 
@@ -55,8 +336,59 @@
   </head>
 
   <body>
+    <!-- FIRST PAINT: Opaque intro mask (hides UI + background while everything loads) -->
+    <div id="aura-intro" aria-label="AuraLab opening attunement">
+      <button id="aura-intro-skip" class="aura-intro-skip" type="button">
+        Skip
+      </button>
+
+      <div class="aura-intro-center">
+        <div class="aura-intro-ring" aria-hidden="true"></div>
+
+        <div class="aura-intro-phrases" aria-live="polite">
+          <div class="aura-phrase p1">Tune The Field</div>
+          <div class="aura-phrase p2">Set The Frequency</div>
+          <div class="aura-phrase p3">Craft Your Aura</div>
+        </div>
+
+        <div class="aura-intro-brand">AuraLab</div>
+      </div>
+    </div>
+
+    <!-- App shell background -->
     <div id="app-shell-bg"></div>
+
+    <!-- React root -->
     <div id="root"></div>
+
+    <!-- Skip behavior + hard cleanup (CSS already auto-hides at 5s) -->
+    <script>
+      (function () {
+        var intro = document.getElementById("aura-intro");
+        if (!intro) return;
+
+        function kill() {
+          // Instant hide
+          intro.style.animation = "none";
+          intro.style.opacity = "0";
+          intro.style.visibility = "hidden";
+          intro.style.pointerEvents = "none";
+          // Remove shortly after to keep DOM clean
+          window.setTimeout(function () {
+            if (intro && intro.parentNode) intro.parentNode.removeChild(intro);
+          }, 50);
+        }
+
+        var skip = document.getElementById("aura-intro-skip");
+        if (skip) skip.addEventListener("click", kill, { passive: true });
+
+        // Hard cleanup slightly after the 5s window (CSS already hides it)
+        window.setTimeout(function () {
+          if (intro && intro.parentNode) intro.parentNode.removeChild(intro);
+        }, 5200);
+      })();
+    </script>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
