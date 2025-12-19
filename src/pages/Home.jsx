@@ -2,15 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "../components/utils";
-import {
-  SlidersHorizontal,
-  Download,
-  X,
-  Play,
-  Pause,
-  Heart,
-  Sparkles,
-} from "lucide-react";
+import { SlidersHorizontal, Download, X, Play, Heart, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import usePWAInstall from "../hooks/usePWAInstall";
 
@@ -84,9 +76,7 @@ function SectionHeader({ title, subtitle, right }) {
     <div className="flex items-end justify-between gap-4 mb-3">
       <div className="min-w-0">
         <h2 className="text-lg font-bold text-white truncate">{title}</h2>
-        {subtitle ? (
-          <p className="text-xs text-gray-400 mt-1">{subtitle}</p>
-        ) : null}
+        {subtitle ? <p className="text-xs text-gray-400 mt-1">{subtitle}</p> : null}
       </div>
       {right ? <div className="shrink-0">{right}</div> : null}
     </div>
@@ -107,6 +97,8 @@ function CompactCard({ preset, href, isFavorite, onToggleFavorite }) {
   // ✅ If image exists, it is the ONLY background layer.
   // ✅ If not, fall back to your tint gradient.
   const bgImage = hasImg ? `url("${img}")` : tint || DEFAULT_TINT;
+
+  const pid = preset?.id;
 
   return (
     <Link to={href} className="shrink-0">
@@ -136,16 +128,16 @@ function CompactCard({ preset, href, isFavorite, onToggleFavorite }) {
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onToggleFavorite?.(preset.id);
+              if (!pid) return;
+              onToggleFavorite?.(pid);
             }}
             title={isFavorite ? "Unfavorite" : "Favorite"}
+            aria-label={isFavorite ? "Unfavorite" : "Favorite"}
           >
             <Heart
               className={[
                 "w-4 h-4",
-                isFavorite
-                  ? "fill-emerald-400 text-emerald-400"
-                  : "text-white/80",
+                isFavorite ? "fill-emerald-400 text-emerald-400" : "text-white/80",
               ].join(" ")}
             />
           </button>
@@ -166,8 +158,6 @@ function CompactCard({ preset, href, isFavorite, onToggleFavorite }) {
     </Link>
   );
 }
-
-
 
 // ------------------------------------------------------------
 // Home content
@@ -235,8 +225,6 @@ export default function Home() {
 
   const player = useGlobalPlayer();
   const nowPreset = player?.currentPlayingPreset || null;
-  const nowIsPlaying = Boolean(player?.isPlaying);
-  const togglePlayPause = player?.togglePlayPause;
 
   // Install banner
   const { isInstalled, isInstallable, promptInstall } = usePWAInstall();
@@ -388,12 +376,16 @@ export default function Home() {
     });
   }, [fanMetaById]);
 
+  // ✅ Real "void" under the hero to reveal the live background
+  // If install banner is showing, keep the void smaller so the page doesn't get pushed too far
+  const HERO_VOID_CLASS = showInstallBanner ? "h-10 sm:h-14" : "h-[34vh] sm:h-[40vh]";
+
   return (
     <div className="w-full overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-10">
         {/* HERO */}
         <section className="relative">
-          <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-[520px] h-[520px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          {/* ✅ Removed the emerald glow circle that was bleeding through the live background */}
 
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -453,12 +445,15 @@ export default function Home() {
           </motion.div>
         </section>
 
-        {/* NOW PLAYING (RESUME WITHOUT NAVIGATING) */}
+        {/* ✅ VOID UNDER HERO (show live background) */}
+        <div aria-hidden="true" className={HERO_VOID_CLASS} />
+
+        {/* NOW PLAYING (CARD) */}
         {nowPreset ? (
           <section className="space-y-3">
             <SectionHeader
               title="Now Playing"
-              subtitle="Resume instantly from Home."
+              subtitle="Your current session."
               right={
                 <Link
                   to="/NowPlaying"
@@ -469,39 +464,12 @@ export default function Home() {
               }
             />
 
-            <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-sm p-4 sm:p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="text-xs text-white/60 font-semibold">Current session</div>
-                  <div className="mt-1 text-xl sm:text-2xl font-extrabold text-white truncate">
-                    {nowPreset?.name || "Aura Session"}
-                  </div>
-                  {nowPreset?.description ? (
-                    <div className="mt-1 text-sm text-white/70 line-clamp-2">
-                      {nowPreset.description}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="shrink-0 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => togglePlayPause?.()}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 bg-emerald-500 text-black font-extrabold text-sm sm:text-base shadow-lg shadow-emerald-500/20"
-                  >
-                    {nowIsPlaying ? (
-                      <>
-                        <Pause className="w-5 h-5" /> Pause
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-5 h-5 fill-black" /> Resume
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
+            <CompactCard
+              preset={nowPreset}
+              href="/NowPlaying"
+              isFavorite={favSet.has(nowPreset?.id)}
+              onToggleFavorite={toggleFavorite}
+            />
           </section>
         ) : null}
 
@@ -521,27 +489,13 @@ export default function Home() {
                   </Link>
                 }
               />
-              <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-sm p-4 sm:p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="text-xs text-white/60 font-semibold">Last played</div>
-                    <div className="mt-1 text-xl sm:text-2xl font-extrabold text-white truncate">
-                      {continuePreset.name}
-                    </div>
-                    {continuePreset.description ? (
-                      <div className="mt-1 text-sm text-white/70 line-clamp-2">
-                        {continuePreset.description}
-                      </div>
-                    ) : null}
-                  </div>
 
-                  <Link to={activateHref(continuePreset.id)} className="shrink-0">
-                    <button className="inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 bg-emerald-500 text-black font-extrabold text-sm sm:text-base shadow-lg shadow-emerald-500/20">
-                      <Play className="w-5 h-5 fill-black" /> Play
-                    </button>
-                  </Link>
-                </div>
-              </div>
+              <CompactCard
+                preset={continuePreset}
+                href={activateHref(continuePreset.id)}
+                isFavorite={favSet.has(continuePreset.id)}
+                onToggleFavorite={toggleFavorite}
+              />
             </div>
 
             {recentsResolved.length > 1 ? (
@@ -553,7 +507,6 @@ export default function Home() {
                       key={preset.id}
                       preset={preset}
                       href={activateHref(preset.id)}
-                      showHeart
                       isFavorite={favSet.has(preset.id)}
                       onToggleFavorite={toggleFavorite}
                     />
@@ -575,7 +528,6 @@ export default function Home() {
                       key={preset.id}
                       preset={preset}
                       href={activateHref(preset.id)}
-                      showHeart
                       isFavorite={favSet.has(preset.id)}
                       onToggleFavorite={toggleFavorite}
                     />
@@ -633,7 +585,13 @@ export default function Home() {
           />
           <Rail>
             {featuredRail.map((p) => (
-              <CompactCard key={p.id} preset={p} href={activateHref(p.id)} />
+              <CompactCard
+                key={p.id}
+                preset={p}
+                href={activateHref(p.id)}
+                isFavorite={favSet.has(p.id)}
+                onToggleFavorite={toggleFavorite}
+              />
             ))}
           </Rail>
         </section>
@@ -654,7 +612,13 @@ export default function Home() {
           />
           <Rail>
             {zodiacRail.map((p) => (
-              <CompactCard key={p.id} preset={p} href={activateHref(p.id)} />
+              <CompactCard
+                key={p.id}
+                preset={p}
+                href={activateHref(p.id)}
+                isFavorite={favSet.has(p.id)}
+                onToggleFavorite={toggleFavorite}
+              />
             ))}
           </Rail>
         </section>
@@ -675,7 +639,13 @@ export default function Home() {
           />
           <Rail>
             {fanRail.map((p) => (
-              <CompactCard key={p.id} preset={p} href={activateHref(p.id)} />
+              <CompactCard
+                key={p.id}
+                preset={p}
+                href={activateHref(p.id)}
+                isFavorite={favSet.has(p.id)}
+                onToggleFavorite={toggleFavorite}
+              />
             ))}
           </Rail>
         </section>
