@@ -1,8 +1,15 @@
 //App.jsx
 
 import React, { useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import Layout from "./Layout";
+import ScrollToTop from "./components/ScrollToTop";
 
 import Home from "./pages/Home";
 import Install from "./pages/Install";
@@ -43,12 +50,18 @@ function FirstRunGate() {
 }
 
 function AppInner() {
-  const { currentPlayingPreset, isPlaying, togglePlayPause, isStickyPlayerHidden, hideStickyPlayerOnce } =
-    useGlobalPlayer();
+  const {
+    currentPlayingPreset,
+    isPlaying,
+    togglePlayPause,
+    isStickyPlayerHidden,
+    hideStickyPlayerOnce,
+  } = useGlobalPlayer();
 
   return (
     <Router>
       <FirstRunGate />
+      <ScrollToTop />
       <Layout
         currentPlayingPreset={currentPlayingPreset}
         isPlaying={isPlaying}
