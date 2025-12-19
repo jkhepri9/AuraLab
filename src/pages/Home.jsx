@@ -93,7 +93,7 @@ function SectionHeader({ title, subtitle, right }) {
   );
 }
 
-function CompactCard({ preset, href, showHeart, isFavorite, onToggleFavorite }) {
+function CompactCard({ preset, href, isFavorite, onToggleFavorite }) {
   const tint =
     typeof preset?.color === "string" && preset.color.includes("gradient")
       ? preset.color
@@ -125,32 +125,30 @@ function CompactCard({ preset, href, showHeart, isFavorite, onToggleFavorite }) 
             backgroundRepeat: "no-repeat",
           }}
         >
-          {/* Optional heart overlay */}
-          {showHeart ? (
-            <button
-              type="button"
+          {/* ✅ Always-on heart overlay (bottom-right) */}
+          <button
+            type="button"
+            className={[
+              "absolute bottom-2 right-2 z-10",
+              "h-8 w-8 rounded-full flex items-center justify-center",
+              "bg-black/35 hover:bg-black/45 border border-white/15",
+            ].join(" ")}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleFavorite?.(preset.id);
+            }}
+            title={isFavorite ? "Unfavorite" : "Favorite"}
+          >
+            <Heart
               className={[
-                "absolute bottom-2 right-2 z-10",
-                "h-8 w-8 rounded-full flex items-center justify-center",
-                "bg-black/35 hover:bg-black/45 border border-white/15",
+                "w-4 h-4",
+                isFavorite
+                  ? "fill-emerald-400 text-emerald-400"
+                  : "text-white/80",
               ].join(" ")}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onToggleFavorite?.(preset.id);
-              }}
-              title={isFavorite ? "Unfavorite" : "Favorite"}
-            >
-              <Heart
-                className={[
-                  "w-4 h-4",
-                  isFavorite
-                    ? "fill-emerald-400 text-emerald-400"
-                    : "text-white/80",
-                ].join(" ")}
-              />
-            </button>
-          ) : null}
+            />
+          </button>
         </div>
 
         {/* ✅ Title + description underneath */}
@@ -168,6 +166,7 @@ function CompactCard({ preset, href, showHeart, isFavorite, onToggleFavorite }) 
     </Link>
   );
 }
+
 
 
 // ------------------------------------------------------------
