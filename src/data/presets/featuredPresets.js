@@ -2,44 +2,33 @@
 
 export const FEATURED_PRESETS = [
   {
-    id: "m_deep_sleep",
-    name: "Deep Sleep",
-    symbol: "☾",
-    color: "linear-gradient(135deg, #0b1220, #1b2a4a)",
-    imageUrl: "/modeimages/deepsleep.jpg",
-    description: "Slow the mind and soften the body into deep sleep. Built for calm, darkness, and stillness.",
-
-    // ✅ Discover metadata
-    goals: ["sleep"],
-    scenarios: ["night", "insomnia", "downshift"],
-    styles: ["binaural", "nature", "noise"],
-    intensity: 1,
-    headphonesRecommended: true,
-    durationHint: "60m",
-    collection: "Featured",
-    tags: ["sleep", "deep", "delta", "night"],
-
-    layers: [
-      // ✅ Sub Foundation (sleep body)
-      { id: "ds_sub", name: "Sub Foundation (65 Hz)", type: "oscillator", frequency: 65, volume: 0.40, pan: 0, waveform: "sine", enabled: true },
-
-      // ✅ Atmospheric Drone (deep sleep)
-      { id: "ds_drone", name: "Atmospheric Drone (84 Hz)", type: "synth", frequency: 84, volume: 0.06, pan: 0, waveform: "drone", enabled: true },
-
-      { id: "ds_amb", name: "Ambient: Ocean Deep", type: "ambient", waveform: "ocean_deep", volume: 0.08, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
-
-      // Deep sleep bed anchored to 432 with a gentle low-offset (popular approach)
-      { id: "ds_l", name: "Binaural Carrier L (98 Hz)", type: "oscillator", frequency: 98, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
-      { id: "ds_r", name: "Binaural Carrier R (102 Hz)", type: "oscillator", frequency: 102, volume: 0.11, pan: 1, waveform: "sine", enabled: true },
-
-      { id: "ds_pink", name: "Pink Noise (Soft Blanket)", type: "noise", frequency: 0, volume: 0.10, pan: 0, waveform: "pink", enabled: true },
-
-      // Popular sleep / grounding tone often used: 174
-      { id: "ds_174", name: "Low Drone (174 Hz)", type: "oscillator", frequency: 174, volume: 0.11, pan: 0, waveform: "sine", enabled: true },
-      { id: "m_deep_sleep_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", waveform: "wind_forest", volume: 0.05, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
-    ],
-    order: 0,
-  },
+  id: "m_deep_sleep",
+  name: "Deep Sleep",
+  symbol: "☾",
+  color: "linear-gradient(135deg, #0b1220, #1b2a4a)",
+  imageUrl: "/modeimages/deepsleep.jpg",
+  description: "Slow the mind and soften the body into deep sleep. Built for calm, darkness, and stillness.",
+  goals: ["sleep"],
+  scenarios: ["night", "insomnia", "downshift"],
+  styles: ["binaural", "nature", "noise"],
+  intensity: 1,
+  headphonesRecommended: true,
+  durationHint: "60m",
+  collection: "Featured",
+  tags: ["sleep", "deep", "delta", "night"],
+  layers: [
+    { id: "ds_sub", name: "Sub Foundation (80 Hz)", type: "oscillator", frequency: 80, volume: 0.549, pan: 0, waveform: "sine", enabled: true, pulseRate: 0.26, pulseDepth: 0.76 },
+    { id: "ds_drone", name: "Atmospheric Drone (84 Hz)", type: "synth", frequency: 84, volume: 0.06, pan: 0, waveform: "drone", enabled: true },
+    { id: "ds_amb", name: "Ambient: Ocean Deep", type: "ambient", waveform: "ocean_deep", volume: 0.08, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 15000, Q: 0.7 } },
+    { id: "ds_l", name: "Binaural Carrier L (98 Hz)", type: "oscillator", frequency: 98, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
+    { id: "ds_r", name: "Binaural Carrier R (102 Hz)", type: "oscillator", frequency: 102, volume: 0.11, pan: 1, waveform: "sine", enabled: true },
+    { id: "ds_pink", name: "Pink Noise (Soft Blanket)", type: "noise", frequency: 0, volume: 0.1, pan: 0, waveform: "pink", enabled: true },
+    { id: "ds_174", name: "Low Drone (174 Hz)", type: "oscillator", frequency: 174, volume: 0.11, pan: 0, waveform: "sine", enabled: true },
+    { id: "m_deep_sleep_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", waveform: "wind_forest", volume: 0.05, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
+  ],
+  order: 0,
+  studioFx: { reverbWet: 0, delayWet: 0, delayTime: 0.5 },
+},
 
   {
     id: "m_theta_gate",
