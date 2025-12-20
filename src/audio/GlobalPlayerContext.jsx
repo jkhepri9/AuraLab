@@ -7,12 +7,15 @@ import React, {
   useState,
 } from "react";
 import { createAudioEngine } from "./AudioEngine";
+import { useAuth } from "@/auth/AuthProvider";
 
 const GlobalPlayerContext = createContext(null);
 
 export function GlobalPlayerProvider({ children }) {
   const engineRef = useRef(createAudioEngine());
   const playSeqRef = useRef(0);
+
+  const { loading, requireAuth } = useAuth();
 
   const [currentPlayingPreset, setCurrentPlayingPreset] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -37,6 +40,12 @@ export function GlobalPlayerProvider({ children }) {
 
   const playLayers = async (layers, meta = {}) => {
     if (!layers?.length) return false;
+
+    // Avoid modal flash while session is still loading
+    if (loading) return false;
+
+    // Must be authed
+    if (!requireAuth()) return false;
 
     const seq = ++playSeqRef.current;
 
@@ -67,6 +76,9 @@ export function GlobalPlayerProvider({ children }) {
 
   const playPreset = async (preset) => {
     if (!preset?.layers?.length) return false;
+
+    if (loading) return false;
+    if (!requireAuth()) return false;
 
     const seq = ++playSeqRef.current;
 
@@ -129,6 +141,9 @@ export function GlobalPlayerProvider({ children }) {
   const resume = useCallback(async () => {
     if (!currentLayers?.length) return false;
 
+    if (loading) return false;
+    if (!requireAuth()) return false;
+
     const seq = ++playSeqRef.current;
 
     safeUnlock();
@@ -148,7 +163,7 @@ export function GlobalPlayerProvider({ children }) {
       if (seq === playSeqRef.current) setIsPlaying(false);
       return false;
     }
-  }, [currentLayers]);
+  }, [currentLayers, loading, requireAuth]);
 
   const togglePlayPause = useCallback(async () => {
     if (isPlaying) {
@@ -186,13 +201,6 @@ export function GlobalPlayerProvider({ children }) {
     setIsStickyPlayerHidden(Boolean(hidden));
   }, []);
 
-  /**
-   * This is what your App/Layout currently call on the "X".
-   * Updated per your requirement:
-   * - animate out (by setting stickyPlayerVisible false)
-   * - stop audio immediately
-   * - keep preset around briefly so exit animation can run (if Layout uses it)
-   */
   const hideStickyPlayerOnce = useCallback(() => {
     // Hide UI (for Layout animation support)
     setTempHidden(true);
@@ -210,13 +218,11 @@ export function GlobalPlayerProvider({ children }) {
     // Allow UI animation time, then clear now-playing state
     const mySeq = playSeqRef.current;
     window.setTimeout(() => {
-      // If something else started playing, don't clear
       if (playSeqRef.current !== mySeq) return;
 
       setCurrentLayers(null);
       setCurrentPlayingPreset(null);
 
-      // Reset for next play (next play will re-show)
       setStickyPlayerVisible(true);
     }, 320);
   }, []);
@@ -228,11 +234,9 @@ export function GlobalPlayerProvider({ children }) {
       currentLayers,
       isPlaying,
 
-      // sticky visibility controls
       isStickyPlayerHidden: isStickyPlayerHidden || tempHidden,
       stickyPlayerVisible,
 
-      // playback API
       playPreset,
       playLayers,
       pause,
@@ -240,11 +244,9 @@ export function GlobalPlayerProvider({ children }) {
       stop,
       togglePlayPause,
 
-      // studio compatibility
       updateLayers,
       updateNowPlaying,
 
-      // sticky control
       setStickyPlayerHidden: setStickyHidden,
       hideStickyPlayerOnce,
     }),
@@ -277,6 +279,7 @@ export function GlobalPlayerProvider({ children }) {
 
 export function useGlobalPlayer() {
   const ctx = useContext(GlobalPlayerContext);
-  if (!ctx) throw new Error("useGlobalPlayer must be used within a GlobalPlayerProvider");
+  if (!ctx)
+    throw new Error("useGlobalPlayer must be used within a GlobalPlayerProvider");
   return ctx;
 }

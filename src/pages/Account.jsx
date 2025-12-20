@@ -5,20 +5,51 @@ import { startCheckout } from "@/lib/billing";
 import { useAuth } from "@/auth/AuthProvider";
 import { getSupabase, getIsSupabaseConfigured } from "@/lib/supabaseClient";
 import { toast } from "sonner";
+import { useNavigate, useLocation } from "react-router-dom";
+
+const AUTH_RETURN_TO_KEY = "auralab_auth_return_to_v1";
 
 export default function Account() {
-  const { user, loading } = useAuth();
+  const { user, loading, signInWithGoogle, signOut } = useAuth();
   const [sub, setSub] = useState(null);
   const [subLoading, setSubLoading] = useState(false);
   const [authError, setAuthError] = useState("");
   const [checkoutError, setCheckoutError] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const supabase = getSupabase();
   const configured = getIsSupabaseConfigured();
 
   const userId = user?.id || null;
   const email = user?.email || null;
+
+  // If sign-in came from the playback gate, return user back after auth succeeds.
+  useEffect(() => {
+    if (!user) return;
+
+    let returnTo = "";
+    try {
+      returnTo = localStorage.getItem(AUTH_RETURN_TO_KEY) || "";
+    } catch {
+      returnTo = "";
+    }
+
+    // Only redirect to safe in-app paths
+    if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("/account")) {
+      try {
+        localStorage.removeItem(AUTH_RETURN_TO_KEY);
+      } catch {
+        // ignore
+      }
+
+      // Navigate after user exists (meaning session is established)
+      // Use replace to avoid keeping /account in history if they didn't intend to visit it.
+      navigate(returnTo, { replace: true });
+    }
+  }, [user, navigate]);
 
   useEffect(() => {
     let alive = true;
@@ -55,29 +86,6 @@ export default function Account() {
       alive = false;
     };
   }, [userId, configured]);
-
-  const signInGoogle = async () => {
-    setAuthError("");
-    if (!supabase) return;
-
-    const redirectTo = `${window.location.origin}/account`;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo },
-    });
-
-    if (error) {
-      console.error("Supabase sign-in error:", error);
-      setAuthError(error.message || "Sign-in failed");
-      toast.error(error.message || "Sign-in failed");
-    }
-  };
-
-  const signOut = async () => {
-    setAuthError("");
-    if (!supabase) return;
-    await supabase.auth.signOut();
-  };
 
   const handleCheckout = async (plan) => {
     setCheckoutError("");
@@ -132,7 +140,11 @@ export default function Account() {
 
             <Button
               className="bg-emerald-500 hover:bg-emerald-600 text-black font-bold"
-              onClick={signInGoogle}
+              onClick={() => {
+                setAuthError("");
+                // Sign-in from Account itself (no returnTo needed)
+                signInWithGoogle({ returnToPath: "" });
+              }}
               disabled={!supabase}
             >
               Sign in with Google
@@ -153,7 +165,9 @@ export default function Account() {
                   Status: <span className="font-semibold">{sub.status}</span>
                 </div>
               ) : (
-                <div className="text-sm text-gray-400 mt-1">No active subscription on file.</div>
+                <div className="text-sm text-gray-400 mt-1">
+                  No active subscription on file.
+                </div>
               )}
             </div>
 
@@ -178,7 +192,7 @@ export default function Account() {
               <Button
                 variant="outline"
                 className="border-white/10 text-white hover:bg-white/10"
-                onClick={signOut}
+                onClick={() => signOut()}
                 disabled={!supabase}
               >
                 Sign out
