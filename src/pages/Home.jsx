@@ -10,9 +10,8 @@ import { db } from "@/lib/db";
 import { useQuery } from "@tanstack/react-query";
 import { useGlobalPlayer } from "../audio/GlobalPlayerContext";
 
-import FEATURED_PRESETS from "../data/presets/featuredPresets";
-import { fanFavoritesPresets } from "../data/presets/fanFavoritesPresets";
-import zodiacPresets from "../data/presets/zodiacPresets";
+// ✅ Registry-driven collections + built-in preset library
+import { PRESET_COLLECTIONS, allPresets as BUILTIN_PRESETS } from "@/data/presets";
 
 // ------------------------------------------------------------
 // Storage keys (shared with AuraModes.jsx)
@@ -62,6 +61,42 @@ const buildMetaMap = (arr) => {
   }
   return m;
 };
+
+// ------------------------------------------------------------
+// ✅ Registry helpers (single source of truth for labels)
+// ------------------------------------------------------------
+const getCollectionMetaByLegacyLabel = (legacyLabel) => {
+  const found = (PRESET_COLLECTIONS || []).find((c) => c?.legacyLabel === legacyLabel);
+  return (
+    found || {
+      key: legacyLabel,
+      legacyLabel,
+      displayedLabel: legacyLabel,
+    }
+  );
+};
+
+const FEATURED_COLLECTION = getCollectionMetaByLegacyLabel("Featured");
+const ZODIAC_COLLECTION = getCollectionMetaByLegacyLabel("Zodiac");
+const FAN_COLLECTION = getCollectionMetaByLegacyLabel("Fan Favorites");
+
+// Built-in lists (still filtered by legacyLabel to avoid breaking preset data)
+const FEATURED_BUILTINS = (BUILTIN_PRESETS || []).filter(
+  (p) => String(p?.collection || "") === String(FEATURED_COLLECTION.legacyLabel || "Featured")
+);
+
+const ZODIAC_BUILTINS = (BUILTIN_PRESETS || []).filter((p) => {
+  const col = String(p?.collection || "");
+  const id = String(p?.id || "");
+  return (
+    col === String(ZODIAC_COLLECTION.legacyLabel || "Zodiac") ||
+    id.startsWith("z_")
+  );
+});
+
+const FAN_FAVORITES_BUILTINS = (BUILTIN_PRESETS || []).filter(
+  (p) => String(p?.collection || "") === String(FAN_COLLECTION.legacyLabel || "Fan Favorites")
+);
 
 function Rail({ children }) {
   return (
@@ -229,9 +264,10 @@ export default function Home() {
   // Install banner
   const { isInstalled, isInstallable, promptInstall } = usePWAInstall();
 
-  const featuredMetaById = useMemo(() => buildMetaMap(FEATURED_PRESETS), []);
-  const fanMetaById = useMemo(() => buildMetaMap(fanFavoritesPresets), []);
-  const zodiacMetaById = useMemo(() => buildMetaMap(zodiacPresets), []);
+  // ✅ Build meta maps from the built-in library (registry-connected)
+  const featuredMetaById = useMemo(() => buildMetaMap(FEATURED_BUILTINS), []);
+  const fanMetaById = useMemo(() => buildMetaMap(FAN_FAVORITES_BUILTINS), []);
+  const zodiacMetaById = useMemo(() => buildMetaMap(ZODIAC_BUILTINS), []);
 
   // Pull full library so Home can resolve Recents/Favorites accurately (includes custom modes)
   const { data: presets = [] } = useQuery({
@@ -239,9 +275,15 @@ export default function Home() {
     queryFn: () => db.presets.list(),
   });
 
+  // ✅ Include built-ins too (Home previously only mapped DB presets)
   const presetById = useMemo(() => {
     const m = new Map();
-    for (const p of presets || []) m.set(p.id, p);
+    for (const p of BUILTIN_PRESETS || []) {
+      if (p?.id) m.set(p.id, p);
+    }
+    for (const p of presets || []) {
+      if (p?.id) m.set(p.id, p);
+    }
     return m;
   }, [presets]);
 
@@ -334,8 +376,13 @@ export default function Home() {
 
   // Curated rails for Featured + Fan Favorites (small + horizontal)
   const featuredRail = useMemo(() => {
-    return quickModes.map((x) => {
+  return quickModes
+    .map((x) => {
       const meta = featuredMetaById.get(x.id);
+
+      // ✅ If it's not actually in the Featured collection, do NOT show it here.
+      if (!meta) return null;
+
       return {
         id: x.id,
         name: meta?.name || x.fallbackTitle,
@@ -343,11 +390,12 @@ export default function Home() {
         imageUrl: meta?.imageUrl || null,
         color: meta?.color || DEFAULT_TINT,
       };
-    });
-  }, [featuredMetaById]);
+    })
+    .filter(Boolean);
+}, [featuredMetaById]);
 
   const zodiacRail = useMemo(() => {
-    const list = Array.isArray(zodiacPresets) ? [...zodiacPresets] : [];
+    const list = Array.isArray(ZODIAC_BUILTINS) ? [...ZODIAC_BUILTINS] : [];
     list.sort((a, b) => (a?.order ?? 9999) - (b?.order ?? 9999));
     return list.map((p) => {
       const meta = zodiacMetaById.get(p.id);
@@ -362,7 +410,7 @@ export default function Home() {
   }, [zodiacMetaById]);
 
   const fanRail = useMemo(() => {
-    const list = Array.isArray(fanFavoritesPresets) ? [...fanFavoritesPresets] : [];
+    const list = Array.isArray(FAN_FAVORITES_BUILTINS) ? [...FAN_FAVORITES_BUILTINS] : [];
     list.sort((a, b) => (a?.order ?? 9999) - (b?.order ?? 9999));
     return list.map((p) => {
       const meta = fanMetaById.get(p.id);
@@ -572,7 +620,7 @@ export default function Home() {
         {/* FEATURED (HORIZONTAL RAIL) */}
         <section className="space-y-3">
           <SectionHeader
-            title="Featured Modes"
+            title={`${FEATURED_COLLECTION.displayedLabel || "Featured"} Modes`}
             subtitle="Curated starts. Tap a card to play."
             right={
               <Link
@@ -599,7 +647,7 @@ export default function Home() {
         {/* ZODIAC MODES (HORIZONTAL RAIL) */}
         <section className="space-y-3">
           <SectionHeader
-            title="Zodiac Modes"
+            title={`${ZODIAC_COLLECTION.displayedLabel || "Zodiac"} Modes`}
             subtitle="Twelve signature fields—one for each sign. Tap a card to play."
             right={
               <Link
@@ -626,7 +674,7 @@ export default function Home() {
         {/* FAN FAVORITES (HORIZONTAL RAIL) */}
         <section className="space-y-3">
           <SectionHeader
-            title="Fan Favorites"
+            title={FAN_COLLECTION.displayedLabel || "Fan Favorites"}
             subtitle="Community-crafted stacks built on popular sound-healing culture frequencies."
             right={
               <Link

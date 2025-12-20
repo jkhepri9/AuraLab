@@ -4,6 +4,7 @@ export function normalizeText(s) {
   return String(s || "").toLowerCase();
 }
 
+// Back-compat: many presets still store marketing labels in preset.collection.
 export function getCollection(preset) {
   return preset?.collection || "Custom";
 }
@@ -17,10 +18,12 @@ export function getGoals(preset) {
 }
 
 // Treat Zodiac as built-in content (non-DB) so we never try to rename/reorder/delete/update it in db.
+// Robust to future normalized presets (collectionKey) AND current legacy labels.
 export function isZodiacPreset(preset) {
   const id = String(preset?.id || "");
-  const col = String(preset?.collection || "");
-  return col === "Zodiac" || id.startsWith("z_");
+  const legacyCol = String(preset?.collection || "");
+  const colKey = String(preset?.collectionKey || "");
+  return legacyCol === "Zodiac" || colKey === "zodiac" || id.startsWith("z_");
 }
 
 export function safeNum(v, fallback) {

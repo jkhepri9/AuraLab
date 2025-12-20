@@ -31,6 +31,9 @@ import {
   SectionHeader,
 } from "./components";
 
+// ✅ Pull registry collections for stable rendering + one-click label edits
+import { PRESET_COLLECTIONS } from "@/data/presets";
+
 export default function AuraModesListView({ pagePadBottom, ctx }) {
   const {
     // data
@@ -83,8 +86,6 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
 
   // ------------------------------------------------------------
   // ✅ Scroll-to-top-of-results after choosing a Goal (and close the panel)
-  // Uses the actual scroll container (overflow-y-auto) instead of relying on
-  // scrollIntoView alone, which can land inconsistently depending on layout shifts.
   // ------------------------------------------------------------
   const scrollWrapRef = useRef(null);
   const pendingGoalScrollRef = useRef(false);
@@ -93,7 +94,6 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
     try {
       const container = scrollWrapRef.current;
       const anchor = document.getElementById("auramodes-results-top");
-
       if (!anchor) return false;
 
       if (container && typeof container.scrollTo === "function") {
@@ -162,13 +162,14 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
 
   // ------------------------------------------------------------
   // ✅ Collection subtitles (brief descriptions per section)
+  // Uses stable registry keys (catalog/community/etc.)
   // ------------------------------------------------------------
-  const collectionSubtitle = (c) => {
-    if (c === "Featured") return "Hand-picked essentials to start strong.";
-    if (c === "Zodiac") return "Celestial sound-stacks tuned for each sign.";
-    if (c === "Grounded Aura Mode") return "Low-end foundation for calm, safety, and stability.";
-    if (c === "Community") return "Created by the community—discover new favorites.";
-    if (c === "Fan Favorites") return "Most-loved stacks—popular for a reason.";
+  const collectionSubtitle = (collectionKey) => {
+    if (collectionKey === "catalog") return "Hand-picked essentials to start strong.";
+    if (collectionKey === "zodiac") return "Celestial sound-stacks tuned for each sign.";
+    if (collectionKey === "grounded") return "Low-end foundation for calm, safety, and stability.";
+    if (collectionKey === "community") return "Created by the community—discover new favorites.";
+    if (collectionKey === "fan_favorites") return "Most-loved stacks—popular for a reason.";
     return "Explore this collection.";
   };
 
@@ -456,26 +457,26 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
               )}
             </div>
 
-            {/* Collection rails */}
-            {[
-              "Featured",
-              "Zodiac",
-              "Grounded Aura Mode",
-              "Community",
-              "Fan Favorites",
-            ].map((c) => {
-              const list = byCollection.get(c) || [];
+            {/* Collection rails (registry-driven, back-compatible grouping) */}
+            {PRESET_COLLECTIONS.map((c) => {
+              // Grouping still uses legacy labels stored on presets to avoid breaking anything.
+              const list =
+                byCollection.get(c.legacyLabel) ||
+                byCollection.get(c.displayedLabel) ||
+                [];
+
               if (!list.length) return null;
+
               return (
-                <div key={c}>
+                <div key={c.key}>
                   <SectionHeader
-                    title={c}
-                    subtitle={collectionSubtitle(c)}
+                    title={c.displayedLabel}
+                    subtitle={collectionSubtitle(c.key)}
                     right={
                       <Button
                         variant="ghost"
                         className="text-emerald-300 hover:bg-white/5"
-                        onClick={() => applyCollection(c)}
+                        onClick={() => applyCollection(c.legacyLabel)}
                       >
                         View all <ArrowRight className="w-4 h-4 ml-1" />
                       </Button>

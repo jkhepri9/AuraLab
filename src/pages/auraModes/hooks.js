@@ -62,15 +62,23 @@ export function useAuraModesLibrary({
 
   const byCollection = useMemo(() => {
     const map = new Map();
+
+    // Seed known collections for predictable ordering (uses legacy keys)
     for (const c of COLLECTIONS) {
       if (c.key !== "all") map.set(c.key, []);
     }
+
+    // Group by legacy collection string stored on preset objects
     for (const p of allPresets || []) {
-      const c = getCollection(p);
+      const c = getCollection(p); // returns preset.collection or "Custom"
       if (!map.has(c)) map.set(c, []);
       map.get(c).push(p);
     }
-    for (const [k, arr] of map.entries()) map.set(k, dedupeById(arr).sort(railSort));
+
+    for (const [k, arr] of map.entries()) {
+      map.set(k, dedupeById(arr).sort(railSort));
+    }
+
     return map;
   }, [allPresets]);
 
