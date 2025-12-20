@@ -8,7 +8,7 @@
 export const fanFavoritesPresets = [
   {
     id: "c_flowstate",
-    name: "FlowState",
+    name: "Flow State",
     color: "linear-gradient(135deg, #0b1026, #1c2e5c)",
     imageUrl: "/modeimages/flowstate.jpg",
     description: "Smooth flow focus: relaxed clarity (alpha-to-low-beta) to stay locked-in without tension.",
@@ -48,7 +48,7 @@ export const fanFavoritesPresets = [
   // NOTE: id is suffixed to avoid colliding with the existing featured Stress Relief preset.
   {
     id: "c_stress_relief_ff",
-    name: "StressRelief",
+    name: "Stress Relief",
     color: "linear-gradient(135deg, #101a24, #1b2a3a)",
     imageUrl:
       "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=2400&auto=format&fit=crop",
@@ -88,7 +88,7 @@ export const fanFavoritesPresets = [
 
   {
     id: "c_creative_flow",
-    name: "CreativeFlow",
+    name: "Creative Flow",
     color: "linear-gradient(135deg, #1a0a00, #5a1a00)",
     imageUrl: "/modeimages/mastermusician.jpg",
     description: "Creative ignition with coherent rhythm—built for ideation, writing, and design flow.",
@@ -127,7 +127,7 @@ export const fanFavoritesPresets = [
 
   {
     id: "c_shuman_resonance",
-    name: "ShumanResonance",
+    name: "Shuman Resonance",
     color: "linear-gradient(135deg, #07130a, #1f3a20)",
     imageUrl:
       "https://commons.wikimedia.org/wiki/Special:FilePath/Earth_from_Space.jpg?width=2400",
@@ -211,7 +211,7 @@ export const fanFavoritesPresets = [
 
   {
     id: "c_stargate_aura",
-    name: "StargateAura",
+    name: "Stargate Aura",
     color: "linear-gradient(135deg, #06071a, #2b0b3a)",
     imageUrl: "/modeimages/stargateaura.jpg",
     description: "High-energy portal focus. Bright upper harmonics with a sharp attention entrainment bed.",
