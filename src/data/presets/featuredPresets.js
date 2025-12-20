@@ -121,45 +121,36 @@ export const FEATURED_PRESETS = [
   },
 
   {
-    id: "m_heart_coherence",
-    name: "Heart Coherence",
-    symbol: "❤",
-    color: "linear-gradient(135deg, #2a0b12, #3a1b4a)",
-    imageUrl: "/modeimages/heartcoherence.jpg",
-    description: "Calm your nervous system and settle into steady coherence. Ideal for stress relief and emotional reset.",
-
-    // ✅ Discover metadata
-    goals: ["calm", "meditate"],
-    scenarios: ["stress", "reset", "regulation"],
-    styles: ["binaural", "nature", "noise"],
-    intensity: 2,
-    headphonesRecommended: true,
-    durationHint: "30m",
-    collection: "Featured",
-    tags: ["heart", "coherence", "calm", "stress"],
-
-    layers: [
-      // ✅ Sub Foundation (coherence)
-      { id: "hc_sub", name: "Sub Foundation (55 Hz)", type: "oscillator", frequency: 55, volume: 0.11, pan: 0, waveform: "sine", enabled: true },
-
-      // ✅ Atmospheric Drone (coherence/calm reset)
-      { id: "hc_drone", name: "Atmospheric Drone (90 Hz)", type: "synth", frequency: 90, volume: 0.05, pan: 0, waveform: "drone", enabled: true },
-
-      { id: "hc_amb", name: "Ambient: Park Birds", type: "ambient", waveform: "birds_park", volume: 0.23, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 17000, Q: 0.7 } },
-
-      // Popular “heart” association in sound-healing culture: 639
-      { id: "hc_l", name: "Binaural Carrier L (520 Hz)", type: "oscillator", frequency: 520, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
-      { id: "hc_r", name: "Binaural Carrier R (536 Hz)", type: "oscillator", frequency: 536, volume: 0.11, pan: 1, waveform: "sine", enabled: true },
-
-      { id: "hc_pink", name: "Pink Noise (Warmth)", type: "noise", frequency: 0, volume: 0.14, pan: 0, waveform: "pink", enabled: true },
-
-      // Bring in the “144 configuration” as a gentle stabilizing harmonic
-      { id: "hc_144", name: "Harmonic (144 Hz)", type: "oscillator", frequency: 144, volume: 0.06, pan: 0, waveform: "sine", enabled: true },
-      { id: "hc_333", name: "Harmonic (333 Hz)", type: "oscillator", frequency: 333, volume: 0.11, pan: 0, waveform: "sine", enabled: true },
-      { id: "m_heart_coherence_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", waveform: "wind_forest", volume: 0.08, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
-    ],
-    order: 3,
-  },
+  id: "m_heart_coherence",
+  name: "Heart Coherence",
+  symbol: "❤",
+  color: "linear-gradient(135deg, #2a0b12, #3a1b4a)",
+  imageUrl: "/modeimages/heartcoherence.jpg",
+  description: "Calm your nervous system and settle into steady coherence. Ideal for stress relief and emotional reset.",
+  goals: ["calm", "meditate"],
+  scenarios: ["stress", "reset", "regulation"],
+  styles: ["binaural", "nature", "noise"],
+  intensity: 2,
+  headphonesRecommended: true,
+  durationHint: "30m",
+  collection: "Featured",
+  tags: ["heart", "coherence", "calm", "stress"],
+  layers: [
+    { id: "hc_sub", name: "Sub Foundation (55 Hz)", type: "oscillator", frequency: 55, volume: 0.11, pan: 0, waveform: "sine", enabled: true },
+    { id: "hc_drone", name: "Atmospheric Drone (90 Hz)", type: "synth", frequency: 90, volume: 0.05, pan: 0, waveform: "drone", enabled: true },
+    { id: "hc_amb", name: "Ambient: Park Birds", type: "ambient", waveform: "birds_park", volume: 0.23, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 17000, Q: 0.7 } },
+    { id: "hc_l", name: "Binaural Carrier L (520 Hz)", type: "oscillator", frequency: 520, volume: 0.11, pan: -1, waveform: "sine", enabled: true },
+    { id: "hc_r", name: "Binaural Carrier R (536 Hz)", type: "oscillator", frequency: 536, volume: 0.11, pan: 1, waveform: "sine", enabled: true },
+    { id: "hc_pink", name: "Pink Noise (Warmth)", type: "noise", frequency: 0, volume: 0.14, pan: 0, waveform: "pink", enabled: true },
+    { id: "hc_144", name: "Harmonic (144 Hz)", type: "oscillator", frequency: 144, volume: 0.06, pan: 0, waveform: "sine", enabled: true },
+    { id: "hc_333", name: "Harmonic (333 Hz)", type: "oscillator", frequency: 333, volume: 0.11, pan: 0, waveform: "sine", enabled: true },
+    { id: "m_heart_coherence_motion_amb", name: "Motion Drift: Wind (Forest)", type: "ambient", waveform: "wind_forest", volume: 0.08, pan: 0, enabled: true, filterEnabled: true, filter: { type: "lowpass", frequency: 16000, Q: 0.7 } },
+    { id: "synth_l", type: "synth", name: "Synth L", frequency: 333, waveform: "drone", volume: 0.15, pan: -1, enabled: true, pulseRate: 0.26, pulseDepth: 0.83, phaseShift: 0, filterEnabled: true, filter: { type: "lowpass", frequency: 560, Q: 13.1 } },
+    { id: "synth_r", type: "synth", name: "Synth R", frequency: 333, waveform: "drone", volume: 0.15, pan: 1, enabled: true, pulseRate: 0.26, pulseDepth: 0.83, phaseShift: 0, filterEnabled: true, filter: { type: "lowpass", frequency: 560, Q: 13.1 } },
+  ],
+  order: 3,
+  studioFx: { reverbWet: 0, delayWet: 0, delayTime: 0.5 },
+},
 
   {
     id: "m_energy_ignition",

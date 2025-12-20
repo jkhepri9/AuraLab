@@ -20,3 +20,13 @@ export const allPresets = [
   ...zodiacPresets,
   ...groundedAuraPresets,
 ];
+
+// -----------------------------------------------------------------------------
+// ✅ Built-in preset registry (DEV tooling)
+// - Fast lookup by id for Creator Mode imports
+// - No behavior change for production
+// -----------------------------------------------------------------------------
+export const BUILTIN_PRESET_REGISTRY = allPresets.reduce((acc, p) => {
+  if (p && typeof p.id === "string" && p.id) acc[p.id] = p;
+  return acc;
+}, {});

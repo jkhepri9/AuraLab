@@ -454,18 +454,25 @@ export default function PresetEditor({
     }
 
     if (type === "synth") {
-      const base =
-        baseFromName ||
-        (wf === "drone"
-          ? "Atmospheric Drone"
-          : wf === "sub"
-          ? "Sub Foundation"
-          : wf
-          ? `Synth: ${wf}`
-          : "Synth");
+  // If the name is just the old generic synth labels, prefer showing the actual type: "Synth".
+  // If the user gave a truly custom name, keep it.
+  const normalized = String(baseFromName || "").trim().toLowerCase();
+  const isGeneric =
+    !normalized ||
+    normalized === "atmospheric drone" ||
+    normalized === "sub foundation" ||
+    normalized === "synth" ||
+    normalized.startsWith("synth:");
 
-      return hzText ? `${base} — ${hzText}` : base;
-    }
+  // ✅ Pan labeling: if hard-left / hard-right, show Synth L / Synth R (only for generic synth labels)
+  const pan = typeof layer?.pan === "number" ? layer.pan : 0;
+  const synthBase =
+    isGeneric && pan <= -0.98 ? "Synth L" : isGeneric && pan >= 0.98 ? "Synth R" : "Synth";
+
+  const base = isGeneric ? synthBase : baseFromName;
+
+  return hzText ? `${base} — ${hzText}` : base;
+}
 
     if (type === "oscillator" || type === "frequency") {
       const base =

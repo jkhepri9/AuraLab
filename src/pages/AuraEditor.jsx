@@ -25,14 +25,26 @@ import RotatePrompt from "@/components/RotatePrompt";
 
 import { db } from "../lib/db";
 
+import { BUILTIN_PRESET_REGISTRY } from "../data/presets";
+import {
+  buildPublicPresetFromStudio,
+  presetToJsonString,
+  presetToAuralabObjectLiteral,
+  slugifyPresetId,
+  studioStateFromPreset,
+} from "../lib/presetSerializer";
+
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
-import { Download, Save } from "lucide-react";
+import { Download, Save, Upload, Copy, X } from "lucide-react";
 import { toast } from "sonner";
 
 import useUnsavedChangesGuard from "../hooks/useUnsavedChangesGuard";
 
 const STUDIO_SESSION_KEY = "auralab_studio_session_v1";
+
+// DEV-only creator tooling (not shipped to production UI)
+const CREATOR_MODE = import.meta.env.DEV === true;
 
 export default function AuraEditor() {
   const player = useGlobalPlayer();
@@ -43,6 +55,11 @@ export default function AuraEditor() {
   const [projectName, setProjectName] = useState("New Aura Session");
   const [layers, setLayers] = useState([]);
   const [selectedLayerId, setSelectedLayerId] = useState(null);
+
+  // ✅ FIX: keep a live ref to the latest layers so "Copy as Code" always exports
+  // the newest layer names (even if a rename just happened on blur).
+  const layersRef = useRef([]);
+  layersRef.current = layers;
 
   // ----------------------------
   // TRANSPORT
@@ -65,6 +82,23 @@ export default function AuraEditor() {
   const [exportMinutes, setExportMinutes] = useState(10);
   const [exporting, setExporting] = useState(false);
 
+
+  // ----------------------------
+  // CREATOR MODE (DEV ONLY)
+  // - Import any built-in preset into Aura Studio
+  // - Copy current Studio mix as JSON or JS preset object for code
+  // ----------------------------
+  const [creatorOpen, setCreatorOpen] = useState(false);
+  const [creatorSearch, setCreatorSearch] = useState("");
+
+  const [publicPresetId, setPublicPresetId] = useState("");
+  const [publicSymbol, setPublicSymbol] = useState("✧");
+  const [publicImageUrl, setPublicImageUrl] = useState("");
+  const [publicDescription, setPublicDescription] = useState("");
+  const [publicColor, setPublicColor] = useState("linear-gradient(135deg, #0f172a, #10b981)");
+  const idTouchedRef = useRef(false);
+  const basePresetRef = useRef(null); // preserves full metadata when exporting
+
   // ----------------------------
   // AUDIO ENGINE (GLOBAL)
   // ----------------------------
@@ -82,6 +116,14 @@ export default function AuraEditor() {
     player.engine.setDelayTime?.(delayTime);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [player?.engine, reverbWet, delayWet, delayTime]);
+
+
+  // Auto-generate a stable preset id from the project name (Creator Mode only)
+  useEffect(() => {
+    if (!CREATOR_MODE) return;
+    if (idTouchedRef.current) return;
+    setPublicPresetId(slugifyPresetId(projectName));
+  }, [projectName]);
 
   // ---------------------------------------------------------------------------
   // SESSION RESTORE / SAVE (persists until tab/app is closed)
@@ -221,6 +263,120 @@ export default function AuraEditor() {
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, [isDirty]);
+
+
+  // ----------------------------
+  // CREATOR MODE HELPERS (DEV ONLY)
+  // ----------------------------
+  const copyToClipboard = async (text) => {
+    const s = String(text ?? "");
+    if (!s) return;
+
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(s);
+        toast.success("Copied to clipboard.");
+        return;
+      }
+    } catch {
+      // fall through
+    }
+
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = s;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.top = "-9999px";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+      toast.success("Copied to clipboard.");
+    } catch (e) {
+      console.error(e);
+      toast.error("Copy failed (clipboard permission).");
+    }
+  };
+
+  const buildExportPreset = () => {
+    // ✅ FIX: export from the ref so layer renames are always captured immediately
+    const exportLayers = Array.isArray(layersRef.current) ? layersRef.current : layers;
+
+    return buildPublicPresetFromStudio({
+      basePreset: basePresetRef.current,
+      projectName,
+      layers: exportLayers,
+      studioFx: { reverbWet, delayWet, delayTime },
+      meta: {
+        id: publicPresetId || slugifyPresetId(projectName),
+        name: projectName || "Aura Mode",
+        symbol: publicSymbol || "✧",
+        color: publicColor || "linear-gradient(135deg, #0f172a, #10b981)",
+        imageUrl: publicImageUrl || "",
+        description: publicDescription || "",
+      },
+    });
+  };
+
+  const importBuiltinIntoStudio = (id) => {
+    const preset = BUILTIN_PRESET_REGISTRY?.[id];
+    if (!preset) return;
+
+    // Preserve full metadata for re-export (Discover/Explorer fields)
+    basePresetRef.current = preset;
+
+    const next = studioStateFromPreset(preset);
+
+    setProjectName(next.projectName);
+    setLayers(next.layers);
+    setSelectedLayerId(next.layers?.[0]?.id || null);
+
+    if (next.studioFx) {
+      const fx = next.studioFx;
+      if (typeof fx.reverbWet === "number") setReverbWet(fx.reverbWet);
+      if (typeof fx.delayWet === "number") setDelayWet(fx.delayWet);
+      if (typeof fx.delayTime === "number") setDelayTime(fx.delayTime);
+    }
+
+    // Seed metadata for exporting back to code
+    if (typeof preset.id === "string") {
+      setPublicPresetId(preset.id);
+      idTouchedRef.current = true;
+    } else {
+      idTouchedRef.current = false;
+    }
+
+    setPublicSymbol(typeof preset.symbol === "string" ? preset.symbol : "✧");
+    setPublicImageUrl(typeof preset.imageUrl === "string" ? preset.imageUrl : "");
+    setPublicDescription(typeof preset.description === "string" ? preset.description : "");
+    setPublicColor(typeof preset.color === "string" ? preset.color : publicColor);
+
+    toast.success("Imported preset into Aura Studio.");
+  };
+
+  const copyPresetJson = async () => {
+    const preset = buildExportPreset();
+    await copyToClipboard(presetToJsonString(preset, { indent: 2 }));
+  };
+
+  const copyPresetCode = async () => {
+    const preset = buildExportPreset();
+    await copyToClipboard(
+      presetToAuralabObjectLiteral(preset, { trailingComma: true })
+    );
+  };
+
+  const builtinList = useMemo(() => {
+    const q = String(creatorSearch || "").trim().toLowerCase();
+    const all = Object.values(BUILTIN_PRESET_REGISTRY || {});
+    if (!q) return all;
+    return all.filter((p) => {
+      const hay = `${p?.id || ""} ${p?.name || ""} ${p?.collection || ""}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [creatorSearch]);
 
   // ----------------------------
   // SAVE PROJECT (to DB library)
@@ -363,11 +519,16 @@ export default function AuraEditor() {
   };
 
   const updateLayer = (id, updates) => {
-    setLayers((prev) => {
-      const next = prev.map((layer) => (layer.id === id ? { ...layer, ...updates } : layer));
-      if (isPlaying) scheduleLiveUpdate(next);
-      return next;
-    });
+    // ✅ FIX: apply to ref synchronously so export always sees latest layer.name
+    const base = Array.isArray(layersRef.current) ? layersRef.current : layers;
+    const next = (Array.isArray(base) ? base : []).map((layer) =>
+      layer.id === id ? { ...layer, ...updates } : layer
+    );
+
+    layersRef.current = next;
+    setLayers(next);
+
+    if (isPlaying) scheduleLiveUpdate(next);
   };
 
   const duplicateLayer = (layerId) => {
@@ -487,6 +648,18 @@ export default function AuraEditor() {
         </div>
 
         <div className="flex items-center gap-2">
+          {CREATOR_MODE ? (
+            <Button
+              onClick={() => setCreatorOpen((v) => !v)}
+              variant="outline"
+              size="sm"
+              className="gap-2 border-white/10 text-amber-300 hover:text-amber-200"
+            >
+              <Upload className="w-4 h-4" />
+              Creator
+            </Button>
+          ) : null}
+
           <Button
             onClick={openExport}
             variant="outline"
@@ -508,6 +681,185 @@ export default function AuraEditor() {
           </Button>
         </div>
       </div>
+
+
+      {/* CREATOR PANEL (DEV ONLY) */}
+      {CREATOR_MODE && creatorOpen ? (
+        <div className="border-b border-amber-400/20 bg-amber-500/5 px-5 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-amber-300">
+                Creator Mode (DEV)
+              </div>
+              <div className="text-xs text-white/55 mt-1">
+                Import a public preset into Aura Studio, then copy your edited mix as code for
+                <span className="text-white/70"> src/data/presets/*.js</span>.
+              </div>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-white/60 hover:text-white"
+              onClick={() => setCreatorOpen(false)}
+              aria-label="Close creator mode"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* LEFT: export metadata + copy */}
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="text-xs font-semibold text-white/70">Export Metadata</div>
+
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[11px] text-white/50 mb-1">Preset ID</div>
+                  <Input
+                    value={publicPresetId}
+                    onChange={(e) => {
+                      idTouchedRef.current = true;
+                      setPublicPresetId(e.target.value);
+                    }}
+                    placeholder="m_my_preset"
+                    className="h-9 bg-white/5 border-white/10 text-sm"
+                  />
+                  <div className="mt-1 text-[11px] text-white/35">
+                    Tip: ids should be stable (letters/numbers/underscores).
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-[11px] text-white/50 mb-1">Symbol</div>
+                  <Input
+                    value={publicSymbol}
+                    onChange={(e) => setPublicSymbol(e.target.value)}
+                    placeholder="✧"
+                    className="h-9 bg-white/5 border-white/10 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <div className="text-[11px] text-white/50 mb-1">Image URL</div>
+                  <Input
+                    value={publicImageUrl}
+                    onChange={(e) => setPublicImageUrl(e.target.value)}
+                    placeholder="/modeimages/your.jpg"
+                    className="h-9 bg-white/5 border-white/10 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <div className="text-[11px] text-white/50 mb-1">Color</div>
+                  <Input
+                    value={publicColor}
+                    onChange={(e) => setPublicColor(e.target.value)}
+                    placeholder="linear-gradient(...)"
+                    className="h-9 bg-white/5 border-white/10 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <div className="text-[11px] text-white/50 mb-1">Description</div>
+                <textarea
+                  value={publicDescription}
+                  onChange={(e) => setPublicDescription(e.target.value)}
+                  placeholder="What does this mode do?"
+                  className="w-full min-h-[80px] rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm text-white/85 outline-none focus:border-white/20"
+                />
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Button
+                  onClick={() => {
+                    idTouchedRef.current = false;
+                    setPublicPresetId(slugifyPresetId(projectName));
+                    toast.success("Preset id synced from project name.");
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="border-white/10 text-white/70 hover:text-white"
+                >
+                  Sync ID from Name
+                </Button>
+
+                <Button
+                  onClick={copyPresetJson}
+                  variant="outline"
+                  size="sm"
+                  className="border-white/10 text-white/70 hover:text-white gap-2"
+                >
+                  <Copy className="w-4 h-4" />
+                  Copy JSON
+                </Button>
+
+                <Button
+                  onClick={copyPresetCode}
+                  size="sm"
+                  className="bg-emerald-500 hover:bg-emerald-600 text-black gap-2"
+                >
+                  <Copy className="w-4 h-4" />
+                  Copy as Code
+                </Button>
+
+                <div className="text-[11px] text-white/40">
+                  Includes layers + Studio FX (reverb/delay) under <span className="text-white/55">studioFx</span>.
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT: import built-ins */}
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="text-xs font-semibold text-white/70">Import Built-in Preset</div>
+
+              <div className="mt-3 flex items-center gap-2">
+                <Input
+                  value={creatorSearch}
+                  onChange={(e) => setCreatorSearch(e.target.value)}
+                  placeholder="Search by name / id / collection…"
+                  className="h-9 bg-white/5 border-white/10 text-sm"
+                />
+              </div>
+
+              <div className="mt-3 max-h-[280px] overflow-auto rounded-lg border border-white/10 bg-black/20">
+                {builtinList.length ? (
+                  <div className="divide-y divide-white/5">
+                    {builtinList.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => importBuiltinIntoStudio(p.id)}
+                        className="w-full text-left px-3 py-2 hover:bg-white/5 transition"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm text-white/85 truncate">
+                              {p.symbol ? `${p.symbol} ` : ""}{p.name}
+                            </div>
+                            <div className="text-xs text-white/45 truncate">
+                              {p.id}{p.collection ? ` • ${p.collection}` : ""}
+                            </div>
+                          </div>
+                          <span className="text-[11px] text-white/35 shrink-0">Import</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-3 py-8 text-sm text-white/45">No presets match your search.</div>
+                )}
+              </div>
+
+              <div className="mt-3 text-[11px] text-white/40">
+                Import replaces current Studio layers. Your session remains in sessionStorage and can be restored.
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* BODY */}
       <div className="flex flex-1 overflow-hidden">
