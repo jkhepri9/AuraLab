@@ -7,6 +7,7 @@ export const NOISE_TYPES = [
   "white",
   "pink",
   "brown",
+  "black",
   "violet",
   "blue",
   "gray",

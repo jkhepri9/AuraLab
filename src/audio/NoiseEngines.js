@@ -1,6 +1,6 @@
 // src/audio/NoiseEngines.js
 // ---------------------------------------------------------
-// All noise types used in AuraLab: white, pink, brown,
+// All noise types used in AuraLab: white, pink, brown, black,
 // violet, blue, gray, gold, silver, cosmic.
 // ---------------------------------------------------------
 
@@ -35,6 +35,21 @@ export function createNoiseBuffer(ctx, type = "white") {
         const brown = (lastOut1 + 0.02 * white) / 1.02;
         lastOut1 = brown;
         data[i] = brown * 3.5;
+        break;
+      }
+
+      // Black noise: slightly deeper (more low-frequency emphasis) than brown.
+      // Implemented as a slower random walk + additional smoothing stage.
+      case "black": {
+        // slower / deeper than brown
+        const walk = (lastOut1 + 0.015 * white) / 1.015;
+        lastOut1 = walk;
+
+        // extra low-pass smoothing to push energy lower
+        const smooth = 0.99 * lastOut2 + 0.01 * walk;
+        lastOut2 = smooth;
+
+        data[i] = smooth * 4.5;
         break;
       }
 

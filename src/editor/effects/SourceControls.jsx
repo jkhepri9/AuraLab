@@ -18,6 +18,14 @@ import { AMBIENT_GROUPS, NOISE_TYPES, SYNTH_TYPES } from "./sourceDefs";
 
 const OSC_TYPES = ["sine", "square", "triangle", "sawtooth"];
 
+// Ensure "black" appears in the noise dropdown even if sourceDefs wasn't updated yet.
+// This avoids breaking other code paths and keeps behavior deterministic.
+const NOISE_TYPES_UI = Array.isArray(NOISE_TYPES)
+  ? NOISE_TYPES.includes("black")
+    ? NOISE_TYPES
+    : [...NOISE_TYPES, "black"]
+  : ["black"];
+
 function resolveUiType(type) {
   // Support both conventions used across the codebase
   if (type === "frequency") return "oscillator";
@@ -157,7 +165,7 @@ export default function SourceControls({ layer, onUpdate }) {
             </SelectTrigger>
 
             <SelectContent>
-              {NOISE_TYPES.map((t) => (
+              {NOISE_TYPES_UI.map((t) => (
                 <SelectItem key={t} value={t}>
                   {t}
                 </SelectItem>

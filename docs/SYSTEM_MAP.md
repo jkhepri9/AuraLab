@@ -91,3 +91,10 @@ timeline/*
 transport/*
 
 visualizer/*
+
+//////Edit Source Items//////
+
+src/editor/effects/SourceControls.jsx
+&
+sourceDefs.js
+

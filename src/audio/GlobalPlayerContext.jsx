@@ -11,6 +11,12 @@ import { useAuth } from "@/auth/AuthProvider";
 
 const GlobalPlayerContext = createContext(null);
 
+// DEV-only auth bypass (must also be enabled by env flag)
+// .env.development.local: VITE_DEV_AUTH_BYPASS=true
+const DEV_AUTH_BYPASS =
+  import.meta.env.DEV === true &&
+  String(import.meta.env.VITE_DEV_AUTH_BYPASS || "").toLowerCase() === "true";
+
 export function GlobalPlayerProvider({ children }) {
   const engineRef = useRef(createAudioEngine());
   const playSeqRef = useRef(0);
@@ -41,11 +47,13 @@ export function GlobalPlayerProvider({ children }) {
   const playLayers = async (layers, meta = {}) => {
     if (!layers?.length) return false;
 
-    // Avoid modal flash while session is still loading
-    if (loading) return false;
+    // Avoid modal flash while session is still loading (unless bypassing auth in dev)
+    if (loading && !DEV_AUTH_BYPASS) return false;
 
-    // Must be authed
-    if (!requireAuth()) return false;
+    // Must be authed (unless bypassing auth in dev)
+    if (!DEV_AUTH_BYPASS) {
+      if (!requireAuth()) return false;
+    }
 
     const seq = ++playSeqRef.current;
 
@@ -77,8 +85,12 @@ export function GlobalPlayerProvider({ children }) {
   const playPreset = async (preset) => {
     if (!preset?.layers?.length) return false;
 
-    if (loading) return false;
-    if (!requireAuth()) return false;
+    if (loading && !DEV_AUTH_BYPASS) return false;
+
+    // Must be authed (unless bypassing auth in dev)
+    if (!DEV_AUTH_BYPASS) {
+      if (!requireAuth()) return false;
+    }
 
     const seq = ++playSeqRef.current;
 
@@ -141,8 +153,12 @@ export function GlobalPlayerProvider({ children }) {
   const resume = useCallback(async () => {
     if (!currentLayers?.length) return false;
 
-    if (loading) return false;
-    if (!requireAuth()) return false;
+    if (loading && !DEV_AUTH_BYPASS) return false;
+
+    // Must be authed (unless bypassing auth in dev)
+    if (!DEV_AUTH_BYPASS) {
+      if (!requireAuth()) return false;
+    }
 
     const seq = ++playSeqRef.current;
 
