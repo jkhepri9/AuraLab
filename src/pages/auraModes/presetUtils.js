@@ -1,12 +1,45 @@
 // src/pages/auraModes/presetUtils.js
 
+import { PRESET_COLLECTIONS } from "@/data/presets";
+
 export function normalizeText(s) {
   return String(s || "").toLowerCase();
 }
 
+function normalizeCollectionLabel(s) {
+  return String(s || "")
+    .replace(/\u00A0/g, " ")   // NBSP -> space
+    .replace(/\s+/g, " ")     // collapse whitespace
+    .trim()
+    .toLowerCase();
+}
+
+// Map any legacyLabel OR displayedLabel -> canonical legacyLabel
+const COLLECTION_CANON = (() => {
+  const map = new Map();
+
+  for (const c of PRESET_COLLECTIONS || []) {
+    const legacy = String(c?.legacyLabel || "").trim();
+    const display = String(c?.displayedLabel || "").trim();
+
+    if (legacy) map.set(normalizeCollectionLabel(legacy), legacy);
+    if (display) map.set(normalizeCollectionLabel(display), legacy);
+  }
+
+  // Always allow Custom
+  map.set(normalizeCollectionLabel("Custom"), "Custom");
+
+  return map;
+})();
+
 // Back-compat: many presets still store marketing labels in preset.collection.
+// ✅ Canonicalizes to registry legacyLabel so rails render consistently across devices.
 export function getCollection(preset) {
-  return preset?.collection || "Custom";
+  const raw = preset?.collection;
+  const cleaned = normalizeCollectionLabel(raw);
+
+  const canon = COLLECTION_CANON.get(cleaned);
+  return canon || (String(raw || "").trim() || "Custom");
 }
 
 export function getGoals(preset) {
