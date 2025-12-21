@@ -38,8 +38,8 @@ export const PRESET_COLLECTIONS = Object.freeze([
   },
   {
     key: PRESET_COLLECTION_KEYS.MASTER_SEQUENCE,
-    legacyLabel: "Master Sequence Modes",
-    displayedLabel: "Master Sequence",
+    legacyLabel: "Master Sequence",
+    displayedLabel: "Master Sequence Modes",
     source: "masterSequencePresets",
     getPresets: () => masterSequencePresets,
   },
