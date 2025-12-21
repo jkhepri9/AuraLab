@@ -5,6 +5,7 @@ import { communityPresets } from "./communityPresets";
 import { fanFavoritesPresets } from "./fanFavoritesPresets";
 import { zodiacPresets } from "./zodiacPresets";
 import { groundedAuraPresets } from "./groundedAuraPresets";
+import { masterSequencePresets } from "./masterSequencePresets";
 
 // ✅ Registry exports (single source of truth)
 export {
@@ -32,6 +33,7 @@ export {
   fanFavoritesPresets,
   zodiacPresets,
   groundedAuraPresets,
+  masterSequencePresets,
 };
 
 export const allPresets = [
@@ -40,6 +42,7 @@ export const allPresets = [
   ...fanFavoritesPresets,
   ...zodiacPresets,
   ...groundedAuraPresets,
+  ...masterSequencePresets,
 ];
 
 // -----------------------------------------------------------------------------

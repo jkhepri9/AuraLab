@@ -166,12 +166,21 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
   // ------------------------------------------------------------
   const collectionSubtitle = (collectionKey) => {
     if (collectionKey === "catalog") return "Hand-picked essentials to start strong.";
+    if (collectionKey === "master_sequence") return "A numbered ascension ladder—progress through the gates.";
     if (collectionKey === "zodiac") return "Celestial sound-stacks tuned for each sign.";
     if (collectionKey === "grounded") return "Low-end foundation for calm, safety, and stability.";
     if (collectionKey === "community") return "Created by the community—discover new favorites.";
     if (collectionKey === "fan_favorites") return "Most-loved stacks—popular for a reason.";
     return "Explore this collection.";
   };
+
+  // ------------------------------------------------------------
+  // ✅ Deterministic sort helper (does NOT mutate input)
+  // ------------------------------------------------------------
+  const sortByOrder = (arr) =>
+    (arr || [])
+      .slice()
+      .sort((a, b) => (a?.order ?? 0) - (b?.order ?? 0));
 
   return (
     <div
@@ -460,12 +469,15 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
             {/* Collection rails (registry-driven, back-compatible grouping) */}
             {PRESET_COLLECTIONS.map((c) => {
               // Grouping still uses legacy labels stored on presets to avoid breaking anything.
-              const list =
+              const raw =
                 byCollection.get(c.legacyLabel) ||
                 byCollection.get(c.displayedLabel) ||
                 [];
 
-              if (!list.length) return null;
+              if (!raw.length) return null;
+
+              // ✅ FIX: deterministic order within each collection (prevents Master Sequence shuffling)
+              const list = sortByOrder(raw);
 
               return (
                 <div key={c.key}>

@@ -4,7 +4,7 @@
 // Goal: one-click label edits without renaming files or breaking imports.
 //
 // Key principles:
-// - Stable internal keys (do not change): catalog, community, fan_favorites, zodiac, grounded
+// - Stable internal keys (do not change): catalog, community, fan_favorites, zodiac, grounded, master_sequence
 // - legacyLabel matches preset.collection values currently stored in presets (back-compat)
 // - displayedLabel is what the UI shows (safe to change anytime)
 // -----------------------------------------------------------------------------
@@ -14,6 +14,7 @@ import { communityPresets } from "./communityPresets";
 import { fanFavoritesPresets } from "./fanFavoritesPresets";
 import { zodiacPresets } from "./zodiacPresets";
 import { groundedAuraPresets } from "./groundedAuraPresets";
+import { masterSequencePresets } from "./masterSequencePresets";
 
 // ✅ Stable collection keys (internal API). Treat these as permanent.
 export const PRESET_COLLECTION_KEYS = Object.freeze({
@@ -22,6 +23,7 @@ export const PRESET_COLLECTION_KEYS = Object.freeze({
   FAN_FAVORITES: "fan_favorites",
   ZODIAC: "zodiac",
   GROUNDED: "grounded",
+  MASTER_SEQUENCE: "master_sequence",
 });
 
 // ✅ One-click edits live here (displayedLabel).
@@ -30,9 +32,16 @@ export const PRESET_COLLECTIONS = Object.freeze([
   {
     key: PRESET_COLLECTION_KEYS.CATALOG,
     legacyLabel: "Featured",
-    displayedLabel: "Featured", // <-- one-click rename target (e.g. "Recommended")
+    displayedLabel: "Sacred Modes", // <-- one-click rename target (e.g. "Recommended")
     source: "initialPresets",
     getPresets: () => initialPresets,
+  },
+  {
+    key: PRESET_COLLECTION_KEYS.MASTER_SEQUENCE,
+    legacyLabel: "Master Sequence Modes",
+    displayedLabel: "Master Sequence",
+    source: "masterSequencePresets",
+    getPresets: () => masterSequencePresets,
   },
   {
     key: PRESET_COLLECTION_KEYS.ZODIAC,
@@ -127,18 +136,10 @@ export function getAllPresetsNormalized() {
 export function getCollectionMeta(keyOrLegacyLabel) {
   // Heuristic: if it matches a stable key, treat as key; else treat as legacy label.
   const s = String(keyOrLegacyLabel || "");
-  return (
-    getCollectionMetaByKey(s) ||
-    getCollectionMetaByLegacyLabel(s) ||
-    null
-  );
+  return getCollectionMetaByKey(s) || getCollectionMetaByLegacyLabel(s) || null;
 }
 
 export function getCollectionLabel(keyOrLegacyLabel) {
   const s = String(keyOrLegacyLabel || "");
-  return (
-    getCollectionLabelByKey(s) ||
-    getCollectionLabelByLegacyLabel(s) ||
-    ""
-  );
+  return getCollectionLabelByKey(s) || getCollectionLabelByLegacyLabel(s) || "";
 }
