@@ -2,6 +2,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -16,6 +17,69 @@ const GlobalPlayerContext = createContext(null);
 const DEV_AUTH_BYPASS =
   import.meta.env.DEV === true &&
   String(import.meta.env.VITE_DEV_AUTH_BYPASS || "").toLowerCase() === "true";
+
+// -----------------------------------------------------------------------------
+// ✅ Media Session (Web): lock-screen / notification metadata + controls where supported
+// Notes:
+// - Works best on Android Chrome when playback is tied to an <audio>/<video> element.
+// - iOS Safari support is inconsistent across versions; this is still worth doing.
+// -----------------------------------------------------------------------------
+function canUseMediaSession() {
+  return (
+    typeof navigator !== "undefined" &&
+    "mediaSession" in navigator &&
+    typeof window !== "undefined" &&
+    typeof window.MediaMetadata !== "undefined"
+  );
+}
+
+function safeSetActionHandler(action, handler) {
+  try {
+    navigator.mediaSession.setActionHandler(action, handler);
+  } catch {
+    // Some browsers throw for unsupported actions; ignore safely.
+  }
+}
+
+function setMediaSessionMeta(meta) {
+  if (!canUseMediaSession()) return;
+
+  const title = meta?.title || "";
+  const artist = meta?.artist || "AuraLab";
+  const album = meta?.album || "Aura Session";
+  const artworkUrl = meta?.artworkUrl || meta?.artwork || meta?.imageUrl || null;
+
+  const artwork = artworkUrl
+    ? [
+        { src: artworkUrl, sizes: "96x96", type: "image/jpeg" },
+        { src: artworkUrl, sizes: "128x128", type: "image/jpeg" },
+        { src: artworkUrl, sizes: "192x192", type: "image/jpeg" },
+        { src: artworkUrl, sizes: "256x256", type: "image/jpeg" },
+        { src: artworkUrl, sizes: "384x384", type: "image/jpeg" },
+        { src: artworkUrl, sizes: "512x512", type: "image/jpeg" },
+      ]
+    : [];
+
+  try {
+    navigator.mediaSession.metadata = new window.MediaMetadata({
+      title,
+      artist,
+      album,
+      artwork,
+    });
+  } catch {
+    // ignore
+  }
+}
+
+function setMediaPlaybackState(state) {
+  if (!canUseMediaSession()) return;
+  try {
+    navigator.mediaSession.playbackState = state; // "none" | "paused" | "playing"
+  } catch {
+    // ignore
+  }
+}
 
 export function GlobalPlayerProvider({ children }) {
   const engineRef = useRef(createAudioEngine());
@@ -36,6 +100,13 @@ export function GlobalPlayerProvider({ children }) {
   // Optional: for Layout animations (fade/slide). If your Layout uses this, it can animate out.
   const [stickyPlayerVisible, setStickyPlayerVisible] = useState(true);
 
+  // Keep latest transport callbacks for Media Session handlers without re-registering constantly.
+  const transportRef = useRef({
+    onPlay: null,
+    onPause: null,
+    onStop: null,
+  });
+
   const safeUnlock = () => {
     try {
       engineRef.current?.unlock?.();
@@ -43,6 +114,51 @@ export function GlobalPlayerProvider({ children }) {
       // ignore
     }
   };
+
+  // ---------------------------------------------------------------------------
+  // ✅ Register Media Session action handlers once (best-effort)
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (!canUseMediaSession()) return;
+
+    safeSetActionHandler("play", () => transportRef.current.onPlay?.());
+    safeSetActionHandler("pause", () => transportRef.current.onPause?.());
+    safeSetActionHandler("stop", () => transportRef.current.onStop?.());
+
+    // Optional actions (harmless if unsupported)
+    safeSetActionHandler("previoustrack", null);
+    safeSetActionHandler("nexttrack", null);
+    safeSetActionHandler("seekbackward", null);
+    safeSetActionHandler("seekforward", null);
+    safeSetActionHandler("seekto", null);
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // ✅ Keep Media Session metadata + playbackState in sync with app state
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (!canUseMediaSession()) return;
+
+    if (!currentPlayingPreset) {
+      // Clear out the session when nothing is playing
+      try {
+        navigator.mediaSession.metadata = null;
+      } catch {
+        // ignore
+      }
+      setMediaPlaybackState("none");
+      return;
+    }
+
+    setMediaSessionMeta({
+      title: currentPlayingPreset?.name || "Aura Mode",
+      artist: "AuraLab",
+      album: "Aura Session",
+      artworkUrl: currentPlayingPreset?.imageUrl || null,
+    });
+
+    setMediaPlaybackState(isPlaying ? "playing" : "paused");
+  }, [currentPlayingPreset, isPlaying]);
 
   const playLayers = async (layers, meta = {}) => {
     if (!layers?.length) return false;
@@ -66,6 +182,14 @@ export function GlobalPlayerProvider({ children }) {
       if (seq !== playSeqRef.current) return false;
 
       engineRef.current.setNowPlaying(meta);
+
+      // ✅ Media Session: if caller provides meta, reflect it
+      setMediaSessionMeta({
+        title: meta?.title || currentPlayingPreset?.name || "Aura Session",
+        artist: meta?.artist || "AuraLab",
+        album: meta?.album || "Aura Session",
+        artworkUrl: meta?.artworkUrl || meta?.artwork || meta?.imageUrl || currentPlayingPreset?.imageUrl || null,
+      });
 
       setCurrentLayers(layers);
       setIsPlaying(true);
@@ -114,6 +238,15 @@ export function GlobalPlayerProvider({ children }) {
       setCurrentLayers(preset.layers);
       setIsPlaying(true);
 
+      // ✅ Media Session (Web)
+      setMediaSessionMeta({
+        title: preset?.name || "Aura Mode",
+        artist: "AuraLab",
+        album: "Aura Session",
+        artworkUrl: preset?.imageUrl || null,
+      });
+      setMediaPlaybackState("playing");
+
       // Re-show sticky if user closed it previously
       setTempHidden(false);
       setStickyPlayerVisible(true);
@@ -133,11 +266,22 @@ export function GlobalPlayerProvider({ children }) {
     } catch {
       // ignore
     }
+
     setIsPlaying(false);
     setCurrentLayers(null);
     setCurrentPlayingPreset(null);
     setTempHidden(false);
     setStickyPlayerVisible(true);
+
+    // ✅ Media Session
+    setMediaPlaybackState("none");
+    if (canUseMediaSession()) {
+      try {
+        navigator.mediaSession.metadata = null;
+      } catch {
+        // ignore
+      }
+    }
   }, []);
 
   const pause = useCallback(() => {
@@ -148,6 +292,9 @@ export function GlobalPlayerProvider({ children }) {
       // ignore
     }
     setIsPlaying(false);
+
+    // ✅ Media Session
+    setMediaPlaybackState("paused");
   }, []);
 
   const resume = useCallback(async () => {
@@ -172,6 +319,9 @@ export function GlobalPlayerProvider({ children }) {
       setIsPlaying(true);
       setTempHidden(false);
       setStickyPlayerVisible(true);
+
+      // ✅ Media Session
+      setMediaPlaybackState("playing");
 
       return true;
     } catch (e) {
@@ -200,7 +350,23 @@ export function GlobalPlayerProvider({ children }) {
     } catch {
       // ignore
     }
-  }, []);
+
+    // ✅ Media Session: keep system UI in sync even when Aura Studio updates now-playing
+    const title = meta?.title || uiPresetLike?.name || currentPlayingPreset?.name || "Aura Session";
+    const artworkUrl =
+      meta?.artworkUrl ||
+      meta?.artwork ||
+      uiPresetLike?.imageUrl ||
+      currentPlayingPreset?.imageUrl ||
+      null;
+
+    setMediaSessionMeta({
+      title,
+      artist: meta?.artist || "AuraLab",
+      album: meta?.album || "Aura Session",
+      artworkUrl,
+    });
+  }, [currentPlayingPreset]);
 
   const updateLayers = useCallback(async (layers) => {
     setCurrentLayers(layers);
@@ -231,6 +397,9 @@ export function GlobalPlayerProvider({ children }) {
     }
     setIsPlaying(false);
 
+    // ✅ Media Session
+    setMediaPlaybackState("none");
+
     // Allow UI animation time, then clear now-playing state
     const mySeq = playSeqRef.current;
     window.setTimeout(() => {
@@ -239,9 +408,24 @@ export function GlobalPlayerProvider({ children }) {
       setCurrentLayers(null);
       setCurrentPlayingPreset(null);
 
+      if (canUseMediaSession()) {
+        try {
+          navigator.mediaSession.metadata = null;
+        } catch {
+          // ignore
+        }
+      }
+
       setStickyPlayerVisible(true);
     }, 320);
   }, []);
+
+  // Keep Media Session button handlers wired to your transport
+  useEffect(() => {
+    transportRef.current.onPlay = () => resume();
+    transportRef.current.onPause = () => pause();
+    transportRef.current.onStop = () => stop();
+  }, [resume, pause, stop]);
 
   const value = useMemo(
     () => ({
