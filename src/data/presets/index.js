@@ -5,14 +5,14 @@ import { communityPresets } from "./communityPresets";
 import { fanFavoritesPresets } from "./fanFavoritesPresets";
 import { zodiacPresets } from "./zodiacPresets";
 import { groundedAuraPresets } from "./groundedAuraPresets";
-import { masterSequencePresets } from "./masterSequencePresets";
+
+// ✅ Import the registry value so allPresets includes auto-loaded collections
+import { PRESET_COLLECTIONS } from "./registry";
 
 // ✅ Registry exports (single source of truth)
 export {
   PRESET_COLLECTION_KEYS,
   PRESET_COLLECTIONS,
-
-  // Newer helpers
   getCollectionMetaByKey,
   getCollectionMetaByLegacyLabel,
   getCollectionLabelByKey,
@@ -20,8 +20,6 @@ export {
   getPresetsByCollectionKey,
   getNormalizedCollections,
   getAllPresetsNormalized,
-
-  // Back-compat helpers (expected by older imports)
   getCollectionMeta,
   getCollectionLabel,
 } from "./registry";
@@ -33,17 +31,14 @@ export {
   fanFavoritesPresets,
   zodiacPresets,
   groundedAuraPresets,
-  masterSequencePresets,
 };
 
-export const allPresets = [
-  ...initialPresets,
-  ...communityPresets,
-  ...fanFavoritesPresets,
-  ...zodiacPresets,
-  ...groundedAuraPresets,
-  ...masterSequencePresets,
-];
+// ✅ Auto-built: includes built-ins + anything in ./collections/
+export const allPresets = PRESET_COLLECTIONS.reduce((acc, c) => {
+  const list = c?.getPresets?.() || [];
+  if (Array.isArray(list)) acc.push(...list);
+  return acc;
+}, []);
 
 // -----------------------------------------------------------------------------
 // ✅ Built-in preset registry (DEV tooling)

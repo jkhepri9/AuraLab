@@ -30,6 +30,7 @@ export default function AuraModes() {
   const [query, setQuery] = useState("");
   const [activeGoal, setActiveGoal] = useState("all");
   const [activeCollection, setActiveCollection] = useState("all");
+  const [activeScenario, setActiveScenario] = useState("all"); // ✅ NEW
   const [sortBy, setSortBy] = useState("custom"); // custom | recent | az
 
   // ✅ Collapsed by default (user must toggle open)
@@ -99,6 +100,7 @@ export default function AuraModes() {
     favorites,
     byCollection,
     byGoal,
+    byScenario, // ✅ NEW
     filtered,
     isFiltered,
     bumpRecent,
@@ -108,6 +110,7 @@ export default function AuraModes() {
     query,
     activeGoal,
     activeCollection,
+    activeScenario, // ✅ NEW
     sortBy,
   });
 
@@ -269,6 +272,7 @@ export default function AuraModes() {
   const applyCollection = (c) => {
     setActiveCollection(c);
     setActiveGoal("all");
+    setActiveScenario("all"); // ✅ reset scenario when picking a collection
     setQuery("");
     setSortBy("custom");
     scrollToTop();
@@ -276,6 +280,16 @@ export default function AuraModes() {
 
   const applyGoal = (g) => {
     setActiveGoal(g);
+    setActiveCollection("all");
+    setActiveScenario("all"); // ✅ reset scenario when picking a goal
+    setQuery("");
+    setSortBy("custom");
+    scrollToTop();
+  };
+
+  const applyScenario = (s) => {
+    setActiveScenario(s);
+    setActiveGoal("all");
     setActiveCollection("all");
     setQuery("");
     setSortBy("custom");
@@ -286,13 +300,19 @@ export default function AuraModes() {
     setQuery("");
     setActiveGoal("all");
     setActiveCollection("all");
+    setActiveScenario("all"); // ✅ NEW
     setSortBy("custom");
     scrollToTop();
   };
 
   if (view !== "list") {
     return (
-      <div className={cn("h-full w-full overflow-hidden bg-black/80", pagePadBottom)}>
+      <div
+        className={cn(
+          "h-full w-full p-6 md:p-8 overflow-y-auto bg-[url('/bg/auramodes.jpg')] bg-cover bg-center",
+          pagePadBottom
+        )}
+      >
         <PresetEditor
           key={`${view}:${editingPreset?.id || "new"}`}
           initialPreset={editingPreset}
@@ -318,6 +338,7 @@ export default function AuraModes() {
         favorites,
         byCollection,
         byGoal,
+        byScenario, // ✅ NEW
 
         query,
         setQuery,
@@ -327,11 +348,13 @@ export default function AuraModes() {
         setGoalsOpen,
         activeGoal,
         setActiveGoal,
+        activeScenario, // ✅ NEW
         favoriteIds,
 
         clearAllFilters,
         applyCollection,
         applyGoal,
+        applyScenario, // ✅ NEW
         handleCreateNew,
         handleActivate,
         handleEditRequest,

@@ -18,6 +18,7 @@ export function useAuraModesLibrary({
   query,
   activeGoal,
   activeCollection,
+  activeScenario, // ✅ NEW
   sortBy,
 }) {
   // keep recents reactive (same-tab updates)
@@ -103,6 +104,75 @@ export function useAuraModesLibrary({
     return map;
   }, [allPresets]);
 
+  // ✅ NEW: group by scenarios (from preset.scenarios)
+  const byScenario = useMemo(() => {
+    const map = new Map();
+
+    for (const p of allPresets || []) {
+      const scenarios = Array.isArray(p?.scenarios) ? p.scenarios : [];
+      for (const s of scenarios) {
+        const key = String(s || "").trim();
+        if (!key) continue;
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(p);
+      }
+    }
+
+    for (const [k, arr] of map.entries()) map.set(k, dedupeById(arr).sort(railSort));
+    return map;
+  }, [allPresets]);
+
+  // ------------------------------------------------------------
+  // ✅ Search ranking: Title matches first (then description/keywords)
+  // ------------------------------------------------------------
+  const getSearchScore = (p, q) => {
+    if (!q) return 0;
+
+    const name = normalizeText(p?.name || "").trim();
+    const desc = normalizeText(p?.description || "").trim();
+    const collection = normalizeText(getCollection(p) || "").trim();
+
+    const tags = Array.isArray(p?.tags) ? p.tags : [];
+    const scenarios = Array.isArray(p?.scenarios) ? p.scenarios : [];
+    const styles = Array.isArray(p?.styles) ? p.styles : [];
+    const goals = Array.isArray(p?.goals) ? p.goals : [];
+
+    const normList = (arr) =>
+      (arr || [])
+        .map((x) => normalizeText(String(x || "")).trim())
+        .filter(Boolean);
+
+    const tagStr = normList(tags).join(" ");
+    const scenStr = normList(scenarios).join(" ");
+    const styleStr = normList(styles).join(" ");
+    const goalStr = normList(goals).join(" ");
+
+    const nameHas = name.includes(q);
+    const descHas = desc.includes(q);
+    const collectionHas = collection.includes(q);
+    const keywordsHas =
+      tagStr.includes(q) || scenStr.includes(q) || styleStr.includes(q) || goalStr.includes(q);
+
+    if (!(nameHas || descHas || collectionHas || keywordsHas)) return 0;
+
+    let score = 0;
+
+    if (name === q) score = Math.max(score, 1200);
+    if (name.startsWith(q)) score = Math.max(score, 1100);
+
+    if (!score && name) {
+      const words = name.split(/\s+/).filter(Boolean);
+      if (words.some((w) => w.startsWith(q))) score = Math.max(score, 1000);
+    }
+
+    if (nameHas) score = Math.max(score, 900);
+    if (descHas) score = Math.max(score, 700);
+    if (keywordsHas) score = Math.max(score, 500);
+    if (collectionHas) score = Math.max(score, 450);
+
+    return score;
+  };
+
   const filtered = useMemo(() => {
     const q = normalizeText(query).trim();
     let list = allPresets || [];
@@ -116,44 +186,53 @@ export function useAuraModesLibrary({
       list = list.filter((p) => set.has(p.id));
     }
 
-    if (q) {
-      list = list.filter((p) => {
-        const meta = [
-          p.name,
-          p.description,
-          getCollection(p),
-          ...(Array.isArray(p.tags) ? p.tags : []),
-          ...(Array.isArray(p.scenarios) ? p.scenarios : []),
-          ...(Array.isArray(p.styles) ? p.styles : []),
-          ...(Array.isArray(p.goals) ? p.goals : []),
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
+    if (activeScenario !== "all") {
+      const set = new Set((byScenario.get(activeScenario) || []).map((p) => p.id));
+      list = list.filter((p) => set.has(p.id));
+    }
 
-        return meta.includes(q);
+    const recentMap = new Map(recents.map((r) => [r.preset.id, r.t]));
+
+    const cmpAZ = (a, b) => String(a?.name || "").localeCompare(String(b?.name || ""));
+    const cmpRecent = (a, b) => (recentMap.get(b?.id) || 0) - (recentMap.get(a?.id) || 0);
+    const cmpCustom = (a, b) => {
+      const ao = safeNum(a?.order, 0);
+      const bo = safeNum(b?.order, 0);
+      if (ao !== bo) return ao - bo;
+      return String(a?.name || "").localeCompare(String(b?.name || ""));
+    };
+
+    const tieBreak = sortBy === "az" ? cmpAZ : sortBy === "recent" ? cmpRecent : cmpCustom;
+
+    if (q) {
+      const scored = (list || [])
+        .map((p) => ({ p, s: getSearchScore(p, q) }))
+        .filter((x) => x.s > 0);
+
+      scored.sort((A, B) => {
+        if (B.s !== A.s) return B.s - A.s;
+        return tieBreak(A.p, B.p);
       });
+
+      return dedupeById(scored.map((x) => x.p));
     }
 
     if (sortBy === "az") {
-      list = [...list].sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+      list = [...list].sort(cmpAZ);
     } else if (sortBy === "recent") {
-      const recentMap = new Map(recents.map((r) => [r.preset.id, r.t]));
-      list = [...list].sort((a, b) => (recentMap.get(b.id) || 0) - (recentMap.get(a.id) || 0));
+      list = [...list].sort(cmpRecent);
     } else {
-      list = [...list].sort((a, b) => {
-        const ao = safeNum(a?.order, 0);
-        const bo = safeNum(b?.order, 0);
-        if (ao !== bo) return ao - bo;
-        return String(a?.name || "").localeCompare(String(b?.name || ""));
-      });
+      list = [...list].sort(cmpCustom);
     }
 
     return dedupeById(list);
-  }, [allPresets, query, activeGoal, activeCollection, sortBy, byGoal, recents]);
+  }, [allPresets, query, activeGoal, activeCollection, activeScenario, sortBy, byGoal, byScenario, recents]);
 
   const isFiltered =
-    Boolean(normalizeText(query).trim()) || activeGoal !== "all" || activeCollection !== "all";
+    Boolean(normalizeText(query).trim()) ||
+    activeGoal !== "all" ||
+    activeCollection !== "all" ||
+    activeScenario !== "all";
 
   return {
     presetById,
@@ -162,6 +241,7 @@ export function useAuraModesLibrary({
     favorites,
     byCollection,
     byGoal,
+    byScenario, // ✅ NEW
     filtered,
     isFiltered,
     bumpRecent,

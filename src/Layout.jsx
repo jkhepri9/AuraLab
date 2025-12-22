@@ -1,3 +1,4 @@
+// src/Layout.jsx
 import React from "react";
 import Navbar from "./components/Navbar";
 import BottomNav from "./components/BottomNav";
@@ -11,7 +12,12 @@ import { Toaster } from "sonner";
 import LiveBackground from "./components/LiveBackground";
 import BackToTopButton from "./components/BackToTopButton";
 
-function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onTogglePlayPause, onClose }) {
+function GlobalAudioPlayer({
+  currentPlayingPreset,
+  isPlaying,
+  onTogglePlayPause,
+  onClose,
+}) {
   const navigate = useNavigate();
   if (!currentPlayingPreset) return null;
 
@@ -39,7 +45,9 @@ function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onTogglePlayPause,
         <div
           className={cn(
             "absolute inset-0",
-            imageUrl ? "bg-black/55 backdrop-blur-md" : "bg-zinc-800/90 backdrop-blur-md"
+            imageUrl
+              ? "bg-black/55 backdrop-blur-md"
+              : "bg-zinc-800/90 backdrop-blur-md"
           )}
         />
 
@@ -61,7 +69,12 @@ function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onTogglePlayPause,
           >
             <div className="h-12 w-12 rounded-xl overflow-hidden bg-white/10 shrink-0 flex items-center justify-center">
               {imageUrl ? (
-                <img src={imageUrl} alt={name} className="h-full w-full object-cover" loading="lazy" />
+                <img
+                  src={imageUrl}
+                  alt={name}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
               ) : (
                 <Music className="w-6 h-6 text-white/80" />
               )}
@@ -71,7 +84,9 @@ function GlobalAudioPlayer({ currentPlayingPreset, isPlaying, onTogglePlayPause,
               <div className="text-[11px] font-semibold text-white/70 uppercase tracking-wide leading-none">
                 Now Playing
               </div>
-              <div className="text-base font-extrabold text-white tracking-tight truncate">{name}</div>
+              <div className="text-base font-extrabold text-white tracking-tight truncate">
+                {name}
+              </div>
             </div>
           </button>
 
@@ -117,13 +132,20 @@ export default function Layout({
   onCloseStickyPlayer,
 }) {
   const location = useLocation();
-  const isImmersive = location.pathname === "/Start";
 
-  const showHomeLiveBg = !isImmersive && location.pathname === "/";
+  const isImmersive = location.pathname === "/Start";
+  const isHome = location.pathname === "/";
+  const isAuraModes = location.pathname === "/AuraModes";
+
+  // ✅ Home live background only (as designed)
+  const showHomeLiveBg = !isImmersive && isHome;
+
+  // ✅ Static background image for Aura Modes
+  // File path: /public/modeimages/bg/auramodes.jpg
+  const auraModesBgImageUrl = "/modeimages/bg/auramodes.jpg";
 
   const hideStickyInStudio =
-    location.pathname === "/AuraEditor" &&
-    currentPlayingPreset?.id === "__studio__";
+    location.pathname === "/AuraEditor" && currentPlayingPreset?.id === "__studio__";
 
   const showStickyPlayer =
     !isImmersive &&
@@ -135,8 +157,8 @@ export default function Layout({
   const mainPadBottom = isImmersive
     ? "pb-0"
     : showStickyPlayer
-      ? "pb-[calc(9rem+env(safe-area-inset-bottom))] md:pb-0"
-      : "pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0";
+    ? "pb-[calc(9rem+env(safe-area-inset-bottom))] md:pb-0"
+    : "pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0";
 
   // Global: show the back-to-top button across the app (except immersive Start screen).
   const showBackToTop = !isImmersive;
@@ -145,8 +167,10 @@ export default function Layout({
     ? "bottom-[calc(11rem+env(safe-area-inset-bottom))] md:bottom-24"
     : "bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-6";
 
-  // ✅ Critical: Home must not paint an opaque background over the shell poster.
-  const shellBg = showHomeLiveBg ? "bg-transparent" : "bg-zinc-950";
+  // ✅ Critical:
+  // - Home must not paint an opaque background over the live poster/video.
+  // - AuraModes must be transparent so the fixed background layer can show.
+  const shellBg = showHomeLiveBg || isAuraModes ? "bg-transparent" : "bg-zinc-950";
 
   return (
     <div
@@ -168,8 +192,25 @@ export default function Layout({
         dim={0.55}
       />
 
+      {/* ✅ Aura Modes static background (fixed layer = sharper; avoids scroll-layer resampling) */}
+      {isAuraModes && (
+        <div
+          className="fixed inset-0 z-0 pointer-events-none"
+          style={{
+            backgroundImage: `url(${auraModesBgImageUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }}
+        />
+      )}
+
+      {/* ✅ Aura Modes readability veil */}
+      {isAuraModes && <div className="fixed inset-0 z-10 pointer-events-none bg-black/55" />}
+
+      {/* Soft global glow */}
       <div
-        className="fixed inset-0 pointer-events-none opacity-20 w-screen max-w-[100vw] overflow-x-hidden"
+        className="fixed inset-0 pointer-events-none opacity-20 w-screen max-w-[100vw] overflow-x-hidden z-10"
         style={{
           background: "radial-gradient(circle at top, #ffffff33, transparent 75%)",
         }}

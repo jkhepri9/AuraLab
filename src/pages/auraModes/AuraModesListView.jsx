@@ -9,17 +9,10 @@ import {
   Plus,
   Search,
   ArrowRight,
-  ArrowUpDown,
   ChevronDown,
   Loader2,
   Heart,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 import { GOALS } from "./constants";
 import { isZodiacPreset } from "./presetUtils";
@@ -47,22 +40,23 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
     favorites,
     byCollection,
     byGoal,
+    byScenario, // ✅ NEW
 
     // view state
     query,
     setQuery,
-    sortBy,
-    setSortBy,
     goalsOpen,
     setGoalsOpen,
     activeGoal,
     setActiveGoal,
+    activeScenario, // ✅ NEW
     favoriteIds,
 
     // actions
     clearAllFilters,
     applyCollection,
     applyGoal,
+    applyScenario, // ✅ NEW
     handleCreateNew,
     handleActivate,
     handleEditRequest,
@@ -182,11 +176,90 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
       .slice()
       .sort((a, b) => (a?.order ?? 0) - (b?.order ?? 0));
 
+  // ------------------------------------------------------------
+  // ✅ Scenario bubbles (human-friendly label)
+  // ------------------------------------------------------------
+  const scenarioLabel = (s) => {
+    const raw = String(s || "").trim();
+    if (!raw) return "Scenario";
+    const words = raw.replace(/[_-]+/g, " ").split(/\s+/).filter(Boolean);
+    return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  };
+
+  const scenarioList = useMemo(() => {
+    const entries = Array.from((byScenario || new Map()).entries())
+      .filter(([k, arr]) => k && k !== "all" && Array.isArray(arr) && arr.length > 0)
+      .map(([k, arr]) => ({ key: k, count: arr.length }));
+
+    // Most common scenarios first (Endel/Calm-like “top use cases” feel)
+    entries.sort((a, b) => b.count - a.count || String(a.key).localeCompare(String(b.key)));
+
+    return entries.slice(0, 14); // keep it clean; still scrollable
+  }, [byScenario]);
+
+  const ScenarioChip = ({ active, children, onClick }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "shrink-0 px-3 py-2 rounded-full text-sm font-semibold border transition",
+        active
+          ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
+          : "bg-black/30 border-white/10 text-white/80 hover:bg-black/40 hover:text-white"
+      )}
+    >
+      {children}
+    </button>
+  );
+
+  const renderScenariosSection = () => (
+    <div>
+      <SectionHeader
+        title="Scenarios"
+        subtitle="Tap a scenario to filter fast."
+        right={
+          activeScenario !== "all" ? (
+            <Button
+              variant="ghost"
+              className="text-emerald-300 hover:bg-white/5"
+              onClick={() => applyScenario("all")}
+            >
+              Clear <ArrowRight className="w-4 h-4 ml-1" />
+            </Button>
+          ) : null
+        }
+      />
+
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
+        <div className="flex gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
+          <ScenarioChip active={activeScenario === "all"} onClick={() => applyScenario("all")}>
+            All
+          </ScenarioChip>
+
+          {scenarioList.map((s) => (
+            <ScenarioChip
+              key={s.key}
+              active={activeScenario === s.key}
+              onClick={() => applyScenario(s.key)}
+            >
+              {scenarioLabel(s.key)}
+            </ScenarioChip>
+          ))}
+        </div>
+
+        <div className="text-xs text-white/50 mt-3">
+          These are pulled from your presets’ <span className="text-white/70">scenarios</span> metadata.
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div
       ref={scrollWrapRef}
       className={cn(
-        "h-full w-full p-6 md:p-8 overflow-y-auto bg-black/80",
+        // ✅ Background is owned by Layout.jsx for /AuraModes
+        "min-h-[100svh] w-full p-6 md:p-8 overflow-y-auto bg-transparent",
         pagePadBottom
       )}
     >
@@ -208,7 +281,7 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
           </Button>
         </div>
 
-        {/* Search + Sort + Filters */}
+        {/* Search + Filters */}
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5 mb-4">
           <div className="flex flex-col md:flex-row md:items-center gap-3">
             <div className="relative flex-1">
@@ -220,43 +293,6 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
                 className="pl-9 bg-black/40 border-white/10 text-white placeholder:text-white/40"
               />
             </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="bg-black/30 border-white/10 text-white hover:bg-black/40"
-                >
-                  <ArrowUpDown className="w-4 h-4 mr-2" />
-                  Sort:{" "}
-                  {sortBy === "custom"
-                    ? "Library"
-                    : sortBy === "recent"
-                    ? "Recent"
-                    : "A–Z"}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-44 bg-zinc-900 border-zinc-700 text-white">
-                <DropdownMenuItem
-                  onClick={() => setSortBy("custom")}
-                  className="cursor-pointer hover:bg-zinc-700"
-                >
-                  Library Order
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setSortBy("recent")}
-                  className="cursor-pointer hover:bg-zinc-700"
-                >
-                  Recent
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setSortBy("az")}
-                  className="cursor-pointer hover:bg-zinc-700"
-                >
-                  A–Z
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
 
           {/* GOALS (collapsible) */}
@@ -468,7 +504,6 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
 
             {/* Collection rails (registry-driven, back-compatible grouping) */}
             {PRESET_COLLECTIONS.map((c) => {
-              // Grouping still uses legacy labels stored on presets to avoid breaking anything.
               const raw =
                 byCollection.get(c.legacyLabel) ||
                 byCollection.get(c.displayedLabel) ||
@@ -476,37 +511,43 @@ export default function AuraModesListView({ pagePadBottom, ctx }) {
 
               if (!raw.length) return null;
 
-              // ✅ FIX: deterministic order within each collection (prevents Master Sequence shuffling)
               const list = sortByOrder(raw);
 
+              // ✅ Insert Scenarios section immediately after Grounded Aura Mode rail
+              const isGrounded = c.key === "grounded";
+
               return (
-                <div key={c.key}>
-                  <SectionHeader
-                    title={c.displayedLabel}
-                    subtitle={collectionSubtitle(c.key)}
-                    right={
-                      <Button
-                        variant="ghost"
-                        className="text-emerald-300 hover:bg-white/5"
-                        onClick={() => applyCollection(c.legacyLabel)}
-                      >
-                        View all <ArrowRight className="w-4 h-4 ml-1" />
-                      </Button>
-                    }
-                  />
-                  <Rail>
-                    {list.slice(0, 12).map((preset) => (
-                      <CompactCard
-                        key={preset.id}
-                        preset={preset}
-                        isFavorite={favoriteIds.has(preset.id)}
-                        onToggleFavorite={toggleFavorite}
-                        onActivate={handleCompactActivate}
-                        onOpen={handleCompactOpen}
-                      />
-                    ))}
-                  </Rail>
-                </div>
+                <React.Fragment key={c.key}>
+                  <div>
+                    <SectionHeader
+                      title={c.displayedLabel}
+                      subtitle={collectionSubtitle(c.key)}
+                      right={
+                        <Button
+                          variant="ghost"
+                          className="text-emerald-300 hover:bg-white/5"
+                          onClick={() => applyCollection(c.legacyLabel)}
+                        >
+                          View all <ArrowRight className="w-4 h-4 ml-1" />
+                        </Button>
+                      }
+                    />
+                    <Rail>
+                      {list.slice(0, 12).map((preset) => (
+                        <CompactCard
+                          key={preset.id}
+                          preset={preset}
+                          isFavorite={favoriteIds.has(preset.id)}
+                          onToggleFavorite={toggleFavorite}
+                          onActivate={handleCompactActivate}
+                          onOpen={handleCompactOpen}
+                        />
+                      ))}
+                    </Rail>
+                  </div>
+
+                  {isGrounded ? renderScenariosSection() : null}
+                </React.Fragment>
               );
             })}
 
