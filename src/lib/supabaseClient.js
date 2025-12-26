@@ -1,5 +1,6 @@
 // src/lib/supabaseClient.js
 import { createClient } from "@supabase/supabase-js";
+import { Capacitor } from "@capacitor/core";
 
 /**
  * ✅ Production-safe fallback
@@ -14,6 +15,14 @@ export let supabase = null;
 export let isSupabaseConfigured = false;
 
 let _initAttempted = false;
+
+function isNativeShell() {
+  try {
+    return Capacitor?.isNativePlatform?.() === true;
+  } catch {
+    return false;
+  }
+}
 
 function readFromViteEnv() {
   return {
@@ -63,7 +72,26 @@ export function initSupabaseFromConfig(cfg) {
     return { supabase: null, isSupabaseConfigured: false };
   }
 
-  supabase = createClient(supabaseUrl, supabaseAnonKey);
+  // ✅ Key native-vs-web difference:
+  // - Web: allow Supabase to detect session from URL after OAuth redirect (e.g. /account)
+  // - Native: we return via deep link + handle session exchange ourselves (appUrlOpen),
+  //          so disable detectSessionInUrl to avoid relying on window.location in the WebView.
+  const native = isNativeShell();
+
+  supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      // Keep standard behavior
+      persistSession: true,
+      autoRefreshToken: true,
+
+      // ✅ Needed for clean native OAuth handling
+      detectSessionInUrl: !native,
+
+      // ✅ Ensures exchangeCodeForSession works consistently (PKCE flow)
+      flowType: "pkce",
+    },
+  });
+
   isSupabaseConfigured = true;
   return { supabase, isSupabaseConfigured: true };
 }

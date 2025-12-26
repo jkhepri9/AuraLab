@@ -4,6 +4,11 @@ import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  // ✅ Capacitor/WebView safety:
+  // Use relative base so assets resolve correctly from capacitor://localhost
+  // (prevents blank screen / missing JS/CSS on device).
+  base: "./",
+
   plugins: [
     react(),
 
@@ -38,8 +43,18 @@ export default defineConfig({
         background_color: "#09090b",
         theme_color: "#09090b",
         icons: [
-          { src: "/icons/auralab-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-          { src: "/icons/auralab-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          {
+            src: "/icons/auralab-192.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/icons/auralab-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any",
+          },
           {
             src: "/icons/auralab-192-maskable.png",
             sizes: "192x192",
@@ -70,7 +85,10 @@ export default defineConfig({
             handler: "StaleWhileRevalidate",
             options: {
               cacheName: "images",
-              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+              },
             },
           },
           {
@@ -79,7 +97,10 @@ export default defineConfig({
             handler: "CacheFirst",
             options: {
               cacheName: "audio",
-              expiration: { maxEntries: 24, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              expiration: {
+                maxEntries: 24,
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+              },
             },
           },
         ],

@@ -52,6 +52,19 @@
           document.documentElement.classList.toggle("is-pm", !!pm);
         }
 
+        // Native shell detection (Capacitor injects a bridge; this is safe and cheap)
+        function isNativeShell() {
+          try {
+            return !!(
+              window.Capacitor &&
+              typeof window.Capacitor.isNativePlatform === "function" &&
+              window.Capacitor.isNativePlatform()
+            );
+          } catch {
+            return false;
+          }
+        }
+
         var pm = isPmNow();
         apply(pm);
 
@@ -65,17 +78,30 @@
         document.head.appendChild(link);
 
         // Keep shell correct if app stays open across boundary
+        // (In native shells, keep it too—but avoid rescheduling aggressively when backgrounded)
         (function schedule() {
           var curPm = isPmNow();
           var ms = msUntilNextBoundary(curPm);
+
           window.setTimeout(function () {
+            // If backgrounded, do a light touch and reschedule later
+            if (document.visibilityState === "hidden") {
+              schedule();
+              return;
+            }
+
             var nextPm = isPmNow();
             apply(nextPm);
+
             var l = document.getElementById("aura-shell-video-preload");
             if (l) l.href = nextPm ? "/live/home_pm.mp4" : "/live/home.mp4";
+
             schedule();
           }, ms);
         })();
+
+        // Expose for the intro cleanup script below
+        window.__AURALAB_IS_NATIVE__ = isNativeShell();
       })();
     </script>
 
@@ -165,6 +191,11 @@
       }
       #aura-intro .aura-intro-skip:active {
         background: rgba(255, 255, 255, 0.16);
+      }
+
+      /* In native shells: remove the skip affordance (intro should always run) */
+      html.is-native #aura-intro .aura-intro-skip {
+        display: none !important;
       }
 
       #aura-intro .aura-intro-center {
@@ -367,6 +398,12 @@
         var intro = document.getElementById("aura-intro");
         if (!intro) return;
 
+        // If native, remove skip affordance and enforce full intro
+        var isNative = !!window.__AURALAB_IS_NATIVE__;
+        if (isNative) {
+          document.documentElement.classList.add("is-native");
+        }
+
         function kill() {
           // Instant hide
           intro.style.animation = "none";
@@ -380,7 +417,9 @@
         }
 
         var skip = document.getElementById("aura-intro-skip");
-        if (skip) skip.addEventListener("click", kill, { passive: true });
+        if (skip && !isNative) {
+          skip.addEventListener("click", kill, { passive: true });
+        }
 
         // Hard cleanup slightly after the 5s window (CSS already hides it)
         window.setTimeout(function () {
