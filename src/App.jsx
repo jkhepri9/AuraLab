@@ -22,9 +22,7 @@ import Account from "./pages/Account";
 import Start from "./pages/Start";
 
 import { GlobalPlayerProvider, useGlobalPlayer } from "./audio/GlobalPlayerContext";
-import { AuthProvider } from "@/auth/AuthProvider";
-
-const FIRST_RUN_KEY = "auralab_first_run_v1";
+import { isFirstRunComplete } from "@/lib/firstRunFlag";
 
 function FirstRunGate() {
   const location = useLocation();
@@ -34,14 +32,7 @@ function FirstRunGate() {
     const allow = new Set(["/Start", "/Install", "/account", "/Account"]);
     if (allow.has(location.pathname)) return;
 
-    let done = false;
-    try {
-      done = localStorage.getItem(FIRST_RUN_KEY) === "1";
-    } catch {
-      done = false;
-    }
-
-    if (!done) {
+    if (!isFirstRunComplete()) {
       navigate("/Start", { replace: true });
     }
   }, [location.pathname, navigate]);
@@ -89,10 +80,8 @@ function AppInner() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <GlobalPlayerProvider>
-        <AppInner />
-      </GlobalPlayerProvider>
-    </AuthProvider>
+    <GlobalPlayerProvider>
+      <AppInner />
+    </GlobalPlayerProvider>
   );
 }
