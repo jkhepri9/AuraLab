@@ -57,14 +57,6 @@ export default function LiveBackground({
     } catch {}
   }, [active, reduceMotion]);
 
-  const shouldPlay = useCallback(() => {
-    const el = videoRef.current;
-    if (!el || reduceMotion || !active) return false;
-    if (!effectiveWebm && !effectiveMp4) return false;
-
-    return true;
-  }, [active, effectiveMp4, effectiveWebm, reduceMotion]);
-
   // Enable swapping only if PM assets are configured (poster or video).
   const hasPmAssets = !!(pmPoster || pmMp4Src || pmWebmSrc);
 
@@ -98,6 +90,14 @@ export default function LiveBackground({
   const effectivePoster = hasPmAssets && isPmNow ? pmPoster || poster : poster;
   const effectiveWebm = hasPmAssets && isPmNow ? pmWebmSrc || webmSrc : webmSrc;
   const effectiveMp4 = hasPmAssets && isPmNow ? pmMp4Src || mp4Src : mp4Src;
+
+  const shouldPlay = useCallback(() => {
+    const el = videoRef.current;
+    if (!el || reduceMotion || !active) return false;
+    if (!effectiveWebm && !effectiveMp4) return false;
+
+    return true;
+  }, [active, effectiveMp4, effectiveWebm, reduceMotion]);
 
   useEffect(() => {
     const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
