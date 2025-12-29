@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 function computeIsPmNow(now, dayStartHour, pmStartHour) {
   const h = now.getHours();
@@ -41,6 +41,21 @@ export default function LiveBackground({
   const videoRef = useRef(null);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
+
+  const tryPlay = useCallback(() => {
+    const el = videoRef.current;
+    if (!el || reduceMotion || !active) return;
+
+    // Some mobile browsers require the properties to be set before play() resolves.
+    el.muted = true;
+    el.playsInline = true;
+    el.autoplay = true;
+
+    try {
+      const p = el.play?.();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } catch {}
+  }, [active, reduceMotion]);
 
   // Enable swapping only if PM assets are configured (poster or video).
   const hasPmAssets = !!(pmPoster || pmMp4Src || pmWebmSrc);
@@ -106,11 +121,8 @@ export default function LiveBackground({
 
     if (reduceMotion) return;
 
-    try {
-      const p = el.play?.();
-      if (p && typeof p.catch === "function") p.catch(() => {});
-    } catch {}
-  }, [active, reduceMotion]);
+    tryPlay();
+  }, [active, reduceMotion, tryPlay]);
 
   useEffect(() => {
     const onVis = () => {
@@ -122,15 +134,13 @@ export default function LiveBackground({
           el.pause();
         } catch {}
       } else if (active && !reduceMotion) {
-        try {
-          el.play?.();
-        } catch {}
+        tryPlay();
       }
     };
 
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
-  }, [active, reduceMotion]);
+  }, [active, reduceMotion, tryPlay]);
 
   // If the wallpaper source changes (day <-> PM), reload the video and fade it back in when ready.
   useEffect(() => {
@@ -145,12 +155,19 @@ export default function LiveBackground({
     } catch {}
 
     if (active) {
-      try {
-        const p = el.play?.();
-        if (p && typeof p.catch === "function") p.catch(() => {});
-      } catch {}
+      tryPlay();
     }
-  }, [effectivePoster, effectiveWebm, effectiveMp4, active, reduceMotion]);
+  }, [effectivePoster, effectiveWebm, effectiveMp4, active, reduceMotion, tryPlay]);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+
+    if (el.readyState >= 2) {
+      setVideoReady(true);
+      tryPlay();
+    }
+  }, [tryPlay]);
 
   const overlayStyle = useMemo(
     () => ({
@@ -193,8 +210,15 @@ export default function LiveBackground({
           playsInline
           preload="auto"
           poster={effectivePoster}
-          onCanPlay={() => setVideoReady(true)}
-          onLoadedData={() => setVideoReady(true)}
+          onCanPlay={() => {
+            setVideoReady(true);
+            tryPlay();
+          }}
+          onLoadedData={() => {
+            setVideoReady(true);
+            tryPlay();
+          }}
+          onPlay={() => setVideoReady(true)}
           onError={() => setVideoReady(false)}
         >
           {effectiveWebm ? <source src={effectiveWebm} type="video/webm" /> : null}
