@@ -57,6 +57,14 @@ export default function LiveBackground({
     } catch {}
   }, [active, reduceMotion]);
 
+  const shouldPlay = useCallback(() => {
+    const el = videoRef.current;
+    if (!el || reduceMotion || !active) return false;
+    if (!effectiveWebm && !effectiveMp4) return false;
+
+    return true;
+  }, [active, effectiveMp4, effectiveWebm, reduceMotion]);
+
   // Enable swapping only if PM assets are configured (poster or video).
   const hasPmAssets = !!(pmPoster || pmMp4Src || pmWebmSrc);
 
@@ -123,6 +131,35 @@ export default function LiveBackground({
 
     tryPlay();
   }, [active, reduceMotion, tryPlay]);
+
+  // Persistent auto-play nudge: some browsers pause/deny autoplay after
+  // navigation. Retry while the layer should be active.
+  useEffect(() => {
+    if (!shouldPlay()) return;
+
+    let cancelled = false;
+    let t;
+
+    const tick = () => {
+      if (cancelled) return;
+
+      const el = videoRef.current;
+      if (!el) return;
+
+      if (el.paused || el.readyState < 2) {
+        tryPlay();
+      }
+
+      t = window.setTimeout(tick, 800);
+    };
+
+    t = window.setTimeout(tick, 50);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [shouldPlay, tryPlay]);
 
   useEffect(() => {
     const onVis = () => {
@@ -219,6 +256,14 @@ export default function LiveBackground({
             tryPlay();
           }}
           onPlay={() => setVideoReady(true)}
+          onPlaying={() => setVideoReady(true)}
+          onPause={() => {
+            if (shouldPlay()) {
+              tryPlay();
+            }
+          }}
+          onStalled={() => shouldPlay() && tryPlay()}
+          onSuspend={() => shouldPlay() && tryPlay()}
           onError={() => setVideoReady(false)}
         >
           {effectiveWebm ? <source src={effectiveWebm} type="video/webm" /> : null}
