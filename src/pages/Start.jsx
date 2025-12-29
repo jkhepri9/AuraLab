@@ -27,9 +27,9 @@ import { toast } from "sonner";
 
 import { useGlobalPlayer } from "@/audio/GlobalPlayerContext";
 import { db } from "@/lib/db";
+import { markFirstRunComplete } from "@/lib/firstRunFlag";
 import { FIRST60_COPY, INTENT_PRESET_MAP } from "../data/copy/first60Copy";
 
-const FIRST_RUN_KEY = "auralab_first_run_v1";
 const OUTPUT_GAIN_KEY = "auralab_output_gain_v1"; // persisted effective gain
 const TONE_KEY = "auralab_tone_v1"; // persisted {warmth,clarity}
 
@@ -256,11 +256,7 @@ export default function Start() {
     }
 
     // ✅ Only mark onboarding complete after audio is confirmed playing.
-    try {
-      localStorage.setItem(FIRST_RUN_KEY, "1");
-    } catch {
-      // ignore
-    }
+    markFirstRunComplete();
 
     setStep("session");
   };
