@@ -185,8 +185,6 @@ export default function Layout({
       {/* ✅ Keep mounted always; toggle only */}
       <LiveBackground
         active={showLiveBackground}
-        webmSrc="/live/home.webm"
-        mp4Src="/live/home.mp4"
         poster="/live/home.png"
         dim={0.55}
       />

@@ -1,6 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Capacitor } from "@capacitor/core";
-import { App as CapApp } from "@capacitor/app";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 function computeIsPmNow(now, dayStartHour, pmStartHour) {
   const h = now.getHours();
@@ -24,14 +22,10 @@ function msUntilNextBoundary(now, isPm, dayStartHour, pmStartHour) {
 export default function LiveBackground({
   active = false,
 
-  // Day sources (existing behavior)
-  webmSrc = null,
-  mp4Src = "/live/home.mp4",
+  // Posters remain as instant paint + reduced-motion fallback
   poster = "/live/home.png",
 
-  // Optional PM/Night sources (add these files in /public/live/)
-  pmWebmSrc = null,
-  pmMp4Src = "/live/home_pm.mp4",
+  // Optional PM/Night posters (add these files in /public/live/)
   pmPoster = "/live/home_pm.png",
 
   // Time rule (local device time)
@@ -40,31 +34,13 @@ export default function LiveBackground({
 
   dim = 0.55, // 0..1 overlay strength
 }) {
-  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const rafRef = useRef(null);
+  const glStateRef = useRef(null);
   const [reduceMotion, setReduceMotion] = useState(false);
-  const [videoReady, setVideoReady] = useState(false);
 
-  const isNative = useMemo(() => {
-    try {
-      return Capacitor?.isNativePlatform?.() === true;
-    } catch {
-      return false;
-    }
-  }, []);
-
-  const tryResumePlayback = useCallback(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    if (!active || reduceMotion) return;
-
-    try {
-      const p = el.play?.();
-      if (p && typeof p.catch === "function") p.catch(() => {});
-    } catch {}
-  }, [active, reduceMotion]);
-
-  // Enable swapping only if PM assets are configured (poster or video).
-  const hasPmAssets = !!(pmPoster || pmMp4Src || pmWebmSrc);
+  // Enable swapping only if PM assets are configured (poster present).
+  const hasPmAssets = !!pmPoster;
 
   const [isPmNow, setIsPmNow] = useState(() => {
     if (!hasPmAssets) return false;
@@ -94,8 +70,6 @@ export default function LiveBackground({
   }, [hasPmAssets, dayStartHour, pmStartHour]);
 
   const effectivePoster = hasPmAssets && isPmNow ? pmPoster || poster : poster;
-  const effectiveWebm = hasPmAssets && isPmNow ? pmWebmSrc || webmSrc : webmSrc;
-  const effectiveMp4 = hasPmAssets && isPmNow ? pmMp4Src || mp4Src : mp4Src;
 
   useEffect(() => {
     const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -113,82 +87,205 @@ export default function LiveBackground({
     };
   }, []);
 
-  // When inactive, pause video (saves CPU). When active, attempt play.
   useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-    if (!active) {
-      try {
-        el.pause();
-      } catch {}
-      return;
-    }
+    const initGl = () => {
+      const gl = canvas.getContext("webgl", { alpha: true, premultipliedAlpha: true });
+      if (!gl) return null;
 
-    tryResumePlayback();
-  }, [active, reduceMotion, tryResumePlayback]);
+      const vertSrc = `
+        attribute vec2 a_position;
+        void main() {
+          gl_Position = vec4(a_position, 0.0, 1.0);
+        }
+      `;
 
-  useEffect(() => {
-    const onVis = () => {
-      const el = videoRef.current;
-      if (!el) return;
+      const fragSrc = `
+        precision highp float;
+        uniform vec2 u_resolution;
+        uniform float u_time;
+        uniform int u_isPm;
 
-      if (document.visibilityState === "hidden") {
-        try {
-          el.pause();
-        } catch {}
-      } else {
-        tryResumePlayback();
+        // Simple pseudo-random
+        float hash(vec2 p) {
+          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+        }
+
+        float noise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          float a = hash(i);
+          float b = hash(i + vec2(1.0, 0.0));
+          float c = hash(i + vec2(0.0, 1.0));
+          float d = hash(i + vec2(1.0, 1.0));
+          vec2 u = f * f * (3.0 - 2.0 * f);
+          return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+        }
+
+        vec3 paletteDay(float t) {
+          vec3 a = vec3(0.1, 0.28, 0.4);
+          vec3 b = vec3(0.15, 0.3, 0.55);
+          vec3 c = vec3(0.9, 0.7, 0.5);
+          vec3 d = vec3(0.35, 0.6, 0.9);
+          return a + b * cos(6.28318 * (c * t + d));
+        }
+
+        vec3 paletteNight(float t) {
+          vec3 a = vec3(0.05, 0.08, 0.15);
+          vec3 b = vec3(0.1, 0.15, 0.3);
+          vec3 c = vec3(1.0, 0.8, 0.6);
+          vec3 d = vec3(0.5, 0.25, 0.75);
+          return a + b * cos(6.28318 * (c * t + d));
+        }
+
+        void main() {
+          vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+          uv.x *= u_resolution.x / u_resolution.y;
+
+          float t = u_time * 0.05;
+          float flow = noise(uv * 2.5 + vec2(t * 0.5, t * 0.25));
+          float ripples = sin((uv.y + flow * 0.2 + t * 0.1) * 6.28318) * 0.07;
+          float blend = clamp(uv.y + ripples + flow * 0.2, 0.0, 1.0);
+
+          float paletteT = blend + noise(uv * 4.0 + t * 0.2) * 0.15;
+          vec3 col = mix(paletteDay(paletteT), paletteNight(paletteT), float(u_isPm));
+
+          float vignette = smoothstep(1.0, 0.6, length(uv - 0.5));
+          col *= vignette;
+
+          gl_FragColor = vec4(col, 1.0);
+        }
+      `;
+
+      const createShader = (type, src) => {
+        const shader = gl.createShader(type);
+        gl.shaderSource(shader, src);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          console.warn("LiveBackground shader compile error", gl.getShaderInfoLog(shader));
+          gl.deleteShader(shader);
+          return null;
+        }
+        return shader;
+      };
+
+      const vs = createShader(gl.VERTEX_SHADER, vertSrc);
+      const fs = createShader(gl.FRAGMENT_SHADER, fragSrc);
+      if (!vs || !fs) return null;
+
+      const program = gl.createProgram();
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.warn("LiveBackground shader link error", gl.getProgramInfoLog(program));
+        return null;
+      }
+
+      const positionBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array([
+          -1, -1,
+          1, -1,
+          -1, 1,
+          -1, 1,
+          1, -1,
+          1, 1,
+        ]),
+        gl.STATIC_DRAW
+      );
+
+      return {
+        gl,
+        program,
+        positionBuffer,
+        attrib: gl.getAttribLocation(program, "a_position"),
+        uniforms: {
+          resolution: gl.getUniformLocation(program, "u_resolution"),
+          time: gl.getUniformLocation(program, "u_time"),
+          isPm: gl.getUniformLocation(program, "u_isPm"),
+        },
+      };
+    };
+
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const width = Math.floor(window.innerWidth * dpr);
+      const height = Math.floor(window.innerHeight * dpr);
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
       }
     };
 
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
-  }, [active, reduceMotion]);
+    const render = (timeMs) => {
+      const state = glStateRef.current;
+      if (!state) return;
+      const { gl, program, positionBuffer, attrib, uniforms } = state;
 
-  // If the wallpaper source changes (day <-> PM), reload the video and fade it back in when ready.
-  useEffect(() => {
-    setVideoReady(false);
+      resize();
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.useProgram(program);
 
-    const el = videoRef.current;
-    if (!el) return;
-    if (reduceMotion) return;
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.enableVertexAttribArray(attrib);
+      gl.vertexAttribPointer(attrib, 2, gl.FLOAT, false, 0, 0);
 
-    try {
-      el.load?.();
-    } catch {}
+      gl.uniform2f(uniforms.resolution, canvas.width, canvas.height);
+      gl.uniform1f(uniforms.time, timeMs * 0.001);
+      gl.uniform1i(uniforms.isPm, isPmNow ? 1 : 0);
 
-    if (active) {
-      try {
-        const p = el.play?.();
-        if (p && typeof p.catch === "function") p.catch(() => {});
-      } catch {}
-    }
-  }, [effectivePoster, effectiveWebm, effectiveMp4, active, reduceMotion]);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    };
 
-  // Some mobile shells pause media while the in-app browser is open. When the app resumes,
-  // explicitly attempt to restart playback so the live background comes back after login.
-  useEffect(() => {
-    const onFocus = () => tryResumePlayback();
-    window.addEventListener("focus", onFocus);
+    const start = () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      if (!active || reduceMotion || document.visibilityState === "hidden") return;
+      if (!glStateRef.current) {
+        glStateRef.current = initGl();
+      }
+      if (!glStateRef.current) return;
 
-    let removeAppListener = null;
-    if (isNative) {
-      const sub = CapApp.addListener("appStateChange", ({ isActive }) => {
-        if (isActive) tryResumePlayback();
-      });
-      removeAppListener = () => {
-        try {
-          sub?.remove?.();
-        } catch {}
+      const loop = (time) => {
+        render(time);
+        rafRef.current = requestAnimationFrame(loop);
       };
-    }
+
+      rafRef.current = requestAnimationFrame(loop);
+    };
+
+    const stop = () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+
+    start();
+
+    const handleVis = () => {
+      if (document.visibilityState === "hidden") stop();
+      else start();
+    };
+
+    window.addEventListener("resize", start);
+    document.addEventListener("visibilitychange", handleVis);
 
     return () => {
-      window.removeEventListener("focus", onFocus);
-      if (removeAppListener) removeAppListener();
+      stop();
+      window.removeEventListener("resize", start);
+      document.removeEventListener("visibilitychange", handleVis);
+      glStateRef.current = null;
     };
-  }, [isNative, tryResumePlayback]);
+  }, [active, reduceMotion, isPmNow]);
 
   const overlayStyle = useMemo(
     () => ({
@@ -201,9 +298,8 @@ export default function LiveBackground({
     [dim]
   );
 
-  // Entire layer fades on/off; video fades in only when ready AND active.
+  // Entire layer fades on/off.
   const layerOpacity = active ? 1 : 0;
-  const videoOpacity = active && videoReady ? 1 : 0;
 
   return (
     <div
@@ -221,23 +317,11 @@ export default function LiveBackground({
       />
 
       {!reduceMotion && (
-        <video
-          ref={videoRef}
-          className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300"
-          style={{ opacity: videoOpacity }}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          poster={effectivePoster}
-          onCanPlay={() => setVideoReady(true)}
-          onLoadedData={() => setVideoReady(true)}
-          onError={() => setVideoReady(false)}
-        >
-          {effectiveWebm ? <source src={effectiveWebm} type="video/webm" /> : null}
-          {effectiveMp4 ? <source src={effectiveMp4} type="video/mp4" /> : null}
-        </video>
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ mixBlendMode: "screen" }}
+        />
       )}
 
       {/* Readability overlay */}
