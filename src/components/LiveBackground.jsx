@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { App as CapacitorApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 
 function computeIsPmNow(now, dayStartHour, pmStartHour) {
   const h = now.getHours();
@@ -85,6 +87,11 @@ export default function LiveBackground({
     return computeIsPmNow(new Date(), dayStartHour, pmStartHour);
   });
 
+  const isNativeShell = useMemo(
+    () => Capacitor?.isNativePlatform?.() === true,
+    []
+  );
+
   // Keep isPmNow accurate and flip exactly at the next boundary.
   useEffect(() => {
     if (!hasPmAssets) return;
@@ -144,13 +151,14 @@ export default function LiveBackground({
       try {
         el.pause();
       } catch {}
+      setVideoReady(false);
       return;
     }
 
     if (reduceMotion) return;
 
-    tryPlay();
-  }, [active, reduceMotion, tryPlay]);
+    refreshAndPlay(true);
+  }, [active, reduceMotion, refreshAndPlay]);
 
   // Persistent auto-play nudge: some browsers pause/deny autoplay after
   // navigation. Retry while the layer should be active.
@@ -198,6 +206,33 @@ export default function LiveBackground({
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [active, reduceMotion, refreshAndPlay]);
+
+  // Native shells: also listen for Capacitor app state so we re-arm autoplay after auth/browser returns.
+  useEffect(() => {
+    if (!shouldPlay()) return;
+    if (!isNativeShell) return;
+
+    let subStateChange;
+    let subResume;
+
+    const onActive = (state) => {
+      if (state?.isActive) refreshAndPlay(true);
+    };
+
+    const onResume = () => refreshAndPlay(true);
+
+    try {
+      subStateChange = CapacitorApp.addListener?.("appStateChange", onActive);
+      subResume = CapacitorApp.addListener?.("resume", onResume);
+    } catch {}
+
+    return () => {
+      try {
+        subStateChange?.remove?.();
+        subResume?.remove?.();
+      } catch {}
+    };
+  }, [isNativeShell, refreshAndPlay, shouldPlay]);
 
   // Native shells may hide the WebView during auth flows; refresh playback on focus/resume.
   useEffect(() => {
@@ -301,7 +336,10 @@ export default function LiveBackground({
           }}
           onStalled={() => shouldPlay() && tryPlay()}
           onSuspend={() => shouldPlay() && tryPlay()}
-          onError={() => setVideoReady(false)}
+          onError={() => {
+            setVideoReady(false);
+            refreshAndPlay(true);
+          }}
         >
           {effectiveWebm ? <source src={effectiveWebm} type="video/webm" /> : null}
           {effectiveMp4 ? <source src={effectiveMp4} type="video/mp4" /> : null}
