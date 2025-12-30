@@ -134,11 +134,10 @@ export default function Layout({
   const location = useLocation();
 
   const isImmersive = location.pathname === "/Start";
-  const isHome = location.pathname === "/";
   const isAuraModes = location.pathname === "/AuraModes";
 
-  // ✅ Home live background only (as designed)
-  const showHomeLiveBg = !isImmersive && isHome;
+  // ✅ Keep the live background active on every non-immersive page (so it stays live after sign-in)
+  const showLiveBackground = !isImmersive;
 
   // ✅ Static background image for Aura Modes
   // File path: /public/modeimages/bg/auramodes.jpg
@@ -168,9 +167,9 @@ export default function Layout({
     : "bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-6";
 
   // ✅ Critical:
-  // - Home must not paint an opaque background over the live poster/video.
-  // - AuraModes must be transparent so the fixed background layer can show.
-  const shellBg = showHomeLiveBg || isAuraModes ? "bg-transparent" : "bg-zinc-950";
+  // - All non-immersive pages should stay transparent so the live layer shows through.
+  // - AuraModes keeps its static background, so we still keep that layer transparent.
+  const shellBg = showLiveBackground || isAuraModes ? "bg-transparent" : "bg-zinc-950";
 
   return (
     <div
@@ -185,7 +184,7 @@ export default function Layout({
     >
       {/* ✅ Keep mounted always; toggle only */}
       <LiveBackground
-        active={showHomeLiveBg}
+        active={showLiveBackground}
         webmSrc="/live/home.webm"
         mp4Src="/live/home.mp4"
         poster="/live/home.png"
