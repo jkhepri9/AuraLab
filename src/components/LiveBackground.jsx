@@ -43,6 +43,7 @@ export default function LiveBackground({
   const videoRef = useRef(null);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const tryPlay = useCallback(() => {
     const el = videoRef.current;
@@ -60,7 +61,15 @@ export default function LiveBackground({
   }, [active, reduceMotion]);
 
   const refreshAndPlay = useCallback(
-    (forceLoad = false) => {
+    (forceLoad = false, resetElement = false) => {
+      // If we need a hard reset, recreate the element so we don't get stuck on a stale
+      // pipeline (can happen after native auth/browser handoffs).
+      if (resetElement) {
+        setVideoReady(false);
+        setReloadKey((k) => k + 1);
+        return;
+      }
+
       const el = videoRef.current;
       if (!el || reduceMotion || !active) return;
 
@@ -160,6 +169,14 @@ export default function LiveBackground({
     refreshAndPlay(true);
   }, [active, reduceMotion, refreshAndPlay]);
 
+  // When we rebuild the element, re-arm autoplay immediately so the new pipeline starts.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || reduceMotion || !active) return;
+
+    tryPlay();
+  }, [active, reduceMotion, reloadKey, tryPlay]);
+
   // Persistent auto-play nudge: some browsers pause/deny autoplay after
   // navigation. Retry while the layer should be active.
   useEffect(() => {
@@ -189,6 +206,44 @@ export default function LiveBackground({
     };
   }, [shouldPlay, tryPlay]);
 
+  // Detect stalled playback by monitoring time progression; if we are stuck on the poster
+  // or a frozen frame for a few seconds, rebuild the element and re-arm playback.
+  useEffect(() => {
+    if (!shouldPlay()) return;
+
+    let cancelled = false;
+    let lastTime = null;
+    let lastProgressAt = Date.now();
+
+    const tick = () => {
+      if (cancelled) return;
+
+      const el = videoRef.current;
+      if (!el) return;
+
+      if (el.paused || el.readyState < 2) {
+        tryPlay();
+      } else {
+        const ct = el.currentTime;
+        if (lastTime === null || ct !== lastTime) {
+          lastTime = ct;
+          lastProgressAt = Date.now();
+        } else if (Date.now() - lastProgressAt > 2500) {
+          refreshAndPlay(true, true);
+          lastProgressAt = Date.now();
+        }
+      }
+
+      window.setTimeout(tick, 900);
+    };
+
+    window.setTimeout(tick, 400);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshAndPlay, shouldPlay, tryPlay]);
+
   useEffect(() => {
     const onVis = () => {
       const el = videoRef.current;
@@ -216,10 +271,10 @@ export default function LiveBackground({
     let subResume;
 
     const onActive = (state) => {
-      if (state?.isActive) refreshAndPlay(true);
+      if (state?.isActive) refreshAndPlay(true, true);
     };
 
-    const onResume = () => refreshAndPlay(true);
+    const onResume = () => refreshAndPlay(true, true);
 
     try {
       subStateChange = CapacitorApp.addListener?.("appStateChange", onActive);
@@ -306,6 +361,7 @@ export default function LiveBackground({
 
       {!reduceMotion && (
         <video
+          key={reloadKey}
           ref={videoRef}
           className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300"
           style={{ opacity: videoOpacity }}
@@ -338,7 +394,7 @@ export default function LiveBackground({
           onSuspend={() => shouldPlay() && tryPlay()}
           onError={() => {
             setVideoReady(false);
-            refreshAndPlay(true);
+            refreshAndPlay(true, true);
           }}
         >
           {effectiveWebm ? <source src={effectiveWebm} type="video/webm" /> : null}
