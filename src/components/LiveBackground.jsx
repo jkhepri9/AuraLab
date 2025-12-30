@@ -57,6 +57,26 @@ export default function LiveBackground({
     } catch {}
   }, [active, reduceMotion]);
 
+  const refreshAndPlay = useCallback(
+    (forceLoad = false) => {
+      const el = videoRef.current;
+      if (!el || reduceMotion || !active) return;
+
+      setVideoReady(false);
+
+      try {
+        // In some hybrid shells, the media pipeline is torn down when backgrounded.
+        // Force a reload when coming back to the foreground so autoplay is available.
+        if (forceLoad || el.readyState < 2) {
+          el.load?.();
+        }
+      } catch {}
+
+      tryPlay();
+    },
+    [active, reduceMotion, tryPlay]
+  );
+
   // Enable swapping only if PM assets are configured (poster or video).
   const hasPmAssets = !!(pmPoster || pmMp4Src || pmWebmSrc);
 
@@ -171,13 +191,32 @@ export default function LiveBackground({
           el.pause();
         } catch {}
       } else if (active && !reduceMotion) {
-        tryPlay();
+        refreshAndPlay(true);
       }
     };
 
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
-  }, [active, reduceMotion, tryPlay]);
+  }, [active, reduceMotion, refreshAndPlay]);
+
+  // Native shells may hide the WebView during auth flows; refresh playback on focus/resume.
+  useEffect(() => {
+    if (!shouldPlay()) return;
+
+    const onFocus = () => refreshAndPlay(true);
+    const onPageShow = () => refreshAndPlay(true);
+    const onResume = () => refreshAndPlay(true);
+
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("pageshow", onPageShow);
+    document.addEventListener("resume", onResume);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("pageshow", onPageShow);
+      document.removeEventListener("resume", onResume);
+    };
+  }, [refreshAndPlay, shouldPlay]);
 
   // If the wallpaper source changes (day <-> PM), reload the video and fade it back in when ready.
   useEffect(() => {
@@ -187,14 +226,8 @@ export default function LiveBackground({
     if (!el) return;
     if (reduceMotion) return;
 
-    try {
-      el.load?.();
-    } catch {}
-
-    if (active) {
-      tryPlay();
-    }
-  }, [effectivePoster, effectiveWebm, effectiveMp4, active, reduceMotion, tryPlay]);
+    refreshAndPlay(true);
+  }, [effectivePoster, effectiveWebm, effectiveMp4, active, reduceMotion, refreshAndPlay]);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -252,6 +285,10 @@ export default function LiveBackground({
             tryPlay();
           }}
           onLoadedData={() => {
+            setVideoReady(true);
+            tryPlay();
+          }}
+          onLoadedMetadata={() => {
             setVideoReady(true);
             tryPlay();
           }}
