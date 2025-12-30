@@ -9,6 +9,12 @@ import React, {
 } from "react";
 import { createAudioEngine } from "./AudioEngine";
 import { useAuth } from "@/auth/AuthProvider";
+import {
+  initSystemMediaSession,
+  resetSystemMediaSession,
+  updateSystemMediaMetadata,
+  updateSystemPlaybackState,
+} from "@/lib/systemMediaSession";
 
 const GlobalPlayerContext = createContext(null);
 
@@ -17,69 +23,6 @@ const GlobalPlayerContext = createContext(null);
 const DEV_AUTH_BYPASS =
   import.meta.env.DEV === true &&
   String(import.meta.env.VITE_DEV_AUTH_BYPASS || "").toLowerCase() === "true";
-
-// -----------------------------------------------------------------------------
-// ✅ Media Session (Web): lock-screen / notification metadata + controls where supported
-// Notes:
-// - Works best on Android Chrome when playback is tied to an <audio>/<video> element.
-// - iOS Safari support is inconsistent across versions; this is still worth doing.
-// -----------------------------------------------------------------------------
-function canUseMediaSession() {
-  return (
-    typeof navigator !== "undefined" &&
-    "mediaSession" in navigator &&
-    typeof window !== "undefined" &&
-    typeof window.MediaMetadata !== "undefined"
-  );
-}
-
-function safeSetActionHandler(action, handler) {
-  try {
-    navigator.mediaSession.setActionHandler(action, handler);
-  } catch {
-    // Some browsers throw for unsupported actions; ignore safely.
-  }
-}
-
-function setMediaSessionMeta(meta) {
-  if (!canUseMediaSession()) return;
-
-  const title = meta?.title || "";
-  const artist = meta?.artist || "AuraLab";
-  const album = meta?.album || "Aura Session";
-  const artworkUrl = meta?.artworkUrl || meta?.artwork || meta?.imageUrl || null;
-
-  const artwork = artworkUrl
-    ? [
-        { src: artworkUrl, sizes: "96x96", type: "image/jpeg" },
-        { src: artworkUrl, sizes: "128x128", type: "image/jpeg" },
-        { src: artworkUrl, sizes: "192x192", type: "image/jpeg" },
-        { src: artworkUrl, sizes: "256x256", type: "image/jpeg" },
-        { src: artworkUrl, sizes: "384x384", type: "image/jpeg" },
-        { src: artworkUrl, sizes: "512x512", type: "image/jpeg" },
-      ]
-    : [];
-
-  try {
-    navigator.mediaSession.metadata = new window.MediaMetadata({
-      title,
-      artist,
-      album,
-      artwork,
-    });
-  } catch {
-    // ignore
-  }
-}
-
-function setMediaPlaybackState(state) {
-  if (!canUseMediaSession()) return;
-  try {
-    navigator.mediaSession.playbackState = state; // "none" | "paused" | "playing"
-  } catch {
-    // ignore
-  }
-}
 
 export function GlobalPlayerProvider({ children }) {
   const engineRef = useRef(createAudioEngine());
@@ -119,45 +62,31 @@ export function GlobalPlayerProvider({ children }) {
   // ✅ Register Media Session action handlers once (best-effort)
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (!canUseMediaSession()) return;
-
-    safeSetActionHandler("play", () => transportRef.current.onPlay?.());
-    safeSetActionHandler("pause", () => transportRef.current.onPause?.());
-    safeSetActionHandler("stop", () => transportRef.current.onStop?.());
-
-    // Optional actions (harmless if unsupported)
-    safeSetActionHandler("previoustrack", null);
-    safeSetActionHandler("nexttrack", null);
-    safeSetActionHandler("seekbackward", null);
-    safeSetActionHandler("seekforward", null);
-    safeSetActionHandler("seekto", null);
+    initSystemMediaSession({
+      onPlay: () => transportRef.current.onPlay?.(),
+      onPause: () => transportRef.current.onPause?.(),
+      onStop: () => transportRef.current.onStop?.(),
+    });
   }, []);
 
   // ---------------------------------------------------------------------------
   // ✅ Keep Media Session metadata + playbackState in sync with app state
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (!canUseMediaSession()) return;
-
     if (!currentPlayingPreset) {
       // Clear out the session when nothing is playing
-      try {
-        navigator.mediaSession.metadata = null;
-      } catch {
-        // ignore
-      }
-      setMediaPlaybackState("none");
+      resetSystemMediaSession();
       return;
     }
 
-    setMediaSessionMeta({
+    updateSystemMediaMetadata({
       title: currentPlayingPreset?.name || "Aura Mode",
       artist: "AuraLab",
       album: "Aura Session",
       artworkUrl: currentPlayingPreset?.imageUrl || null,
     });
 
-    setMediaPlaybackState(isPlaying ? "playing" : "paused");
+    updateSystemPlaybackState(isPlaying ? "playing" : "paused");
   }, [currentPlayingPreset, isPlaying]);
 
   const playLayers = async (layers, meta = {}) => {
@@ -184,7 +113,7 @@ export function GlobalPlayerProvider({ children }) {
       engineRef.current.setNowPlaying(meta);
 
       // ✅ Media Session: if caller provides meta, reflect it
-      setMediaSessionMeta({
+      updateSystemMediaMetadata({
         title: meta?.title || currentPlayingPreset?.name || "Aura Session",
         artist: meta?.artist || "AuraLab",
         album: meta?.album || "Aura Session",
@@ -239,13 +168,13 @@ export function GlobalPlayerProvider({ children }) {
       setIsPlaying(true);
 
       // ✅ Media Session (Web)
-      setMediaSessionMeta({
+      updateSystemMediaMetadata({
         title: preset?.name || "Aura Mode",
         artist: "AuraLab",
         album: "Aura Session",
         artworkUrl: preset?.imageUrl || null,
       });
-      setMediaPlaybackState("playing");
+      updateSystemPlaybackState("playing");
 
       // Re-show sticky if user closed it previously
       setTempHidden(false);
@@ -274,14 +203,7 @@ export function GlobalPlayerProvider({ children }) {
     setStickyPlayerVisible(true);
 
     // ✅ Media Session
-    setMediaPlaybackState("none");
-    if (canUseMediaSession()) {
-      try {
-        navigator.mediaSession.metadata = null;
-      } catch {
-        // ignore
-      }
-    }
+    resetSystemMediaSession();
   }, []);
 
   const pause = useCallback(() => {
@@ -294,7 +216,7 @@ export function GlobalPlayerProvider({ children }) {
     setIsPlaying(false);
 
     // ✅ Media Session
-    setMediaPlaybackState("paused");
+    updateSystemPlaybackState("paused");
   }, []);
 
   const resume = useCallback(async () => {
@@ -321,7 +243,7 @@ export function GlobalPlayerProvider({ children }) {
       setStickyPlayerVisible(true);
 
       // ✅ Media Session
-      setMediaPlaybackState("playing");
+      updateSystemPlaybackState("playing");
 
       return true;
     } catch (e) {
@@ -360,7 +282,7 @@ export function GlobalPlayerProvider({ children }) {
       currentPlayingPreset?.imageUrl ||
       null;
 
-    setMediaSessionMeta({
+    updateSystemMediaMetadata({
       title,
       artist: meta?.artist || "AuraLab",
       album: meta?.album || "Aura Session",
@@ -398,7 +320,7 @@ export function GlobalPlayerProvider({ children }) {
     setIsPlaying(false);
 
     // ✅ Media Session
-    setMediaPlaybackState("none");
+    updateSystemPlaybackState("none");
 
     // Allow UI animation time, then clear now-playing state
     const mySeq = playSeqRef.current;
@@ -407,14 +329,7 @@ export function GlobalPlayerProvider({ children }) {
 
       setCurrentLayers(null);
       setCurrentPlayingPreset(null);
-
-      if (canUseMediaSession()) {
-        try {
-          navigator.mediaSession.metadata = null;
-        } catch {
-          // ignore
-        }
-      }
+      resetSystemMediaSession();
 
       setStickyPlayerVisible(true);
     }, 320);
