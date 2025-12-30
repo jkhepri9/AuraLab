@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
+import { App as CapApp } from "@capacitor/app";
 
 function computeIsPmNow(now, dayStartHour, pmStartHour) {
   const h = now.getHours();
@@ -41,6 +43,25 @@ export default function LiveBackground({
   const videoRef = useRef(null);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
+
+  const isNative = useMemo(() => {
+    try {
+      return Capacitor?.isNativePlatform?.() === true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const tryResumePlayback = useCallback(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (!active || reduceMotion) return;
+
+    try {
+      const p = el.play?.();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } catch {}
+  }, [active, reduceMotion]);
 
   // Enable swapping only if PM assets are configured (poster or video).
   const hasPmAssets = !!(pmPoster || pmMp4Src || pmWebmSrc);
@@ -104,13 +125,8 @@ export default function LiveBackground({
       return;
     }
 
-    if (reduceMotion) return;
-
-    try {
-      const p = el.play?.();
-      if (p && typeof p.catch === "function") p.catch(() => {});
-    } catch {}
-  }, [active, reduceMotion]);
+    tryResumePlayback();
+  }, [active, reduceMotion, tryResumePlayback]);
 
   useEffect(() => {
     const onVis = () => {
@@ -121,10 +137,8 @@ export default function LiveBackground({
         try {
           el.pause();
         } catch {}
-      } else if (active && !reduceMotion) {
-        try {
-          el.play?.();
-        } catch {}
+      } else {
+        tryResumePlayback();
       }
     };
 
@@ -151,6 +165,30 @@ export default function LiveBackground({
       } catch {}
     }
   }, [effectivePoster, effectiveWebm, effectiveMp4, active, reduceMotion]);
+
+  // Some mobile shells pause media while the in-app browser is open. When the app resumes,
+  // explicitly attempt to restart playback so the live background comes back after login.
+  useEffect(() => {
+    const onFocus = () => tryResumePlayback();
+    window.addEventListener("focus", onFocus);
+
+    let removeAppListener = null;
+    if (isNative) {
+      const sub = CapApp.addListener("appStateChange", ({ isActive }) => {
+        if (isActive) tryResumePlayback();
+      });
+      removeAppListener = () => {
+        try {
+          sub?.remove?.();
+        } catch {}
+      };
+    }
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      if (removeAppListener) removeAppListener();
+    };
+  }, [isNative, tryResumePlayback]);
 
   const overlayStyle = useMemo(
     () => ({
