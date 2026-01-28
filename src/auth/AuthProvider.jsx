@@ -10,26 +10,9 @@ import React, {
 import { getSupabase, getIsSupabaseConfigured } from "@/lib/supabaseClient";
 import SignInModal from "../components/auth/SignInModal";
 
-// ✅ Native OAuth return + in-app browser
-import { Capacitor } from "@capacitor/core";
-import { App as CapApp } from "@capacitor/app";
-import { Browser } from "@capacitor/browser";
-
 const AuthContext = createContext(null);
 
 const AUTH_RETURN_TO_KEY = "auralab_auth_return_to_v1";
-
-// ✅ Use a deep-link scheme for native OAuth callback.
-// This must match what you register in Android/iOS AND what you allow in Supabase redirect URLs.
-const NATIVE_OAUTH_REDIRECT = "space.auralab://auth/callback";
-
-function isNativeShell() {
-  try {
-    return Capacitor?.isNativePlatform?.() === true;
-  } catch {
-    return false;
-  }
-}
 
 function parseOAuthCallback(urlString) {
   // Supports:
@@ -107,78 +90,6 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // ✅ Native: handle deep-link return from Google OAuth and finalize Supabase session
-  useEffect(() => {
-    if (!supabase) return;
-    if (!isNativeShell()) return;
-
-    let removed = false;
-    let didHandle = false;
-
-    const handleUrl = async (url) => {
-      if (!url || didHandle || removed) return;
-
-      // Only handle our auth callback links
-      if (!url.startsWith("space.auralab://")) return;
-
-      const { code, access_token, refresh_token, error } = parseOAuthCallback(url);
-
-      if (error) {
-        console.error("[AuthProvider] OAuth callback error:", error);
-        return;
-      }
-
-      try {
-        didHandle = true;
-
-        // Preferred: PKCE exchange
-        if (code) {
-          const { error: exErr } = await supabase.auth.exchangeCodeForSession(code);
-          if (exErr) throw exErr;
-        } else if (access_token && refresh_token) {
-          // Fallback: token-based session set
-          const { error: setErr } = await supabase.auth.setSession({
-            access_token,
-            refresh_token,
-          });
-          if (setErr) throw setErr;
-        } else {
-          throw new Error("No auth code or tokens found in callback URL.");
-        }
-
-        // Close in-app browser if possible (safe even if already closed on some devices)
-        try {
-          await Browser.close();
-        } catch {}
-
-        // Gate will close via onAuthStateChange once session is set
-      } catch (e) {
-        didHandle = false;
-        console.error("[AuthProvider] Failed to finalize OAuth session:", e);
-        try {
-          await Browser.close();
-        } catch {}
-        setGateOpen(true);
-      }
-    };
-
-    const sub = CapApp.addListener("appUrlOpen", (data) => {
-      handleUrl(data?.url);
-    });
-
-    // Cold start via deep link
-    CapApp.getLaunchUrl().then((ret) => {
-      if (ret?.url) handleUrl(ret.url);
-    });
-
-    return () => {
-      removed = true;
-      try {
-        sub?.remove?.();
-      } catch {}
-    };
-  }, [supabase]);
-
   /**
    * Used by playback gate:
    * - If still loading, do nothing (prevents modal flashing).
@@ -195,7 +106,6 @@ export function AuthProvider({ children }) {
   /**
    * Supabase Google OAuth.
    * Web: redirects to /account (your existing flow).
-   * Native: opens OAuth in Capacitor Browser and returns via deep link, then we exchange the code.
    */
   const signInWithGoogle = useCallback(
     async ({ returnToPath } = {}) => {
@@ -206,32 +116,6 @@ export function AuthProvider({ children }) {
           if (returnToPath.startsWith("/")) {
             localStorage.setItem(AUTH_RETURN_TO_KEY, returnToPath);
           }
-        }
-
-        if (isNativeShell()) {
-          // Native: do NOT use window.location.origin. Use deep link callback.
-          const { data, error } = await supabase.auth.signInWithOAuth({
-            provider: "google",
-            options: {
-              redirectTo: NATIVE_OAUTH_REDIRECT,
-              skipBrowserRedirect: true,
-            },
-          });
-
-          if (error) {
-            console.error("[AuthProvider] Supabase sign-in error:", error);
-            setGateOpen(true);
-            return;
-          }
-
-          if (!data?.url) {
-            console.error("[AuthProvider] No OAuth URL returned from Supabase.");
-            setGateOpen(true);
-            return;
-          }
-
-          await Browser.open({ url: data.url });
-          return;
         }
 
         // Web/PWA: keep your existing behavior
