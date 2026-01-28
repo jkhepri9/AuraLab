@@ -35,7 +35,7 @@ export const FEATURED_PRESETS = [
     name: "Theta Gate",
     symbol: "✧",
     color: "linear-gradient(135deg, #1a0b2a, #2a1b4a)",
-    imageUrl: "https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=2400&auto=format&fit=crop",
+    imageUrl: "/modeimages/stargate.jpg",
     description: "Enter meditative depth and inner stillness. Designed for theta entrainment and quiet awareness.",
 
     // ✅ Discover metadata
@@ -225,7 +225,7 @@ export const FEATURED_PRESETS = [
     id: "p3",
     name: "Oceanic Flow",
     color: "linear-gradient(135deg, #0ea5e9, #0f766e)",
-    imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2940&auto=format&fit=crop",
+    imageUrl: "/modeimages/flowstate.jpg",
     description: "Ease the body into calm, steady relaxation. Ideal for unwinding, reading, and sleep preparation.",
 
     // ✅ Discover metadata
@@ -264,7 +264,7 @@ export const FEATURED_PRESETS = [
     id: "p4",
     name: "Night Shield",
     color: "linear-gradient(135deg, #111827, #0b1220)",
-    imageUrl: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=2940&auto=format&fit=crop",
+    imageUrl: "/modeimages/nightfoundation.jpg",
     description: "A smooth protective layer for the mind. Ideal for winding down and restoring internal balance.",
 
     // ✅ Discover metadata

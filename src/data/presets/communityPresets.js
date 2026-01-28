@@ -6,8 +6,7 @@ export const communityPresets = [
     id: "c_lucid_dreaming",
     name: "Lucid Dreaming",
     color: "linear-gradient(135deg, #0b1026, #1c2e5c)",
-    imageUrl:
-      "https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=2400&auto=format&fit=crop",
+    imageUrl: "/modeimages/deepsleep.jpg",
     description: "Supports vivid dreams and lucidity using gentle theta-style entrainment.",
 
     // ✅ Discover metadata
@@ -47,7 +46,7 @@ export const communityPresets = [
     name: "Shielded Calm",
     symbol: "⟡",
     color: "linear-gradient(135deg, #101a24, #1b2a3a)",
-    imageUrl: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=2400&auto=format&fit=crop",
+    imageUrl: "/modeimages/stressrelief.jpg",
     description: "Smooth the edges and stabilize your field. Built for emotional regulation and steady calm.",
 
     // ✅ Discover metadata
@@ -209,8 +208,7 @@ export const communityPresets = [
     id: "c_third_eye",
     name: "Third Eye",
     color: "linear-gradient(135deg, #120a2a, #183a6a)",
-    imageUrl:
-      "https://commons.wikimedia.org/wiki/Special:FilePath/Ajna_chakra.svg?width=2400",
+    imageUrl: "/modeimages/stargateaura.jpg",
     description: "Supports meditative focus and inner visualization with theta-style entrainment.",
     layers: [
 
@@ -348,8 +346,7 @@ export const communityPresets = [
     id: "c_earth_frequency",
     name: "Earth Frequency",
     color: "linear-gradient(135deg, #07130a, #1f3a20)",
-    imageUrl:
-      "https://commons.wikimedia.org/wiki/Special:FilePath/Earth_from_Space.jpg?width=2400",
+    imageUrl: "/modeimages/gravitybed.png",
     description: "Promotes grounding and steady calm using a Schumann-style binaural profile.",
     layers: [
       { id: "ef_l", name: "Binaural L (430 Hz)", type: "oscillator", frequency: 430, volume: 0.12, pan: -1, waveform: "sine", enabled: true },

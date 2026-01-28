@@ -50,8 +50,7 @@ export const fanFavoritesPresets = [
     id: "c_stress_relief_ff",
     name: "Stress Relief",
     color: "linear-gradient(135deg, #101a24, #1b2a3a)",
-    imageUrl:
-      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=2400&auto=format&fit=crop",
+    imageUrl: "/modeimages/stressrelief.jpg",
     description: "Calm focus: downshift stress while staying productive and steady.",
 
     // ✅ Discover metadata
@@ -129,8 +128,7 @@ export const fanFavoritesPresets = [
     id: "c_shuman_resonance",
     name: "Shuman Resonance",
     color: "linear-gradient(135deg, #07130a, #1f3a20)",
-    imageUrl:
-      "https://commons.wikimedia.org/wiki/Special:FilePath/Earth_from_Space.jpg?width=2400",
+    imageUrl: "/modeimages/earthanchor.jpg",
     description: "Grounded focus and steady calm using a Schumann-style 7.83 Hz binaural profile.",
 
     // ✅ Discover metadata
@@ -253,8 +251,7 @@ export const fanFavoritesPresets = [
     id: "c_heart",
     name: "Heart",
     color: "linear-gradient(135deg, #1a0b12, #5a1b3a)",
-    imageUrl:
-      "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=2400&auto=format&fit=crop",
+    imageUrl: "/modeimages/heartcoherence.jpg",
     description: "Heart-led coherence for calm focus and social intelligence using 528/639 culture anchors.",
 
     // ✅ Discover metadata

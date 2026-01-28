@@ -141,8 +141,8 @@ export default function Layout({
   const showHomeLiveBg = !isImmersive && isHome;
 
   // ✅ Static background image for Aura Modes
-  // File path: /public/modeimages/bg/auramodes.jpg
-  const auraModesBgImageUrl = "/modeimages/bg/auramodes.jpg";
+  // File path: /public/modeimages/bg/auramodes1.jpg
+  const auraModesBgImageUrl = "/modeimages/bg/auramodes1.jpg";
 
   const hideStickyInStudio =
     location.pathname === "/AuraEditor" && currentPlayingPreset?.id === "__studio__";
