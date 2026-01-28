@@ -385,8 +385,10 @@ export default function AuraEditor() {
     try {
       await db.presets.create({
         name: projectName,
-        description: "Created in AuraEditor",
-        color: "linear-gradient(135deg, #0f172a, #10b981)",
+        description: publicDescription || "Created in AuraEditor",
+        symbol: publicSymbol || "✧",
+        color: publicColor || "linear-gradient(135deg, #0f172a, #10b981)",
+        imageUrl: publicImageUrl || "",
         layers,
       });
 
@@ -431,7 +433,7 @@ export default function AuraEditor() {
         id: "__studio__",
         name: projectName || "Aura Studio",
         color: "linear-gradient(135deg, #0f172a, #10b981)",
-        imageUrl: null,
+        imageUrl: publicImageUrl || null,
       },
       {
         title: projectName || "Aura Studio",
