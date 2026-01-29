@@ -118,8 +118,11 @@ export function AuthProvider({ children }) {
           }
         }
 
-        // Web/PWA: keep your existing behavior
-        const redirectTo = `${window.location.origin}/account`;
+        // ✅ IMPORTANT: Respect Vite BASE_URL (fixes subpath deployments like GitHub Pages)
+        const redirectTo = new URL(
+          `${import.meta.env.BASE_URL}account`,
+          window.location.origin
+        ).toString();
 
         const { error } = await supabase.auth.signInWithOAuth({
           provider: "google",

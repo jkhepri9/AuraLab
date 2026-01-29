@@ -10,17 +10,41 @@ import { AuthProvider } from "@/auth/AuthProvider";
 import { loadPublicConfig } from "@/lib/publicConfig";
 import { initSupabaseFromConfig } from "@/lib/supabaseClient";
 
-// ✅ PWA: manual SW registration (production only)
 import { registerSW } from "virtual:pwa-register";
+
+const SW_PURGE_VERSION = "sw-purge-1"; // bump this if you need to force purge again
+
+async function purgeOldServiceWorkerAndCachesOnce() {
+  if (typeof window === "undefined") return;
+
+  try {
+    const key = "__AURALAB_SW_PURGED__";
+    if (localStorage.getItem(key) === SW_PURGE_VERSION) return;
+
+    // Unregister service workers
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+
+    // Clear caches (workbox etc.)
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+
+    localStorage.setItem(key, SW_PURGE_VERSION);
+  } catch {
+    // ignore
+  }
+}
 
 function setupPwaInstallCapture() {
   if (typeof window === "undefined") return;
 
-  // Prevent duplicate listeners during HMR
   if (window.__AURALAB_PWA_CAPTURE_SETUP__ === true) return;
   window.__AURALAB_PWA_CAPTURE_SETUP__ = true;
 
-  // Where we store the install prompt event for one-click install
   window.__AURALAB_BIP_EVENT__ = window.__AURALAB_BIP_EVENT__ || null;
 
   window.addEventListener("beforeinstallprompt", (e) => {
@@ -42,24 +66,23 @@ function setupPwaInstallCapture() {
 function setupServiceWorker() {
   if (!import.meta.env.PROD) return;
 
-  if (typeof window !== "undefined" && window.__AURALAB_SW_REGISTERED__ === true) return;
+  if (typeof window !== "undefined" && window.__AURALAB_SW_REGISTERED__ === true)
+    return;
   if (typeof window !== "undefined") window.__AURALAB_SW_REGISTERED__ = true;
 
-  registerSW({
-    immediate: true,
-  });
+  registerSW({ immediate: true });
 }
 
-function bootstrap() {
+async function bootstrap() {
   const queryClient = new QueryClient();
+
+  // ✅ critical: make sure we are not running an old SW config after OAuth reload
+  await purgeOldServiceWorkerAndCachesOnce();
 
   setupPwaInstallCapture();
   setupServiceWorker();
 
-  // ✅ Initialize Supabase early and keep the instance
   initSupabaseFromConfig();
-
-  // Fire-and-forget config load (as you already designed it)
   loadPublicConfig().catch(() => {});
 
   ReactDOM.createRoot(document.getElementById("root")).render(

@@ -21,7 +21,10 @@ import NowPlaying from "./pages/NowPlaying";
 import Account from "./pages/Account";
 import Start from "./pages/Start";
 
-import { GlobalPlayerProvider, useGlobalPlayer } from "./audio/GlobalPlayerContext";
+import {
+  GlobalPlayerProvider,
+  useGlobalPlayer,
+} from "./audio/GlobalPlayerContext";
 import { isFirstRunComplete } from "@/lib/firstRunFlag";
 
 function FirstRunGate() {
@@ -48,6 +51,9 @@ function AppInner() {
     isStickyPlayerHidden,
     hideStickyPlayerOnce,
   } = useGlobalPlayer();
+
+  const rawBase = import.meta.env.BASE_URL || "/";
+  const basename = rawBase === "/./" ? "/" : rawBase.replace(/\/$/, "") || "/";
 
   return (
     <Router>

@@ -4,22 +4,17 @@ import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
-  // ✅ Capacitor/WebView safety:
-  // Use relative base so assets resolve correctly from capacitor://localhost
-  // (prevents blank screen / missing JS/CSS on device).
-  base: "./",
+  base: "/",
 
   plugins: [
     react(),
 
-    // Keep the plugin enabled so `virtual:pwa-register` exists.
-    // Disable SW behavior in dev to avoid Codespaces/CORS/redirect weirdness.
     VitePWA({
       registerType: "autoUpdate",
       filename: "sw.js",
 
       devOptions: {
-        enabled: false, // ✅ important for Codespaces dev
+        enabled: false,
       },
 
       includeAssets: [
@@ -75,24 +70,15 @@ export default defineConfig({
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [
           /^\/icons\//,
+          /^\/modeimages\//,
+          /^\/live\//,
+          /^\/api\//,
           /^\/manifest\.webmanifest$/,
           /^\/sw\.js$/,
           /^\/favicon\.ico$/,
         ],
         runtimeCaching: [
           {
-            urlPattern: ({ request }) => request.destination === "image",
-            handler: "StaleWhileRevalidate",
-            options: {
-              cacheName: "images",
-              expiration: {
-                maxEntries: 60,
-                maxAgeSeconds: 60 * 60 * 24 * 30,
-              },
-            },
-          },
-          {
-            // AmbientLoader uses fetch(), so request.destination may be empty.
             urlPattern: ({ url }) => url.pathname.startsWith("/audio/"),
             handler: "CacheFirst",
             options: {
