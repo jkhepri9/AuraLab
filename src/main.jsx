@@ -10,26 +10,26 @@ import { AuthProvider } from "@/auth/AuthProvider";
 import { loadPublicConfig } from "@/lib/publicConfig";
 import { initSupabaseFromConfig } from "@/lib/supabaseClient";
 
-const SW_PURGE_VERSION = "prod-purge-2"; // bump this string if you ever need to force purge again
+const SW_PURGE_VERSION = "kill-sw-3"; // bump this if you ever need to force purge again
 
-async function purgeServiceWorkersAndCachesOnce() {
+async function killOldServiceWorkerAndCachesOnce() {
   if (typeof window === "undefined") return;
 
-  // Only do this on the live domain
   const host = window.location.hostname;
-  if (host !== "auralab.space") return;
+  const isAuraLabHost = host === "auralab.space" || host === "www.auralab.space";
+  if (!isAuraLabHost) return;
 
   try {
     const key = "__AURALAB_SW_PURGED__";
     if (localStorage.getItem(key) === SW_PURGE_VERSION) return;
 
-    // Unregister ALL service workers on this origin
+    // Unregister any SW
     if ("serviceWorker" in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
       await Promise.all(regs.map((r) => r.unregister()));
     }
 
-    // Delete ALL caches (workbox + anything else)
+    // Delete caches
     if ("caches" in window) {
       const keys = await caches.keys();
       await Promise.all(keys.map((k) => caches.delete(k)));
@@ -37,18 +37,16 @@ async function purgeServiceWorkersAndCachesOnce() {
 
     localStorage.setItem(key, SW_PURGE_VERSION);
 
-    // Hard reload once so the page comes back without SW control/caches
-    // (this is what makes the fix “stick” immediately)
+    // Reload once to come back clean (no SW control, no cache poison)
     window.location.reload();
   } catch {
-    // If anything fails, do nothing; app will still run
+    // If it fails, don't brick the app
   }
 }
 
 function setupPwaInstallCapture() {
   if (typeof window === "undefined") return;
 
-  // Prevent duplicate listeners during HMR
   if (window.__AURALAB_PWA_CAPTURE_SETUP__ === true) return;
   window.__AURALAB_PWA_CAPTURE_SETUP__ = true;
 
@@ -73,15 +71,11 @@ function setupPwaInstallCapture() {
 async function bootstrap() {
   const queryClient = new QueryClient();
 
-  // ✅ production SW/cache purge (one-time) to kill old Workbox behavior
-  await purgeServiceWorkersAndCachesOnce();
+  await killOldServiceWorkerAndCachesOnce();
 
   setupPwaInstallCapture();
 
-  // ✅ Initialize Supabase early
   initSupabaseFromConfig();
-
-  // Fire-and-forget config load
   loadPublicConfig().catch(() => {});
 
   ReactDOM.createRoot(document.getElementById("root")).render(

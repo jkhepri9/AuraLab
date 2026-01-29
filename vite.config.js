@@ -10,6 +10,10 @@ export default defineConfig({
     react(),
 
     VitePWA({
+      // ✅ CRITICAL: do not inject/register a service worker at all
+      injectRegister: false,
+
+      // you can keep these (manifest generation still works)
       registerType: "autoUpdate",
       filename: "sw.js",
 
@@ -38,43 +42,35 @@ export default defineConfig({
         background_color: "#09090b",
         theme_color: "#09090b",
         icons: [
-          { src: "/icons/auralab-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-          { src: "/icons/auralab-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-          { src: "/icons/auralab-192-maskable.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
-          { src: "/icons/auralab-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-        ],
-      },
-
-      workbox: {
-        cleanupOutdatedCaches: true,
-        clientsClaim: true,
-        skipWaiting: true,
-        navigateFallback: "/index.html",
-        navigateFallbackDenylist: [
-          /^\/api\//,
-          /^\/modeimages\//,
-          /^\/live\//,
-          /^\/icons\//,
-          /^\/manifest\.webmanifest$/,
-          /^\/sw\.js$/,
-          /^\/favicon\.ico$/,
-        ],
-
-        // ✅ DO NOT cache images (this is what was killing you)
-        runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.pathname.startsWith("/audio/"),
-            handler: "CacheFirst",
-            options: {
-              cacheName: "audio",
-              expiration: {
-                maxEntries: 24,
-                maxAgeSeconds: 60 * 60 * 24 * 30,
-              },
-            },
+            src: "/icons/auralab-192.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/icons/auralab-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/icons/auralab-192-maskable.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "maskable",
+          },
+          {
+            src: "/icons/auralab-512-maskable.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
           },
         ],
       },
+
+      // ✅ remove runtimeCaching entirely (Workbox should not be involved)
+      // (Leaving this out prevents your images from getting “handled” by SW logic)
     }),
   ],
 
