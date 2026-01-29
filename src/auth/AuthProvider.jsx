@@ -119,7 +119,7 @@ export function AuthProvider({ children }) {
         }
 
         // Web/PWA: keep your existing behavior
-        const redirectTo = `${window.location.origin}/account`;
+        const redirectTo = new URL("account", window.location.href).toString();
 
         const { error } = await supabase.auth.signInWithOAuth({
           provider: "google",
