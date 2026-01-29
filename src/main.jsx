@@ -10,70 +10,46 @@ import { AuthProvider } from "@/auth/AuthProvider";
 import { loadPublicConfig } from "@/lib/publicConfig";
 import { initSupabaseFromConfig } from "@/lib/supabaseClient";
 
-const SW_PURGE_VERSION = "kill-sw-3"; // bump this if you ever need to force purge again
+const PURGE_VERSION = "purge-auralab-4"; // bump this if you ever need to force purge again
 
-async function killOldServiceWorkerAndCachesOnce() {
+async function purgeSWAndCachesOnce() {
   if (typeof window === "undefined") return;
 
   const host = window.location.hostname;
-  const isAuraLabHost = host === "auralab.space" || host === "www.auralab.space";
-  if (!isAuraLabHost) return;
+  const isProd =
+    host === "auralab.space" || host === "www.auralab.space";
+
+  if (!isProd) return;
 
   try {
-    const key = "__AURALAB_SW_PURGED__";
-    if (localStorage.getItem(key) === SW_PURGE_VERSION) return;
+    const key = "__AURALAB_PURGE_DONE__";
+    if (localStorage.getItem(key) === PURGE_VERSION) return;
 
-    // Unregister any SW
+    // Unregister ALL service workers on this origin
     if ("serviceWorker" in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map((r) => r.unregister()));
+      await Promise.all(regs.map((r) => r.unregister().catch(() => {})));
     }
 
-    // Delete caches
+    // Delete ALL caches
     if ("caches" in window) {
       const keys = await caches.keys();
-      await Promise.all(keys.map((k) => caches.delete(k)));
+      await Promise.all(keys.map((k) => caches.delete(k).catch(() => {})));
     }
 
-    localStorage.setItem(key, SW_PURGE_VERSION);
+    localStorage.setItem(key, PURGE_VERSION);
 
-    // Reload once to come back clean (no SW control, no cache poison)
+    // Reload once clean
     window.location.reload();
   } catch {
-    // If it fails, don't brick the app
+    // don't brick the app if something fails
   }
-}
-
-function setupPwaInstallCapture() {
-  if (typeof window === "undefined") return;
-
-  if (window.__AURALAB_PWA_CAPTURE_SETUP__ === true) return;
-  window.__AURALAB_PWA_CAPTURE_SETUP__ = true;
-
-  window.__AURALAB_BIP_EVENT__ = window.__AURALAB_BIP_EVENT__ || null;
-
-  window.addEventListener("beforeinstallprompt", (e) => {
-    e.preventDefault();
-    window.__AURALAB_BIP_EVENT__ = e;
-    window.deferredPrompt = e;
-  });
-
-  window.addEventListener("appinstalled", () => {
-    window.__AURALAB_BIP_EVENT__ = null;
-    window.deferredPrompt = null;
-
-    try {
-      localStorage.setItem("auralab_pwa_installed", "1");
-    } catch {}
-  });
 }
 
 async function bootstrap() {
   const queryClient = new QueryClient();
 
-  await killOldServiceWorkerAndCachesOnce();
-
-  setupPwaInstallCapture();
+  await purgeSWAndCachesOnce();
 
   initSupabaseFromConfig();
   loadPublicConfig().catch(() => {});
