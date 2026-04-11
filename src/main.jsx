@@ -40,18 +40,8 @@ function setupPwaInstallCapture() {
   });
 }
 
-/**
- * 🚫 SERVICE WORKER DISABLED ON PURPOSE
- * Reason: Workbox is intercepting /modeimages/* requests
- * and causing no-response / connection failures in production.
- */
-function setupServiceWorker() {
-  return; // intentionally disabled
-}
-
 function bootstrap() {
   setupPwaInstallCapture();
-  setupServiceWorker();
 
   // Initialize backend/config safely
   initSupabaseFromConfig();

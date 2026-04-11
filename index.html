@@ -1,25 +1,20 @@
-<!-- index.html -->
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
 
-    <!-- Mobile + responsive -->
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
 
-    <!-- Theme -->
     <meta name="theme-color" content="#09090b" />
     <meta name="color-scheme" content="dark" />
 
-    <!-- Icons -->
     <link rel="icon" type="image/png" href="/icons/favicon-32.png" />
     <link rel="icon" type="image/png" href="/icons/favicon-16.png" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png" />
 
-    <!-- ✅ Preload BOTH posters so AM never flashes during PM (and vice-versa) -->
     <link rel="preload" as="image" href="/live/home.png" fetchpriority="high" />
     <link
       rel="preload"
@@ -28,7 +23,6 @@
       fetchpriority="high"
     />
 
-    <!-- ✅ Determine AM/PM early (before CSS paints) + preload the correct video -->
     <script>
       (function () {
         var dayStartHour = 6; // 6:00 AM
@@ -79,7 +73,6 @@
       })();
     </script>
 
-    <!-- ✅ App-shell background + FIRST-PAINT intro mask -->
     <style>
       html {
         background-color: #09090b;
@@ -332,11 +325,21 @@
       }
     </style>
 
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+            console.log("Parasite PWA deleted.");
+          }
+        });
+      }
+    </script>
+
     <title>AuraLab</title>
   </head>
 
   <body>
-    <!-- FIRST PAINT: Opaque intro mask (hides UI + background while everything loads) -->
     <div id="aura-intro" aria-label="AuraLab opening attunement">
       <button id="aura-intro-skip" class="aura-intro-skip" type="button">
         Skip
@@ -355,13 +358,10 @@
       </div>
     </div>
 
-    <!-- App shell background -->
     <div id="app-shell-bg"></div>
 
-    <!-- React root -->
     <div id="root"></div>
 
-    <!-- Skip behavior + hard cleanup (CSS already auto-hides at 5s) -->
     <script>
       (function () {
         var intro = document.getElementById("aura-intro");
