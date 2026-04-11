@@ -57,6 +57,7 @@ export default defineConfig({
 
       workbox: {
         cleanupOutdatedCaches: true,
+        maximumFileSizeToCacheInBytes: 10485760, // ✅ FIX: Increased limit to 10MB to prevent crashes
         navigateFallback: "/",
         navigateFallbackDenylist: [
           /^\/icons\//,
